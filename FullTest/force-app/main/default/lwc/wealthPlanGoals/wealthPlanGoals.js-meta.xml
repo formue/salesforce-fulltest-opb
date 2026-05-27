@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>66.0</apiVersion>
+    <isExposed>true</isExposed>
+    <masterLabel>Wealth Plan: Goals List &amp; Editor</masterLabel>
+    <description>Fast SPA component with compressed UI and collapsible AI Accordion.</description>
+    <targets>
+        <target>lightning__FlowScreen</target>
+    </targets>
+    <targetConfigs>
+        <targetConfig targets="lightning__FlowScreen">
+            <!-- INPUTS -->
+            <property name="recordId" type="String" label="0. Input: Record ID" role="inputOnly"/>
+            <property name="inputGoals" type="@salesforce/schema/FinServ__FinancialGoal__c[]" label="1. Input: Goals Collection" role="inputOnly"/>
+            <property name="inputHouseholdMembers" type="@salesforce/schema/Account[]" label="2. Input: Household Members Collection" role="inputOnly"/>
+            <property name="inputPrimaryMemberId" type="String" label="3. Input: Default Primary Member ID" role="inputOnly"/>
+            <property name="backgroundColor" type="String" label="4. Style: Background Color" default="#f0f9ff" role="inputOnly"/>
+            
+            <!-- NYTT: Status for Publisering -->
+            <property name="inputIsPublished" type="Boolean" label="5. Input: Is Plan Published?" default="false" role="inputOnly" description="Set to true if the main record is already published."/>
+            
+            <!-- AI MODUL INNSTILLINGER -->
+            <property name="showAiSection" type="Boolean" label="5. AI: Show AI Accordion Module?" default="false" role="inputOnly"/>
+            <property name="defaultAccordionOpen" type="Boolean" label="5b. AI: Default Accordion Open?" default="false" role="inputOnly" description="If true, the AI panel starts expanded. If false, it starts collapsed."/>
+            <property name="isAiLoading" type="Boolean" label="6. AI: Show Loading Animation?" default="false" role="inputOnly"/>
+            <property name="aiInsightSummary" type="String" label="7. AI: Formatted HTML Summary" role="inputOnly" />
+            
+            <!-- OUTPUTS -->
+            <property name="outputAction" type="String" label="Output: Action (SAVE)" role="outputOnly"/>
+            <!-- NYTT: Output-verdi for å oppdatere den andre recorden -->
+            <property name="outputIsPublished" type="Boolean" label="Output: Is Published (To DML)" role="outputOnly"/>
+            
+            <property name="outputGoals" type="@salesforce/schema/FinServ__FinancialGoal__c[]" label="Output: Goals Collection (To DML)" role="outputOnly"/>
+            <property name="outputGoalsToDelete" type="@salesforce/schema/FinServ__FinancialGoal__c[]" label="Output: Goals to DELETE (To DML)" role="outputOnly"/>
+        </targetConfig>
+    </targetConfigs>
+</LightningComponentBundle>
