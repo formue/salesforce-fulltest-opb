@@ -1,0 +1,218 @@
+<template>
+    <!-- ========================================================= -->
+    <!-- MAIN COMPONENT SHELL: Handles layout, modals, and saving  -->
+    <!-- ========================================================= -->
+    <c-wealth-plan-view-shell 
+        style={dynamicBgStyle}
+        dashboard-title="Income Streams Overview"
+        dashboard-subtitle="Manage household salary, dividends, and other recurring revenue."
+        editor-title={modalTitle}
+        is-editor-view={isEditorView}
+        is-dirty={isDirty}
+        onshellsave={handleSaveToFlow}
+        onshellcancel={handleCancelEdit}
+        onshellapply={handleApplyEdit}>
+        
+        <!-- ========================================================= -->
+        <!-- SLOT: DASHBOARD CONTENT (The main read-only view)         -->
+        <!-- ========================================================= -->
+        <div slot="dashboard-content" class="dashboard-content-wrapper">
+            
+            <!-- TOP ROW: Quick Stats & Core Actions -->
+            <div class="stats-row">
+                <c-wealth-plan-stat-card label="Total Annual Income" value={formattedTotalIncome} variant="highlight"></c-wealth-plan-stat-card>
+                <c-wealth-plan-stat-card label="Income Streams" value={totalIncomeCount}></c-wealth-plan-stat-card>
+                
+                <div class={publishCardClass} title={publishTitleText}>
+                    <div class="publish-info">
+                        <template if:false={localIsPublished}>
+                            <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" class="draft-icon"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                            <span><b>Unpublished</b></span>
+                        </template>
+                        <template if:true={localIsPublished}>
+                            <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" fill="none" class="published-icon"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                            <span><b>Published</b></span>
+                        </template>
+                    </div>
+                    <label class="premium-toggle">
+                        <input type="checkbox" checked={localIsPublished} onchange={handlePublishToggle} disabled={isToggleDisabled}>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+
+                <button class="btn-create-card" onclick={handleAddNew}>
+                    <div class="create-icon-wrap">
+                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                    </div>
+                    <b>Add New Income</b>
+                </button>
+            </div>
+
+            <!-- ========================================================= -->
+            <!-- SLEEK AI ACCORDION MODULE                                 -->
+            <!-- ========================================================= -->
+            <template if:true={showAiSection}>
+                <div class="ai-accordion-panel fade-in">
+                    
+                    <div class="ai-header" onclick={toggleAiPanel}>
+                        <div class="ai-header-left">
+                            <span class="ai-badge">
+                                <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                                <b>AI ANALYSIS</b>
+                            </span>
+                            <span class="ai-title"><b>Income Overview</b></span>
+                        </div>
+                        <div class="ai-header-right">
+                            <span class="ai-provider"><span class="blue-dot"></span> Formue Intelligence</span>
+                            <svg class={chevronClass} viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </div>
+                    </div>
+
+                    <div class={aiBodyClass}>
+                        <template if:true={isAiLoading}>
+                            <div class="ai-formue-loader">
+                                <div class="loader-graphic live-network">
+                                    <svg viewBox="0 0 100 100" width="120" height="120">
+                                        <defs><radialGradient id="coreGlow" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.6"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0"/></radialGradient></defs>
+                                        <circle cx="50" cy="50" r="32" fill="none" stroke="#e0e7ff" stroke-width="0.75" class="spin-slow" stroke-dasharray="4 8" />
+                                        <circle cx="50" cy="50" r="18" fill="none" stroke="#e0e7ff" stroke-width="0.5" />
+                                        <g stroke="#c7d2fe" stroke-width="1.5"><line x1="50" y1="50" x2="20" y2="25" class="data-stream delay-1" /><line x1="50" y1="50" x2="80" y2="25" class="data-stream delay-2" /><line x1="50" y1="50" x2="15" y2="60" class="data-stream delay-3" /><line x1="50" y1="50" x2="85" y2="60" class="data-stream delay-4" /><line x1="50" y1="50" x2="50" y2="85" class="data-stream delay-5" /><line x1="20" y1="25" x2="80" y2="25" class="data-stream perimeter delay-3" /><line x1="80" y1="25" x2="85" y2="60" class="data-stream perimeter delay-1" /><line x1="85" y1="60" x2="50" y2="85" class="data-stream perimeter delay-4" /><line x1="50" y1="85" x2="15" y2="60" class="data-stream perimeter delay-2" /><line x1="15" y1="60" x2="20" y2="25" class="data-stream perimeter delay-5" /></g>
+                                        <g class="orbit-fast" transform-origin="50px 50px"><circle cx="18" cy="50" r="2" fill="#a855f7" /></g>
+                                        <g class="orbit-slow" transform-origin="50px 50px"><circle cx="76" cy="35" r="1.5" fill="#8b5cf6" /></g>
+                                        <g class="orbit-reverse" transform-origin="50px 50px"><circle cx="36" cy="80" r="2" fill="#60a5fa" /></g>
+                                        <g fill="#ffffff" stroke="#818cf8" stroke-width="1.5"><circle cx="20" cy="25" r="4" class="pulse-node delay-1" transform-origin="20px 25px" /><circle cx="80" cy="25" r="4" class="pulse-node delay-2" transform-origin="80px 25px" /><circle cx="15" cy="60" r="4" class="pulse-node delay-3" transform-origin="15px 60px" /><circle cx="85" cy="60" r="4" class="pulse-node delay-4" transform-origin="85px 60px" /><circle cx="50" cy="85" r="4" class="pulse-node delay-5" transform-origin="50px 85px" /></g>
+                                        <circle cx="50" cy="50" r="20" fill="url(#coreGlow)" class="core-glow" transform-origin="50px 50px" />
+                                        <circle cx="50" cy="50" r="11" fill="#60a5fa" class="pulse-center" transform-origin="50px 50px" />
+                                        <polygon points="50,43 51.5,47.5 56,47.5 52.5,50.5 54,55 50,52 46,55 47.5,50.5 44,47.5 48.5,47.5" fill="#ffffff" />
+                                    </svg>
+                                </div>
+                                <div class="loader-brand"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z"/></svg><b>Formue Intelligence</b></div>
+                                <div class="loader-status"><span class="status-dot"></span> Reading your Wealth Plan...</div>
+                                <div class="loader-bar-container"><div class="loader-bar"></div></div>
+                            </div>
+                        </template>
+                        <template if:false={isAiLoading}>
+                            <div class="ai-content-rich"><lightning-formatted-rich-text value={aiInsightSummary}></lightning-formatted-rich-text></div>
+                            <div class="ai-footer">Generated by Formue AI · Wealth Plan Intelligence</div>
+                        </template>
+                    </div>
+                </div>
+            </template>
+
+            <!-- ========================================================= -->
+            <!-- COMPRESSED INCOME GRID (Lego Cards)                       -->
+            <!-- ========================================================= -->
+            <div class="income-grid">
+                <template for:each={incomes} for:item="inc">
+                    <div class={inc.cardWrapperClass} key={inc.Id}>
+                        <div class={inc.accentClass}></div>
+                        <div class="card-inner">
+                            
+                            <div class="card-header">
+                                <div class="header-left-badges">
+                                    <span class="badge badge-neutral"><b>{inc.DisplayType}</b></span>
+                                    <template if:true={inc.isMarkedForDeletion}>
+                                        <span class="badge badge-danger"><b>To Be Deleted</b></span>
+                                    </template>
+                                    <template if:true={inc.isUnsaved}>
+                                        <template if:false={inc.isMarkedForDeletion}>
+                                            <span class="badge unsaved-card-badge"><b>Unsaved</b></span>
+                                        </template>
+                                    </template>
+                                </div>
+                                
+                                <template if:false={inc.isMarkedForDeletion}>
+                                    <button class="btn-icon-only" onclick={handleEditRequest} data-id={inc.Id} title="Edit Income">
+                                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                    </button>
+                                </template>
+                                <template if:true={inc.isMarkedForDeletion}>
+                                    <button class="btn-restore" onclick={handleRestoreIncome} data-id={inc.Id} title="Undo Delete">
+                                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><polyline points="3 3 3 8 8 8"></polyline></svg>
+                                        <b>Undo</b>
+                                    </button>
+                                </template>
+                            </div>
+
+                            <div class="card-body">
+                                <h3>
+                                    <template if:true={inc.isMarkedForDeletion}><strike><b>{inc.DisplayTitle}</b></strike></template>
+                                    <template if:false={inc.isMarkedForDeletion}><b>{inc.DisplayTitle}</b></template>
+                                </h3>
+                                
+                                <div class="amount-value text-green">
+                                    <template if:true={inc.isMarkedForDeletion}><strike><b>{inc.formattedAmount}</b></strike></template>
+                                    <template if:false={inc.isMarkedForDeletion}><b>{inc.formattedAmount}</b></template>
+                                </div>
+
+                                <template if:true={isBusinessContext}>
+                                    <template if:true={inc.BusinessName}>
+                                        <p class="card-description">Business: <b>{inc.BusinessName}</b></p>
+                                    </template>
+                                </template>
+                            </div>
+
+                            <div class="card-footer">
+                                <div class="owner-info">
+                                    <div class="owner-avatar"><b>{inc.ownerInitials}</b></div>
+                                    <div class="owner-details">
+                                        <span><b>{inc.OwnerName}</b></span>
+                                        <span class="item-date">Updated: {inc.formattedDate}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+                
+                <!-- EMPTY STATE -->
+                <template if:false={hasIncomes}>
+                    <div class="empty-state empty-grid-state">
+                        <div class="icon-circle">
+                            <svg viewBox="0 0 24 24" width="32" height="32" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                        </div>
+                        <h2><b>No Income Sources Defined</b></h2>
+                        <p>Add salary, dividends, or rental income to build the wealth profile.</p>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <!-- ========================================================= -->
+        <!-- SLOT: EDITOR FORM (Intercepts view when editing/creating) -->
+        <!-- ========================================================= -->
+        <div slot="editor-form">
+            <div class="form-row split-row">
+                <c-wealth-plan-premium-input label="Income Name" field-name="Name" value={currentIncome.Name} onvaluechange={handleFormChange}></c-wealth-plan-premium-input>
+                <c-wealth-plan-premium-input label="Annual Amount (kr)" type="number" field-name="FF_Amount__c" value={currentIncome.FF_Amount__c} is-money="true" onvaluechange={handleFormChange}></c-wealth-plan-premium-input>
+            </div>
+            
+            <div class="form-row split-row">
+                <c-wealth-plan-premium-input label="Income Type" type="select" field-name="FF_Type__c" options={currentTypeOptions} onvaluechange={handleFormChange}></c-wealth-plan-premium-input>
+                
+                <template if:true={isCustomType}>
+                    <c-wealth-plan-premium-input label="Custom Type (Required)" field-name="FF_Type_Other__c" value={currentIncome.FF_Type_Other__c} required="true" onvaluechange={handleFormChange}></c-wealth-plan-premium-input>
+                </template>
+                <template if:false={isCustomType}><div></div></template>
+            </div>
+
+            <div class="form-row split-row">
+                <c-wealth-plan-premium-input label="Household Member" type="select" field-name="FF_Account__c" options={currentOwnerOptions} onvaluechange={handleFormChange}></c-wealth-plan-premium-input>
+                
+                <template if:true={isBusinessContext}>
+                    <c-wealth-plan-premium-input label="Select Foundation/Business" type="select" field-name="FoundationBusiness__c" options={currentBusinessOptions} onvaluechange={handleFormChange}></c-wealth-plan-premium-input>
+                </template>
+            </div>
+
+            <template if:false={isNewRecord}>
+                <div class="form-row delete-action-row">
+                    <button class="btn-delete-goal" onclick={handleDeleteClick}>
+                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                        <b>Delete Income</b>
+                    </button>
+                </div>
+            </template>
+        </div>
+
+    </c-wealth-plan-view-shell>
+</template>

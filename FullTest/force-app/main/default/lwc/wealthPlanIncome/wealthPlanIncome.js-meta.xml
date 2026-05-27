@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>66.0</apiVersion>
+    <isExposed>true</isExposed>
+    <masterLabel>Wealth Plan: Income Editor</masterLabel>
+    <description>Premium SPA component for managing FF_Income__c. Built on the unified Rubicon Blueprint.</description>
+    <targets>
+        <target>lightning__FlowScreen</target>
+    </targets>
+    <targetConfigs>
+        <targetConfig targets="lightning__FlowScreen">
+            <!-- INPUTS -->
+            <property name="recordId" type="String" label="0. Input: Record ID" role="inputOnly" description="The Context ID."/>
+            <property name="inputIncomes" type="@salesforce/schema/FF_Income__c[]" label="1. Input: Incomes Collection" role="inputOnly" description="Existing FF_Income__c records."/>
+            <property name="inputHouseholdMembers" type="@salesforce/schema/Account[]" label="2. Input: Household Members Collection" role="inputOnly" description="Accounts for the 'Primary Owner' lookup."/>
+            <property name="inputBusinessAccounts" type="@salesforce/schema/Account[]" label="2b. Input: Business Accounts Collection" role="inputOnly" description="Accounts for the 'Foundation/Business' lookup."/>
+            <property name="inputPrimaryMemberId" type="String" label="3. Input: Default Primary Member ID" role="inputOnly" description="Pre-selects Owner for new records."/>
+            <property name="backgroundColor" type="String" label="4. Style: Background Color" default="#f0f9ff" role="inputOnly"/>
+            <property name="inputIsPublished" type="Boolean" label="5. Input: Is Plan Published?" default="false" role="inputOnly" description="Triggers the one-way Rubicon lock."/>
+            
+            <!-- NY: Den globale premiss-bryteren -->
+            <property name="isBusinessContext" type="Boolean" label="5b. Context: Is Business Account?" default="false" role="inputOnly" description="If True, the component enforces Foundation/Business fields."/>
+            
+            <!-- AI MODULE INPUTS -->
+            <property name="showAiSection" type="Boolean" label="6. AI: Show AI Accordion Module?" default="false" role="inputOnly"/>
+            <property name="defaultAccordionOpen" type="Boolean" label="6b. AI: Default Accordion Open?" default="false" role="inputOnly"/>
+            <property name="isAiLoading" type="Boolean" label="7. AI: Show Loading Animation?" default="false" role="inputOnly"/>
+            <property name="aiInsightSummary" type="String" label="8. AI: Formatted HTML Summary" role="inputOnly"/>
+            
+            <!-- OUTPUTS -->
+            <property name="outputAction" type="String" label="Output: Action (SAVE)" role="outputOnly" description="Emits SAVE for Flow Routing."/>
+            <property name="outputIsPublished" type="Boolean" label="Output: Is Published" role="outputOnly"/>
+            <property name="outputIncomes" type="@salesforce/schema/FF_Income__c[]" label="Output: Incomes (To Save)" role="outputOnly" description="Valid records to upsert."/>
+            <property name="outputIncomesToDelete" type="@salesforce/schema/FF_Income__c[]" label="Output: Incomes (To DELETE)" role="outputOnly" description="Records flagged via Soft Delete for DML deletion."/>
+        </targetConfig>
+    </targetConfigs>
+</LightningComponentBundle>
