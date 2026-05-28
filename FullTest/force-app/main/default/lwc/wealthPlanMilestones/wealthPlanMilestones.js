@@ -91,9 +91,10 @@ export default class WealthPlanMilestones extends LightningElement {
     @track isEditorView = false;
     @track currentMilestone = {};
     @track isNewRecord = false;
-    @track localIsPublished = false; 
+    @track localIsPublished = false;
     @track currentPage = 1;
     @track yearOptions = [];
+    @track isCorporateTheme = true;
 
     _editorRendered = false;
     _originalSnapshot = null;
@@ -113,9 +114,36 @@ export default class WealthPlanMilestones extends LightningElement {
         return String(id1).trim().substring(0, 15) === String(id2).trim().substring(0, 15);
     }
 
-    get dynamicBgStyle() { 
-        return `--component-bg-color: ${this.backgroundColor}; --visible-lines: ${this.visibleLines};`; 
+    get dynamicBgStyle() {
+        const extra = `; --visible-lines: ${this.visibleLines}`;
+        if (this.isCorporateTheme) {
+            return [
+                '--component-bg-color: #eeebe5',
+                '--shell-header-bg: #0d1b48',
+                '--shell-header-margin: -24px -24px 0',
+                '--shell-header-padding: 20px 24px 24px',
+                '--shell-header-radius: 24px 24px 0 0',
+                '--shell-title-color: #ffffff',
+                '--shell-subtitle-color: rgba(255,255,255,0.6)',
+                '--shell-btn-primary-bg: #10b981',
+            ].join('; ') + extra;
+        }
+        return `--component-bg-color: ${this.backgroundColor};` + extra;
     }
+    get dashboardWrapperClass() {
+        return this.isCorporateTheme ? 'dashboard-content-wrapper theme-corporate' : 'dashboard-content-wrapper';
+    }
+    get themePillWrapClass() {
+        return this.isCorporateTheme ? 'theme-pill-toggle theme-pill-dark' : 'theme-pill-toggle';
+    }
+    get classicSegmentClass() {
+        return this.isCorporateTheme ? 'segment-btn' : 'segment-btn segment-active';
+    }
+    get corporateSegmentClass() {
+        return this.isCorporateTheme ? 'segment-btn segment-active' : 'segment-btn';
+    }
+    handleSetClassic() { this.isCorporateTheme = false; }
+    handleSetCorporate() { this.isCorporateTheme = true; }
 
     get publishCardClass() { return this.localIsPublished ? 'publish-card is-published' : 'publish-card is-draft'; }
     get isToggleDisabled() { return this.inputIsPublished === true; }

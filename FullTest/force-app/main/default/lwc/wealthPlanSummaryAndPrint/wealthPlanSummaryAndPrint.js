@@ -1,4 +1,4 @@
-import { LightningElement, api } from 'lwc';
+import { LightningElement, api, track } from 'lwc';
 import { FlowNavigationNextEvent, FlowNavigationFinishEvent } from 'lightning/flowSupport';
 
 export default class WealthPlanSummaryAndPrint extends LightningElement {
@@ -141,6 +141,37 @@ export default class WealthPlanSummaryAndPrint extends LightningElement {
         catch { this.dispatchEvent(new FlowNavigationFinishEvent()); }
     }
 
+    @track isCorporateTheme = true;
+
     // ── Style ───────────────────────────────────────────────────
-    get dynamicBgStyle() { return `--component-bg-color: ${this.backgroundColor};`; }
+    get dynamicBgStyle() {
+        if (this.isCorporateTheme) {
+            return [
+                '--component-bg-color: #eeebe5',
+                '--shell-header-bg: #0d1b48',
+                '--shell-header-margin: -24px -24px 0',
+                '--shell-header-padding: 20px 24px 24px',
+                '--shell-header-radius: 24px 24px 0 0',
+                '--shell-title-color: #ffffff',
+                '--shell-subtitle-color: rgba(255,255,255,0.6)',
+                '--shell-btn-primary-bg: #10b981',
+            ].join('; ');
+        }
+        return `--component-bg-color: ${this.backgroundColor};`;
+    }
+
+    get dashboardWrapperClass() {
+        return this.isCorporateTheme ? 'dashboard-content-wrapper theme-corporate' : 'dashboard-content-wrapper';
+    }
+    get themePillWrapClass() {
+        return this.isCorporateTheme ? 'theme-pill-toggle theme-pill-dark' : 'theme-pill-toggle';
+    }
+    get classicSegmentClass() {
+        return this.isCorporateTheme ? 'segment-btn' : 'segment-btn segment-active';
+    }
+    get corporateSegmentClass() {
+        return this.isCorporateTheme ? 'segment-btn segment-active' : 'segment-btn';
+    }
+    handleSetClassic() { this.isCorporateTheme = false; }
+    handleSetCorporate() { this.isCorporateTheme = true; }
 }

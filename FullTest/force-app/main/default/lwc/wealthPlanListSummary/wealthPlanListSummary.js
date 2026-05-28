@@ -153,6 +153,7 @@ export default class WealthPlanListSummary extends LightningElement {
         return dict;
     }
 
+    @track isCorporateTheme = true;
     @track expandedSection = '';
     @track _assetTypeOptions = [];
     @track _goalOptions = [];
@@ -462,8 +463,22 @@ export default class WealthPlanListSummary extends LightningElement {
     }
 
     get dynamicStyle() {
-        return `background-color: ${this.backgroundColor};`;
+        return `background-color: ${this.isCorporateTheme ? '#eeebe5' : this.backgroundColor};`;
     }
+    get listSummaryWrapClass() {
+        return this.isCorporateTheme ? 'dashboard-wrapper theme-corporate' : 'dashboard-wrapper';
+    }
+    get themePillWrapClass() {
+        return this.isCorporateTheme ? 'theme-pill-toggle theme-pill-dark' : 'theme-pill-toggle';
+    }
+    get classicSegmentClass() {
+        return this.isCorporateTheme ? 'segment-btn' : 'segment-btn segment-active';
+    }
+    get corporateSegmentClass() {
+        return this.isCorporateTheme ? 'segment-btn segment-active' : 'segment-btn';
+    }
+    handleSetClassic() { this.isCorporateTheme = false; }
+    handleSetCorporate() { this.isCorporateTheme = true; }
 
     handleToggleSection(event) {
         const sectionId = event.currentTarget.dataset.id;

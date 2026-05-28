@@ -6,7 +6,10 @@
             <div class="view-panel fade-in">
                 <div class="dashboard-header">
                     <div class="header-titles">
-                        <h2><b>{dashboardTitle}</b></h2>
+                        <div class="title-line">
+                            <h2><b>{dashboardTitle}</b></h2>
+                            <slot name="title-badge"></slot>
+                        </div>
                         <p>{dashboardSubtitle}</p>
                     </div>
 

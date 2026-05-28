@@ -700,3 +700,22 @@
     to { opacity: 1; transform: translateY(0); }
 }
 .fade-in { animation: fadeIn 0.4s ease forwards; }
+
+/* =========================================================
+   CORPORATE THEME
+   ========================================================= */
+.theme-corporate .accordion-item { background: #ffffff; border-color: #d1d5db; }
+.theme-corporate .item-header { background: #f9fafb; }
+.theme-corporate .record-row { border-color: #f1f5f9; }
+.theme-corporate .record-row:hover { background: #f9fafb; }
+
+.list-summary-header { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+
+.theme-pill-toggle { display: flex; background: rgba(0,0,0,0.08); border-radius: 99px; padding: 3px; gap: 2px; }
+.theme-pill-dark { background: rgba(255,255,255,0.18); }
+.segment-btn { display: flex; align-items: center; gap: 5px; padding: 6px 16px; border-radius: 99px; border: none; background: transparent; color: rgba(0,0,0,0.45); font-size: 0.76rem; font-family: 'Salesforce Sans', sans-serif; cursor: pointer; transition: all 0.2s; }
+.theme-pill-dark .segment-btn { color: rgba(255,255,255,0.6); }
+.segment-btn.segment-active { background: #ffffff; color: #0f172a; box-shadow: 0 1px 4px rgba(0,0,0,0.18); }
+.segment-btn b { font-size: 0.76rem; color: inherit; font-weight: 700; }
+.segment-btn.segment-active b { color: #0f172a; }
+.segment-btn svg { flex-shrink: 0; }

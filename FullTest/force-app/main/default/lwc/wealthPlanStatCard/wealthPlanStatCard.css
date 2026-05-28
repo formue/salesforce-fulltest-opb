@@ -1,13 +1,14 @@
 b, strong { font-weight: 800; color: var(--color-text-main); }
 
 .stat-card {
-    background: rgba(255, 255, 255, 0.5);
+    background: var(--stat-card-bg, rgba(255, 255, 255, 0.5));
     border: 1px solid var(--glass-border);
     border-radius: 13px;
     padding: 16px 19px;
     display: flex;
     flex-direction: column;
-    min-width: 112px;
+    align-items: center;
+    min-width: 123px;
     box-shadow: var(--shadow-card);
     transition: all 0.2s ease;
 }
@@ -24,6 +25,7 @@ b, strong { font-weight: 800; color: var(--color-text-main); }
     text-transform: uppercase;
     letter-spacing: 0.05em;
     margin-bottom: 6px;
+    text-align: center;
 }
 
 .stat-value {
