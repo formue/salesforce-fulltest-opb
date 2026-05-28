@@ -1,0 +1,37 @@
+b, strong { font-weight: 800; color: var(--color-text-main); }
+
+.stat-card {
+    background: rgba(255, 255, 255, 0.5);
+    border: 1px solid var(--glass-border);
+    border-radius: 13px;
+    padding: 16px 19px;
+    display: flex;
+    flex-direction: column;
+    min-width: 112px;
+    box-shadow: var(--shadow-card);
+    transition: all 0.2s ease;
+}
+
+.stat-card-highlight {
+    background: var(--color-bg-card);
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.1);
+}
+
+.stat-label {
+    font-size: 0.68rem;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
+}
+
+.stat-value {
+    font-size: 1.6rem;
+    line-height: 1;
+    font-weight: 800;
+}
+
+.text-green, .text-green b { color: var(--success-green); }
+.text-red, .text-red b { color: var(--danger-red); }
+.text-blue, .text-blue b { color: var(--brand-accent); }

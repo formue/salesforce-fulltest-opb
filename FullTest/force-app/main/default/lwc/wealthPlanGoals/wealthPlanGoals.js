@@ -53,6 +53,7 @@ export default class WealthPlanGoals extends LightningElement {
     @track localIsPublished = false; 
     @track dynamicStatusOptions = [];
     @track dynamicGoalOptions = [];
+    @track currentPage = 1;
 
     get dynamicBgStyle() { return `--component-bg-color: ${this.backgroundColor};`; }
 
@@ -138,6 +139,18 @@ export default class WealthPlanGoals extends LightningElement {
     get hasGoals() { return this.goals.length > 0; }
     get modalTitle() { return this.isNewRecord ? 'Create New Goal' : 'Edit Goal Details'; }
 
+    get PAGE_SIZE() { return 15; }
+    get paginatedGoals() {
+        const start = (this.currentPage - 1) * this.PAGE_SIZE;
+        return this.goals.slice(start, start + this.PAGE_SIZE);
+    }
+    get totalPages() { return Math.max(1, Math.ceil(this.goals.length / this.PAGE_SIZE)); }
+    get showPagination() { return this.goals.length > this.PAGE_SIZE; }
+    get isFirstPage() { return this.currentPage === 1; }
+    get isLastPage() { return this.currentPage >= this.totalPages; }
+    handlePrevPage() { if (!this.isFirstPage) this.currentPage--; }
+    handleNextPage() { if (!this.isLastPage) this.currentPage++; }
+
     get currentStatusOptions() {
         return this.dynamicStatusOptions.map(opt => {
             return { ...opt, selected: this.currentGoal.FinServ__Status__c === opt.value };
@@ -220,7 +233,29 @@ export default class WealthPlanGoals extends LightningElement {
         }
         
         goal.DisplayTitle = goal.FF_Custom_Goal__c ? goal.FF_Custom_Goal__c : (goalLabel || 'Unnamed Goal');
-        
+
+        if (goal.isMarkedForDeletion) {
+            goal.rowClass = 'compact-row deleted-row-highlight';
+        } else if (goal.isUnsaved) {
+            goal.rowClass = 'compact-row unsaved-row-highlight';
+        } else {
+            goal.rowClass = 'compact-row';
+        }
+
+        if (goal.FinServ__Status__c === 'Completed') {
+            goal.badgeTinyClass = 'badge-tiny badge-success-tiny';
+        } else if (goal.FinServ__Status__c === 'In Progress') {
+            goal.badgeTinyClass = 'badge-tiny badge-active-tiny';
+        } else {
+            goal.badgeTinyClass = 'badge-tiny';
+        }
+
+        if (goal.LastModifiedDate) {
+            goal.formattedDate = new Date(goal.LastModifiedDate).toLocaleDateString('nb-NO', { year: 'numeric', month: 'short', day: 'numeric' });
+        } else {
+            goal.formattedDate = '';
+        }
+
         return goal;
     }
 

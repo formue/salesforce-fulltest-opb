@@ -1,0 +1,250 @@
+<template>
+    <div class="wp-outer" style={dynamicBgStyle}>
+
+        <!-- ── Title header ── -->
+        <div class="wp-shell-header">
+            <div class="wp-title-row">
+                <div class="wp-title-area">
+                    <h2 class="wp-title"><b>Wealth Plan Progress</b></h2>
+                    <span class={statusBadgeClass}>
+                        <span class="status-badge-dot" aria-hidden="true"></span>
+                        <b>{statusBadgeText}</b>
+                    </span>
+                </div>
+                <button class="refresh-btn" onclick={handleRefresh} aria-label="Refresh Data">
+                    <svg class="refresh-icon" viewBox="0 0 16 16" fill="none" width="14" height="14" aria-hidden="true">
+                        <path d="M3 8a5 5 0 1 1 1.2 3.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                        <path d="M3 11.5V8h3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <b>Refresh Data</b>
+                </button>
+            </div>
+            <p class="wp-subtitle">Real-time completeness and publishing status across all data modules.</p>
+        </div>
+
+        <!-- ── Stats bar ── -->
+        <div class="wp-stats-row">
+            <div class="stat-chip">
+                <span class="stat-val"><b>{totalRecordCount}</b></span>
+                <span class="stat-lbl">Total Records</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-chip">
+                <span class="stat-val"><b>{sectionsWithDataCount}</b><span class="stat-sub">/{totalCount}</span></span>
+                <span class="stat-lbl">Sections with Data</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-chip stat-chip--green">
+                <span class="stat-val"><b>{publishedCount}</b><span class="stat-sub">/{publishableTotal}</span></span>
+                <span class="stat-lbl">Published</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-chip stat-chip--purple">
+                <span class="stat-val"><b>{_p}</b><span class="stat-sub">%</span></span>
+                <span class="stat-lbl">Plan Score</span>
+            </div>
+        </div>
+
+        <!-- ============================================================
+             EXPANDABLE DASHBOARD CARD
+             ============================================================ -->
+        <div class="wp-card fade-in">
+
+            <!-- ═══════════════════════════════════════
+                 DARK COMMAND BAR (Always Visible — click to expand)
+                 ═══════════════════════════════════════ -->
+            <div class={commandBarClass} onclick={toggleDrawer}>
+
+                <!-- 1. GAUGE ZONE -->
+                <div class="wp-gauge-zone">
+                    <div class="gauge-wrap">
+                        <svg viewBox="0 0 160 160" class="gauge-svg" aria-hidden="true">
+                            <circle cx="80" cy="80" r="60" fill="none" stroke="rgba(0,0,0,0.1)" stroke-width="16"/>
+                            <template for:each={donutSegments} for:item="seg">
+                                <circle key={seg.k} cx="80" cy="80" r="60"
+                                    fill="none"
+                                    stroke={seg.color}
+                                    stroke-width="16"
+                                    stroke-linecap="butt"
+                                    stroke-dasharray={seg.dash}
+                                    transform={seg.transform}/>
+                            </template>
+                        </svg>
+                        <div class="donut-ctr">
+                            <span class="ctr-num"><b>{_p}</b><span class="ctr-pct">%</span></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. MODULE STATUS PILLS (grouped columns with dividers) -->
+                <div class="wp-module-grid">
+                    <template for:each={pillGroups} for:item="grp">
+                        <div key={grp.key} class="pill-col">
+                            <template for:each={grp.pills} for:item="sec">
+                                <div key={sec.label} class={sec.moduleGridClass} title={sec.label}>
+                                    <span class="mpill-dot" aria-hidden="true"></span>
+                                    <span class="mpill-name">{sec.shortLabel}</span>
+                                    <span class="mpill-count">{sec.pillCount}</span>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- 3. ACTION ZONE -->
+                <div class="wp-action-zone">
+                    <div class="wp-ai-status">
+                        <span class="pulse-dot" aria-hidden="true"></span>
+                        <b>AI: {aiStateLabel}</b>
+                    </div>
+                    <button class={expandBtnClass} onclick={handleExpandBtnClick} aria-label={expandBtnText}>
+                        <b>{expandBtnText}</b>
+                        <svg class="expand-icon" viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none" aria-hidden="true">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- ═══════════════════════════════════════
+                 EXPANDABLE DRAWER
+                 ═══════════════════════════════════════ -->
+            <div class={drawerClass}>
+                <div class="drawer-inner">
+
+                    <!-- AI Analysis Panel (full-width) -->
+                    <div class="col-ai">
+                        <div class="col-header">
+                            <div class="ai-header-left">
+                                <span class="ai-badge"><b>AI ANALYSIS</b></span>
+                                <span class="col-heading"><b>Wealth Plan Overview</b></span>
+                            </div>
+                            <span class="ai-provider"><span class="blue-dot"></span> <b>Formue Intelligence</b></span>
+                        </div>
+
+                        <div class="ai-col-body">
+
+                            <!-- STATE: LOADING -->
+                            <template lwc:if={isLoading}>
+                                <template lwc:if={isIrisScanner}>
+                                    <div class="iris-wrap">
+                                        <canvas data-iris-canvas class="iris-canvas"></canvas>
+                                        <div class="iris-lbl">
+                                            <div class="iris-lbl-t"><b>✦ Formue Intelligence</b></div>
+                                            <div class="iris-lbl-s"><b>Optical pattern recognition active</b></div>
+                                        </div>
+                                        <div class="iris-msg">
+                                            <span class="status-dot"></span>
+                                            <b>{loadingMessage}</b>
+                                        </div>
+                                    </div>
+                                </template>
+                                <template lwc:else>
+                                    <div class="ai-formue-loader">
+                                        <div class="loader-graphic live-network">
+                                            <svg viewBox="0 0 100 100" width="100" height="100" aria-hidden="true">
+                                                <defs>
+                                                    <radialGradient id="progressCoreGlow" cx="50%" cy="50%" r="50%">
+                                                        <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.6"/>
+                                                        <stop offset="100%" stop-color="#3b82f6" stop-opacity="0"/>
+                                                    </radialGradient>
+                                                </defs>
+                                                <circle cx="50" cy="50" r="32" fill="none" stroke="#e0e7ff" stroke-width="0.75" class="spin-slow" stroke-dasharray="4 8" />
+                                                <circle cx="50" cy="50" r="18" fill="none" stroke="#e0e7ff" stroke-width="0.5" />
+                                                <g stroke="#c7d2fe" stroke-width="1.5">
+                                                    <line x1="50" y1="50" x2="20" y2="25" class="data-stream delay-1" />
+                                                    <line x1="50" y1="50" x2="80" y2="25" class="data-stream delay-2" />
+                                                    <line x1="50" y1="50" x2="15" y2="60" class="data-stream delay-3" />
+                                                    <line x1="50" y1="50" x2="85" y2="60" class="data-stream delay-4" />
+                                                    <line x1="50" y1="50" x2="50" y2="85" class="data-stream delay-5" />
+                                                </g>
+                                                <g fill="#ffffff" stroke="#818cf8" stroke-width="1.5">
+                                                    <circle cx="20" cy="25" r="4" class="pulse-node delay-1" transform-origin="20px 25px" />
+                                                    <circle cx="80" cy="25" r="4" class="pulse-node delay-2" transform-origin="80px 25px" />
+                                                    <circle cx="15" cy="60" r="4" class="pulse-node delay-3" transform-origin="15px 60px" />
+                                                    <circle cx="85" cy="60" r="4" class="pulse-node delay-4" transform-origin="85px 60px" />
+                                                    <circle cx="50" cy="85" r="4" class="pulse-node delay-5" transform-origin="50px 85px" />
+                                                </g>
+                                                <circle cx="50" cy="50" r="20" fill="url(#progressCoreGlow)" class="core-glow" transform-origin="50px 50px" />
+                                                <circle cx="50" cy="50" r="11" fill="#60a5fa" class="pulse-center" transform-origin="50px 50px" />
+                                            </svg>
+                                        </div>
+                                        <div class="loader-brand">
+                                            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z"/></svg>
+                                            <b>Formue Intelligence</b>
+                                        </div>
+                                        <div class="iris-msg"><span class="status-dot"></span> <b>{loadingMessage}</b></div>
+                                        <div class="loader-bar-container"><div class="loader-bar"></div></div>
+                                    </div>
+                                </template>
+                            </template>
+
+                            <!-- STATE: ERROR -->
+                            <template lwc:elseif={isError}>
+                                <div class="ai-centered-state">
+                                    <div class="ai-error-state">
+                                        <svg class="ai-error-icon" viewBox="0 0 24 24" width="32" height="32" fill="none" aria-hidden="true">
+                                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/>
+                                            <path d="M12 7v6M12 16.5v.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                        </svg>
+                                        <span class="ai-error-title"><b>Analysis unavailable</b></span>
+                                        <span class="ai-error-msg">{errorMessage}</span>
+                                        <button class="ai-retry-btn" onclick={handleRetry} aria-label="Retry"><b>Retry</b></button>
+                                    </div>
+                                </div>
+                            </template>
+
+                            <!-- STATE: IDLE -->
+                            <template lwc:elseif={isIdle}>
+                                <template lwc:if={hasFlowConfigured}>
+                                    <div class="ai-centered-state fade-in">
+                                        <div class="ai-ready-state">
+                                            <svg viewBox="0 0 24 24" width="32" height="32" stroke="#7c3aed" stroke-width="1.5" fill="none" aria-hidden="true">
+                                                <path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z"/>
+                                            </svg>
+                                            <span class="ai-ready-title"><b>AI Analysis Ready</b></span>
+                                            <span class="ai-ready-sub">Run the analysis to generate insights and summaries from your wealth plan data.</span>
+                                            <button class="ai-run-btn" onclick={handleRunAnalysis} aria-label="Run AI Analysis">
+                                                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                                                <b>Run Analysis</b>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </template>
+                                <template lwc:else>
+                                    <div class="ai-centered-state">
+                                        <div class="ai-idle-state">
+                                            <svg viewBox="0 0 24 24" width="20" height="20" stroke="#94a3b8" stroke-width="1.5" fill="none" aria-hidden="true">
+                                                <path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z"/>
+                                            </svg>
+                                            <span>Configure <strong>flowApiName</strong> or pass <strong>wealthPlanAnalysis</strong> to enable AI analysis.</span>
+                                        </div>
+                                    </div>
+                                </template>
+                            </template>
+
+                            <!-- STATE: DONE -->
+                            <template lwc:else>
+                                <div class="ai-content-rich fade-in" lwc:dom="manual" data-ai-panel></div>
+                                <div class="ai-done-footer">
+                                    <span class="ai-footer-text"><b>Generated by Formue AI · Wealth Plan Intelligence</b></span>
+                                    <template lwc:if={hasFlowConfigured}>
+                                        <button class="ai-rerun-btn" onclick={handleRunAnalysis} aria-label="Re-run AI Analysis">
+                                            <svg viewBox="0 0 16 16" fill="none" width="14" height="14" aria-hidden="true">
+                                                <path d="M3 8a5 5 0 1 1 1.2 3.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                                                <path d="M3 11.5V8h3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                            </svg>
+                                            <b>Re-run Analysis</b>
+                                        </button>
+                                    </template>
+                                </div>
+                            </template>
+
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</template>

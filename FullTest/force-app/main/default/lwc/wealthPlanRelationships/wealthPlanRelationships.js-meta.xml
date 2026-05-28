@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>59.0</apiVersion>
+    <isExposed>true</isExposed>
+    <masterLabel>Wealth Plan: Relationships</masterLabel>
+    <description>Premium Dashboard for displaying Household and Business relationships.</description>
+    
+    <targets>
+        <target>lightning__FlowScreen</target>
+    </targets>
+    
+    <targetConfigs>
+        <targetConfig targets="lightning__FlowScreen">
+            <property name="inputHouseholdMembers" type="@salesforce/schema/Account[]" label="1. Input: Household Members (Accounts)" role="inputOnly" />
+            <property name="inputBusinessAccounts" type="@salesforce/schema/Account[]" label="2. Input: Business Entities (Accounts)" role="inputOnly" />
+            <property name="inputPrimaryMemberId" type="String" label="3. Input: Primary Member ID" role="inputOnly" />
+            <property name="backgroundColor" type="String" label="4. Style: Background Color" default="#f0f9ff" role="inputOnly"/>
+            
+            <property name="enableNetworkMap" type="Boolean" label="5. WOW: Enable Orbital Map View?" default="true" role="inputOnly" description="Allows the user to view an orbital solar system of the family."/>
+            <property name="enableTreeView" type="Boolean" label="6. WOW: Enable Hierarchy Tree View?" default="true" role="inputOnly" description="Allows the user to view a beautiful Organization Chart of the family and businesses."/>
+            
+            <!-- LEGACY GHOST VARIABLES TO PREVENT FLOW CRASHES -->
+            <property name="enableSpotlight" type="Boolean" label="[LEGACY] Enable Spotlight" role="inputOnly"/>
+            <property name="enableDnaAvatars" type="Boolean" label="[LEGACY] Enable DNA Avatars" role="inputOnly"/>
+        </targetConfig>
+    </targetConfigs>
+</LightningComponentBundle>

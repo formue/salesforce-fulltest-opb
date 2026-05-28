@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>66.0</apiVersion>
+    <isExposed>true</isExposed>
+    <masterLabel>Wealth Plan: Investment Profile</masterLabel>
+    <description>Premium SPA component for Client Knowledge and Risk Profile with AI Oracles.</description>
+    <targets>
+        <target>lightning__FlowScreen</target>
+    </targets>
+    <targetConfigs>
+        <targetConfig targets="lightning__FlowScreen">
+            <!-- INPUTS -->
+            <property name="inputAccountRecord" type="@salesforce/schema/Account" label="1. Input: Account Record" role="inputOnly"/>
+            <property name="inputPrimaryOwnerRecord" type="@salesforce/schema/Account" label="2. Input: Primary Owner Record" role="inputOnly"/>
+            <property name="backgroundColor" type="String" label="3. Style: Background Color" default="#f0f9ff" role="inputOnly"/>
+            <property name="inputIsPublished" type="Boolean" label="4. Input: Is Plan Published?" default="false" role="inputOnly"/>
+
+            <!-- AI MODULE INPUTS -->
+            <property name="showAiSection" type="Boolean" label="5. AI: Show AI Accordion Module?" default="false" role="inputOnly"/>
+            <property name="defaultAccordionOpen" type="Boolean" label="6. AI: Default Accordion Open?" default="false" role="inputOnly"/>
+            <property name="isAiLoading" type="Boolean" label="7. AI: Show Loading Animation?" default="false" role="inputOnly"/>
+            <property name="aiInsightSummary" type="String" label="8. AI: Formatted HTML Summary" role="inputOnly"/>
+
+            <!-- TEMPLATE INPUTS -->
+            <property name="templateEnglish" type="String" label="9a. Template: English Text" role="inputOnly"/>
+            <property name="templateLocal" type="String" label="9b. Template: Local Language Text" role="inputOnly"/>
+            <property name="localLanguageCode" type="String" label="9c. Template: Language Label" default="NO" role="inputOnly"/>
+
+            <!-- OUTPUTS -->
+            <property name="outputAction" type="String" label="Output: Action" role="outputOnly"/>
+            <property name="outputIsPublished" type="Boolean" label="Output: Is Published" role="outputOnly"/>
+            <property name="outputAccountRecord" type="@salesforce/schema/Account" label="Output: Updated Account Record" role="outputOnly"/>
+            <property name="outputPrimaryOwnerRecord" type="@salesforce/schema/Account" label="Output: Updated Owner Record" role="outputOnly"/>
+        </targetConfig>
+    </targetConfigs>
+</LightningComponentBundle>

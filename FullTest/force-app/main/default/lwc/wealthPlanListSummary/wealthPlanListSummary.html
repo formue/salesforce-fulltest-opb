@@ -1,0 +1,495 @@
+<template>
+    <div class="dashboard-wrapper" style={dynamicStyle}>
+        
+        <!-- HEADER -->
+        <header class="header-section">
+            <div class="header-left">
+                <h1><b>WealthPlan Executive Summary</b></h1>
+                <p>Click on any section to reveal detailed records or navigate to the full editor.</p>
+            </div>
+        </header>
+
+        <!-- ACCORDION LIST -->
+        <div class="accordion-container">
+            <template for:each={sections} for:item="section">
+                <div key={section.id} class="accordion-item fade-in">
+                    
+                    <!-- Section Header -->
+                    <div class="item-header" onclick={handleToggleSection} data-id={section.id}>
+                        <div class="header-icon-box">
+                            <lightning-icon icon-name={section.icon} size="medium"></lightning-icon>
+                        </div>
+                        
+                        <div class="header-main-info">
+                            <div class="top-row">
+                                <h3><b>{section.title}</b></h3>
+                                <span class={section.badgeClass}><b>{section.status}</b></span>
+                            </div>
+                            <p class="subtitle">{section.description}</p>
+                            <template if:true={section.summaryPills}>
+                                <div class="status-pills">
+                                    <template for:each={section.summaryPills} for:item="pill">
+                                        <span key={pill.label} class={pill.pillClass}>{pill.label}</span>
+                                    </template>
+                                </div>
+                            </template>
+                        </div>
+
+                        <div class="header-summary-box">
+                            <span class="summary-label">{section.summaryLabel}</span>
+                            <span class="summary-value"><b>{section.summary}</b></span>
+                        </div>
+
+                        <div class="header-chevron">
+                            <lightning-icon icon-name={section.chevronIcon} size="x-small"></lightning-icon>
+                        </div>
+                    </div>
+
+                    <!-- Collapsible Content -->
+                    <template if:true={section.isExpanded}>
+                        <div class="item-content expand-animation">
+
+                            <!-- RELATIONSHIPS: Roster grid layout -->
+                            <template if:true={section.isRelationshipSection}>
+                                <div class="rel-roster-grid">
+
+                                    <!-- HOUSEHOLD MEMBERS -->
+                                    <div class="rel-section">
+                                        <div class="rel-heading">
+                                            <div class="rel-heading-icon rel-blue-icon">
+                                                <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
+                                            </div>
+                                            <span><b>Household Members</b></span>
+                                            <span class="rel-count">{relationshipPersons.length}</span>
+                                        </div>
+                                        <template if:true={hasRelPersons}>
+                                            <template for:each={relationshipPersons} for:item="person">
+                                                <div class="rel-row" key={person.Id}>
+                                                    <div class="rel-row-main">
+                                                        <div class="rel-avatar rel-avatar-blue"><b>{person.Initials}</b></div>
+                                                        <div class="rel-info">
+                                                            <span class="rel-name"><b>{person.Name}</b></span>
+                                                            <template if:true={person.subline}>
+                                                                <span class="rel-sub">{person.subline}</span>
+                                                            </template>
+                                                        </div>
+                                                        <div class="rel-row-right">
+                                                            <template if:true={person.hasAge}>
+                                                                <span class="rel-meta-chip">{person.Age}</span>
+                                                            </template>
+                                                            <span class={person.badgeClass}><b>{person.Role}</b></span>
+                                                            <svg class="rel-chevron-hint" viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" stroke-width="2.5" fill="none"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                                                        </div>
+                                                    </div>
+                                                    <div class="rel-hover-detail">
+                                                        <div class="rel-detail-strip">
+                                                            <div class="rel-detail-item">
+                                                                <span class="rel-detail-label">Role</span>
+                                                                <span class="rel-detail-value">{person.Role}</span>
+                                                            </div>
+                                                            <template if:true={person.hasOccupation}>
+                                                                <div class="rel-detail-divider"></div>
+                                                                <div class="rel-detail-item">
+                                                                    <span class="rel-detail-label">Occupation</span>
+                                                                    <span class="rel-detail-value">{person.Occupation}</span>
+                                                                </div>
+                                                            </template>
+                                                            <template if:true={person.hasEmployer}>
+                                                                <div class="rel-detail-divider"></div>
+                                                                <div class="rel-detail-item">
+                                                                    <span class="rel-detail-label">Current Employer</span>
+                                                                    <span class="rel-detail-value">{person.Employer}</span>
+                                                                </div>
+                                                            </template>
+                                                            <template if:true={person.hasAge}>
+                                                                <div class="rel-detail-divider"></div>
+                                                                <div class="rel-detail-item">
+                                                                    <span class="rel-detail-label">Age</span>
+                                                                    <span class="rel-detail-value">{person.Age}</span>
+                                                                </div>
+                                                            </template>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </template>
+                                        </template>
+                                        <template if:false={hasRelPersons}>
+                                            <div class="empty-data-state">No household members added.</div>
+                                        </template>
+                                    </div>
+
+                                    <!-- CORPORATE ENTITIES -->
+                                    <div class="rel-section">
+                                        <div class="rel-heading">
+                                            <div class="rel-heading-icon rel-green-icon">
+                                                <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><path d="M9 22v-4h6v4"></path></svg>
+                                            </div>
+                                            <span><b>Corporate Entities</b></span>
+                                            <span class="rel-count">{relationshipBusinesses.length}</span>
+                                        </div>
+                                        <template if:true={hasRelBusinesses}>
+                                            <template for:each={relationshipBusinesses} for:item="biz">
+                                                <div class="rel-row" key={biz.Id}>
+                                                    <div class="rel-row-main">
+                                                        <div class="rel-avatar rel-avatar-green">
+                                                            <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect></svg>
+                                                        </div>
+                                                        <div class="rel-info">
+                                                            <span class="rel-name"><b>{biz.Name}</b></span>
+                                                            <template if:true={biz.subline}>
+                                                                <span class="rel-sub">{biz.subline}</span>
+                                                            </template>
+                                                        </div>
+                                                        <div class="rel-row-right">
+                                                            <template if:true={biz.hasOrgNumber}>
+                                                                <span class="rel-meta-chip rel-mono">{biz.OrgNumber}</span>
+                                                            </template>
+                                                            <svg class="rel-chevron-hint" viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" stroke-width="2.5" fill="none"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                                                        </div>
+                                                    </div>
+                                                    <div class="rel-hover-detail">
+                                                        <div class="rel-detail-strip">
+                                                            <div class="rel-detail-item">
+                                                                <span class="rel-detail-label">Entity Type</span>
+                                                                <span class="rel-detail-value">{biz.Type}</span>
+                                                            </div>
+                                                            <template if:true={biz.hasIndustry}>
+                                                                <div class="rel-detail-divider"></div>
+                                                                <div class="rel-detail-item">
+                                                                    <span class="rel-detail-label">Industry</span>
+                                                                    <span class="rel-detail-value">{biz.Industry}</span>
+                                                                </div>
+                                                            </template>
+                                                            <template if:true={biz.hasOrgNumber}>
+                                                                <div class="rel-detail-divider"></div>
+                                                                <div class="rel-detail-item">
+                                                                    <span class="rel-detail-label">Org Number</span>
+                                                                    <span class="rel-detail-value rel-mono">{biz.OrgNumber}</span>
+                                                                </div>
+                                                            </template>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </template>
+                                        </template>
+                                        <template if:false={hasRelBusinesses}>
+                                            <div class="empty-data-state">No corporate entities added.</div>
+                                        </template>
+                                    </div>
+
+                                </div>
+                            </template>
+
+                            <!-- ALL OTHER SECTIONS -->
+                            <template if:false={section.isRelationshipSection}>
+
+                            <!-- GREETING: Card layout for long text -->
+                            <template if:true={section.isGreetingSection}>
+                                <div class="content-table-body">
+                                    <template for:each={section.items} for:item="item">
+                                        <a key={item.id} class="greeting-card" href={item.url} target="_blank">
+                                            <div class="greeting-card-header">
+                                                <span class="greeting-subject">{item.main}</span>
+                                                <span class="meta-pill"><b>{item.meta}</b></span>
+                                            </div>
+                                            <div class="greeting-text-body">{item.sub}</div>
+                                        </a>
+                                    </template>
+                                    <template if:false={section.items.length}>
+                                        <div class="empty-data-state">No records found in this section.</div>
+                                    </template>
+                                </div>
+                            </template>
+
+                            <!-- INVESTMENT PREFERENCES: Badge + tolerance card layout -->
+                            <template if:false={section.isGreetingSection}>
+                                <template if:true={section.isInvestmentSection}>
+                                    <div class="inv-content-grid">
+                                        <div class="inv-card">
+                                            <div class="inv-card-title">Asset Class Knowledge</div>
+                                            <div class="badge-row">
+                                                <template if:true={hasInvestmentKnowledge}>
+                                                    <template for:each={investmentKnowledgeBadges} for:item="badge">
+                                                        <span key={badge.id} class="pill-badge blue-pill"><b>{badge.label}</b></span>
+                                                    </template>
+                                                </template>
+                                                <template if:false={hasInvestmentKnowledge}>
+                                                    <span class="empty-text">None registered</span>
+                                                </template>
+                                            </div>
+                                            <div class="inv-card-title" style="margin-top:20px">Asset Class Experience</div>
+                                            <div class="badge-row">
+                                                <template if:true={hasInvestmentExperience}>
+                                                    <template for:each={investmentExperienceBadges} for:item="badge">
+                                                        <span key={badge.id} class="pill-badge green-pill"><b>{badge.label}</b></span>
+                                                    </template>
+                                                </template>
+                                                <template if:false={hasInvestmentExperience}>
+                                                    <span class="empty-text">None registered</span>
+                                                </template>
+                                            </div>
+                                            <template if:true={investmentPrefs.FF_KnowledgeAndTrainingComment__c}>
+                                                <div class="inv-comment-section">
+                                                    <div class="inv-card-title">Knowledge &amp; Training Comment</div>
+                                                    <p class="inv-body-text">{investmentPrefs.FF_KnowledgeAndTrainingComment__c}</p>
+                                                </div>
+                                            </template>
+                                        </div>
+                                        <div class="inv-card">
+                                            <div class="tol-item">
+                                                <span class="tol-label">Risk Profile</span>
+                                                <span class="tol-value"><b>{investmentPrefs.FF_riskProfile__c}</b></span>
+                                            </div>
+                                            <div class="tol-item">
+                                                <span class="tol-label">Risk Profile Details</span>
+                                                <p class="inv-body-text">{investmentPrefs.FF_riskProfileDetails__c}</p>
+                                            </div>
+                                            <div class="tol-item">
+                                                <span class="tol-label">Loss Aversion</span>
+                                                <p class="inv-body-text">{investmentPrefs.FF_lossAversionDetails__c}</p>
+                                            </div>
+                                            <div class="tol-item">
+                                                <span class="tol-label">Winning Appetite</span>
+                                                <p class="inv-body-text">{investmentPrefs.FF_winningAppetiteDetails__c}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+
+                                <!-- SUSTAINABILITY PREFERENCES: Card list layout -->
+                                <template if:false={section.isInvestmentSection}>
+                                    <template if:true={section.isSustainabilitySection}>
+                                        <div class="sust-list">
+                                            <template if:true={hasSustainabilityPrefs}>
+                                                <template for:each={sustainabilityItems} for:item="rec">
+                                                    <div key={rec.Id} class="sust-card">
+                                                        <div class="sust-card-header">
+                                                            <div class="sust-name-group">
+                                                                <span class="sust-name"><b>{rec.Name}</b></span>
+                                                                <template if:true={rec.SustainabilityPreferences__c}>
+                                                                    <span class="pill-badge sust-pref-pill"><b>{rec.SustainabilityPreferences__c}</b></span>
+                                                                </template>
+                                                                <template if:true={rec.Active__c}>
+                                                                    <span class="pill-badge green-pill"><b>Active</b></span>
+                                                                </template>
+                                                            </div>
+                                                            <span class="sust-date">{rec.formattedDate}</span>
+                                                        </div>
+                                                        <div class="sust-card-body">
+                                                            <div class="sust-field-row">
+                                                                <template if:true={rec.EngagementStrategy__c}>
+                                                                    <div class="sust-field">
+                                                                        <span class="tol-label">Engagement Strategy</span>
+                                                                        <span class="sust-field-value">{rec.EngagementStrategy__c}</span>
+                                                                    </div>
+                                                                </template>
+                                                                <template if:true={rec.SustainableInvestmentsShare__c}>
+                                                                    <div class="sust-field">
+                                                                        <span class="tol-label">Sustainable Investments Share</span>
+                                                                        <span class="sust-field-value">{rec.SustainableInvestmentsShare__c}</span>
+                                                                    </div>
+                                                                </template>
+                                                                <template if:true={rec.ImproveNegativeImpacts__c}>
+                                                                    <div class="sust-field">
+                                                                        <span class="tol-label">Improve Negative Impacts</span>
+                                                                        <span class="sust-field-value">{rec.ImproveNegativeImpacts__c}</span>
+                                                                    </div>
+                                                                </template>
+                                                            </div>
+                                                            <template if:true={rec.hasThemes}>
+                                                                <div class="sust-themes">
+                                                                    <span class="tol-label">Specific Themes</span>
+                                                                    <div class="badge-row">
+                                                                        <template for:each={rec.themesArray} for:item="theme">
+                                                                            <span key={theme} class="pill-badge blue-pill"><b>{theme}</b></span>
+                                                                        </template>
+                                                                    </div>
+                                                                </div>
+                                                            </template>
+                                                            <template if:true={rec.AdvisorCommentPreferences__c}>
+                                                                <div class="sust-comment">
+                                                                    <span class="tol-label">Advisor Comment</span>
+                                                                    <p class="inv-body-text">{rec.AdvisorCommentPreferences__c}</p>
+                                                                </div>
+                                                            </template>
+                                                        </div>
+                                                    </div>
+                                                </template>
+                                            </template>
+                                            <template if:false={hasSustainabilityPrefs}>
+                                                <div class="empty-data-state">No sustainability preferences defined.</div>
+                                            </template>
+                                        </div>
+                                    </template>
+
+                                    <!-- DEFAULT: Standard table layout -->
+                                    <template if:false={section.isSustainabilitySection}>
+
+                                        <!-- COMPANY OWNERSHIP -->
+                                        <template lwc:if={section.isOwnershipSection}>
+                                            <div class="own-table-container">
+                                                <template if:true={hasOwnershipItems}>
+                                                    <div class="own-table-header">
+                                                        <span class="own-col">Company Owned</span>
+                                                        <span class="own-col">Company Owner</span>
+                                                        <span class="own-col-sm">Percentage</span>
+                                                        <span class="own-col-sm own-align-center">Beneficial Owner</span>
+                                                        <span class="own-col-sm">Stock Class</span>
+                                                        <span class="own-col">Comment</span>
+                                                    </div>
+                                                    <div class="own-table-body">
+                                                        <template for:each={ownershipItems} for:item="o">
+                                                            <a key={o.id} class="own-row" href={o.url} target="_blank">
+                                                                <div class="own-col"><b>{o.CompanyOwnedName}</b></div>
+                                                                <div class="own-col own-text-blue">{o.CompanyOwnerName}</div>
+                                                                <div class="own-col-sm"><b>{o.formattedPercent}</b></div>
+                                                                <div class="own-col-sm own-align-center">
+                                                                    <template if:true={o.Beneficial_Owner__c}>
+                                                                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="#10b981" stroke-width="3" fill="none"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                                                    </template>
+                                                                </div>
+                                                                <div class="own-col-sm">
+                                                                    <template if:true={o.Stock_Class__c}>
+                                                                        <span class="meta-pill">{o.Stock_Class__c}</span>
+                                                                    </template>
+                                                                </div>
+                                                                <div class="own-col own-comment">{o.Comment__c}</div>
+                                                            </a>
+                                                        </template>
+                                                    </div>
+                                                </template>
+                                                <template if:false={hasOwnershipItems}>
+                                                    <div class="empty-data-state">No ownership records found.</div>
+                                                </template>
+                                            </div>
+                                        </template>
+
+                                        <!-- CAPITAL NEEDS: Year / Event / Amount -->
+                                        <template lwc:elseif={section.isCapitalNeedsSection}>
+                                            <div class="own-table-container">
+                                                <template if:true={hasCapitalNeedsItems}>
+                                                    <div class="own-table-header">
+                                                        <span class="own-col-sm">Year</span>
+                                                        <span class="own-col">Event</span>
+                                                        <span class="own-col-sm">Amount</span>
+                                                    </div>
+                                                    <div class="own-table-body">
+                                                        <template for:each={capitalNeedsItems} for:item="c">
+                                                            <a key={c.id} class="own-row" href={c.url} target="_blank">
+                                                                <div class="own-col-sm"><b>{c.Year__c}</b></div>
+                                                                <div class="own-col">{c.Event__c}</div>
+                                                                <div class="own-col-sm"><b>{c.formattedAmount}</b></div>
+                                                            </a>
+                                                        </template>
+                                                    </div>
+                                                </template>
+                                                <template if:false={hasCapitalNeedsItems}>
+                                                    <div class="empty-data-state">No capital needs recorded.</div>
+                                                </template>
+                                            </div>
+                                        </template>
+
+                                        <!-- RISK & LOCK-IN -->
+                                        <template lwc:elseif={section.isRiskLockInSection}>
+                                            <div class="rli-section">
+                                                <!-- Header badges -->
+                                                <div class="rli-header">
+                                                    <div class="rli-badge-group">
+                                                        <div class="rli-badge">
+                                                            <span class="rli-badge-label">Risk</span>
+                                                            <span class="rli-badge-value"><b>{riskLockInData.risk}</b></span>
+                                                        </div>
+                                                        <div class="rli-badge">
+                                                            <span class="rli-badge-label">Lock-In</span>
+                                                            <span class="rli-badge-value"><b>{riskLockInData.lockIn}</b></span>
+                                                        </div>
+                                                    </div>
+                                                    <template if:true={riskLockInData.hasOverrides}>
+                                                        <div class="rli-overrides">
+                                                            <template if:true={riskLockInData.riskOverride}>
+                                                                <span class="rli-override-chip">Risk Override: <b>{riskLockInData.riskOverride}</b></span>
+                                                            </template>
+                                                            <template if:true={riskLockInData.lockInOverride}>
+                                                                <span class="rli-override-chip">Lock-In Override: <b>{riskLockInData.lockInOverride}</b></span>
+                                                            </template>
+                                                        </div>
+                                                    </template>
+                                                </div>
+                                                <!-- Comment -->
+                                                <template if:true={riskLockInData.hasComment}>
+                                                    <div class="rli-comment-card">
+                                                        <span class="rli-comment-label">Comment</span>
+                                                        <p class="rli-comment-text">{riskLockInData.comment}</p>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </template>
+
+                                        <!-- INVESTMENT STRATEGY: 5-column table -->
+                                        <template lwc:elseif={section.isInvestmentStrategySection}>
+                                            <div class="own-table-container">
+                                                <template if:true={hasInvestmentStrategyItems}>
+                                                    <div class="own-table-header">
+                                                        <span class="own-col">Name</span>
+                                                        <span class="own-col-sm">Total Portfolio</span>
+                                                        <span class="own-col-sm">Status</span>
+                                                        <span class="own-col-sm">Investment Profile</span>
+                                                        <span class="own-col-sm">Management Type</span>
+                                                    </div>
+                                                    <div class="own-table-body">
+                                                        <template for:each={investmentStrategyItems} for:item="s">
+                                                            <a key={s.id} class="own-row" href={s.url} target="_blank">
+                                                                <div class="own-col"><b>{s.Name__c}</b></div>
+                                                                <div class="own-col-sm">{s.TotalPortfolio__c}</div>
+                                                                <div class="own-col-sm"><span class={s.statusPillClass}><b>{s.Status__c}</b></span></div>
+                                                                <div class="own-col-sm">{s.InvestmentProfile__c}</div>
+                                                                <div class="own-col-sm">{s.ManagementType__c}</div>
+                                                            </a>
+                                                        </template>
+                                                    </div>
+                                                </template>
+                                                <template if:false={hasInvestmentStrategyItems}>
+                                                    <div class="empty-data-state">No investment strategies defined.</div>
+                                                </template>
+                                            </div>
+                                        </template>
+
+                                        <!-- ALL OTHER SECTIONS: Standard 3-column table -->
+                                        <template lwc:else>
+                                            <div class="content-table-header">
+                                                <span class="col-main">{section.colMain}</span>
+                                                <span class="col-sub">Description / Category</span>
+                                                <span class="col-meta">Value / Status</span>
+                                            </div>
+                                            <div class="content-table-body">
+                                                <template for:each={section.items} for:item="item">
+                                                    <a key={item.id} class="record-row" href={item.url} target="_blank" title="Open record">
+                                                        <div class="col-main"><b>{item.main}</b></div>
+                                                        <div class="col-sub">{item.sub}</div>
+                                                        <div class="col-meta">
+                                                            <span class="meta-pill"><b>{item.meta}</b></span>
+                                                        </div>
+                                                    </a>
+                                                </template>
+                                                <template if:false={section.items.length}>
+                                                    <div class="empty-data-state">No records found in this section.</div>
+                                                </template>
+                                            </div>
+                                        </template>
+
+                                    </template>
+                                </template>
+                            </template>
+
+                            </template><!-- end if:false isRelationshipSection -->
+
+                        </div>
+                    </template>
+
+                </div>
+            </template>
+        </div>
+
+
+    </div>
+</template>

@@ -54,6 +54,7 @@ export default class WealthPlanIncome extends LightningElement {
     _pristineMap = {};
     @track localIsPublished = false;
     @track dynamicTypeOptions = [];
+    @track currentPage = 1;
 
     currencyFormatter = new Intl.NumberFormat('nb-NO', { style: 'currency', currency: 'NOK', minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
@@ -145,6 +146,18 @@ export default class WealthPlanIncome extends LightningElement {
     get hasIncomes() { return this.incomes.length > 0; }
     get modalTitle() { return this.isNewRecord ? 'Create Income Source' : 'Edit Income Source'; }
 
+    get PAGE_SIZE() { return 15; }
+    get paginatedIncomes() {
+        const start = (this.currentPage - 1) * this.PAGE_SIZE;
+        return this.incomes.slice(start, start + this.PAGE_SIZE);
+    }
+    get totalPages() { return Math.max(1, Math.ceil(this.incomes.length / this.PAGE_SIZE)); }
+    get showPagination() { return this.incomes.length > this.PAGE_SIZE; }
+    get isFirstPage() { return this.currentPage === 1; }
+    get isLastPage() { return this.currentPage >= this.totalPages; }
+    handlePrevPage() { if (!this.isFirstPage) this.currentPage--; }
+    handleNextPage() { if (!this.isLastPage) this.currentPage++; }
+
     get currentTypeOptions() {
         let options = [{ label: '-- Select Income Type --', value: '' }];
         if (this.dynamicTypeOptions) {
@@ -229,6 +242,14 @@ export default class WealthPlanIncome extends LightningElement {
         
         inc.DisplayType = typeLabel || 'Unspecified';
         inc.DisplayTitle = inc.Name ? inc.Name : (inc.FF_Type_Other__c ? inc.FF_Type_Other__c : 'Unnamed Income');
+
+        if (inc.isMarkedForDeletion) {
+            inc.rowClass = 'compact-row deleted-row-highlight';
+        } else if (inc.isUnsaved) {
+            inc.rowClass = 'compact-row unsaved-row-highlight';
+        } else {
+            inc.rowClass = 'compact-row';
+        }
 
         if (inc.LastModifiedDate) {
             inc.formattedDate = new Date(inc.LastModifiedDate).toLocaleDateString('nb-NO', { year: 'numeric', month: 'short', day: 'numeric' });

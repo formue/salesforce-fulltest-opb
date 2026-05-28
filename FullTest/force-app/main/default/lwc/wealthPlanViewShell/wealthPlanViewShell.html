@@ -1,0 +1,79 @@
+<template>
+    <div class="view-shell-wrapper">
+
+        <!-- DASHBOARD VIEW -->
+        <template if:true={showDashboard}>
+            <div class="view-panel fade-in">
+                <div class="dashboard-header">
+                    <div class="header-titles">
+                        <h2><b>{dashboardTitle}</b></h2>
+                        <p>{dashboardSubtitle}</p>
+                    </div>
+
+                    <div class="header-widget-area">
+                        <slot name="header-widget"></slot>
+                    </div>
+
+                    <template if:false={viewOnly}>
+                        <div class="header-actions">
+                            <template if:true={isDirty}>
+                                <div class="unsaved-global-badge">
+                                    <div class="pulse-dot"></div>
+                                    <b>Unsaved Changes</b>
+                                </div>
+                            </template>
+                            <button class="btn-stay" onclick={handleShellSave} disabled={isSaveDisabled}>
+                                <b>Save to Salesforce</b>
+                            </button>
+                        </div>
+                    </template>
+                </div>
+                <slot name="dashboard-content"></slot>
+            </div>
+        </template>
+
+        <!-- INLINE EDITOR: only when not using modal mode -->
+        <template if:true={showInlineEditor}>
+            <div class="view-panel editor-container fade-in-up">
+                <button class="btn-back" onclick={handleShellCancel}>
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                    <b>Back to Dashboard</b>
+                </button>
+                <div class="editor-header">
+                    <h2><b>{editorTitle}</b></h2>
+                </div>
+                <div class="editor-body">
+                    <div class="editor-card">
+                        <slot name="editor-form-inline"></slot>
+                    </div>
+                </div>
+                <div class="editor-footer">
+                    <button class="btn-discard" onclick={handleShellCancel}><b>Discard Changes</b></button>
+                    <button class="btn-stay" onclick={handleShellApply}><b>Apply Changes</b></button>
+                </div>
+            </div>
+        </template>
+
+    </div>
+
+    <!-- MODAL EDITOR: sibling of view-shell-wrapper — escapes container stacking context -->
+    <template if:true={showModalEditor}>
+        <div class="modal-root">
+            <div class="modal-backdrop" onclick={handleShellCancel}></div>
+            <div class="editor-modal fade-in-up" style={editorPanelStyle}>
+                <div class="editor-header">
+                    <h2><b>{editorTitle}</b></h2>
+                </div>
+                <div class="editor-body">
+                    <div class="editor-card">
+                        <slot name="editor-form"></slot>
+                    </div>
+                </div>
+                <div class="editor-footer">
+                    <button class="btn-discard" onclick={handleShellCancel}><b>Discard Changes</b></button>
+                    <button class="btn-stay" onclick={handleShellApply}><b>Apply Changes</b></button>
+                </div>
+            </div>
+        </div>
+    </template>
+</template>

@@ -1,0 +1,41 @@
+<template>
+    <div class="input-group">
+        <label class="input-label">
+            {label}
+            <template if:true={required}>
+                <span class="required-asterisk">*</span>
+            </template>
+        </label>
+
+        <template if:true={isSelect}>
+            <div class="select-wrapper">
+                <select class={selectClass} onchange={handleChange} disabled={readOnly}>
+                    <template for:each={options} for:item="opt">
+                        <option key={opt.value} value={opt.value} selected={opt.selected}>{opt.label}</option>
+                    </template>
+                </select>
+            </div>
+        </template>
+
+        <template if:true={isTextarea}>
+            <textarea class={textareaClass} oninput={handleChange} required={required} maxlength={maxLength} readonly={readOnly}>{value}</textarea>
+        </template>
+
+        <template if:true={isStandardInput}>
+            <div class="input-wrapper">
+                <template if:true={isMoney}>
+                    <span class="currency-symbol">$</span>
+                </template>
+                <input
+                    type={type}
+                    class={inputClass}
+                    value={value}
+                    oninput={handleChange}
+                    required={required}
+                    maxlength={maxLength}
+                    readonly={readOnly}
+                />
+            </div>
+        </template>
+    </div>
+</template>

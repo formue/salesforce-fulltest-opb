@@ -1,0 +1,183 @@
+<template>
+    <div class="dashboard-wrapper" style={dynamicStyle}>
+
+        <!-- HEADER -->
+        <header class="header-section">
+            <div class="header-left">
+                <span class="header-badge"><b>Plan Explorer</b></span>
+                <h1><b>Household Relationships</b></h1>
+                <p>Family members and corporate entities linked to this household.</p>
+            </div>
+        </header>
+
+        <div class="accordion-card">
+
+        <!-- HEADER (always visible, acts as toggle) -->
+        <div class="accordion-header" onclick={handleToggleExpand}>
+            <div class="header-icon">
+                <lightning-icon icon-name="standard:hierarchy" size="small"></lightning-icon>
+            </div>
+
+            <div class="header-body">
+                <div class="header-top">
+                    <h3><b>Household Relationships</b></h3>
+                    <span class="entity-badge"><b>{totalEntities}</b> Entities</span>
+                </div>
+                <p class="header-sub">Family members and corporate entities linked to this household.</p>
+            </div>
+
+            <div class="header-counts">
+                <div class="count-chip blue-chip">
+                    <svg viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" stroke-width="2" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
+                    <span>{persons.length}</span>
+                </div>
+                <div class="count-chip green-chip">
+                    <svg viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" stroke-width="2" fill="none"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><path d="M9 22v-4h6v4"></path></svg>
+                    <span>{businesses.length}</span>
+                </div>
+            </div>
+
+            <div class="header-chevron">
+                <lightning-icon icon-name={chevronIcon} size="x-small"></lightning-icon>
+            </div>
+        </div>
+
+        <!-- EXPANDABLE ROSTER -->
+        <template if:true={isExpanded}>
+            <div class="accordion-body fade-in">
+                <div class="roster-grid">
+
+                    <!-- HOUSEHOLD MEMBERS -->
+                    <div class="roster-section">
+                        <div class="roster-heading">
+                            <div class="roster-heading-icon blue-icon">
+                                <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
+                            </div>
+                            <span><b>Household Members</b></span>
+                            <span class="roster-count">{persons.length}</span>
+                        </div>
+
+                        <template if:true={hasPersons}>
+                            <template for:each={persons} for:item="person">
+                                <div class="roster-row" key={person.Id}>
+                                    <div class="row-main">
+                                        <div class="avatar-sm avatar-blue"><b>{person.Initials}</b></div>
+                                        <div class="roster-info">
+                                            <span class="roster-name"><b>{person.Name}</b></span>
+                                            <template if:true={person.subline}>
+                                                <span class="roster-sub">{person.subline}</span>
+                                            </template>
+                                        </div>
+                                        <div class="row-right">
+                                            <template if:true={person.hasAge}>
+                                                <span class="meta-chip">{person.Age}</span>
+                                            </template>
+                                            <span class={person.badgeClass}><b>{person.Role}</b></span>
+                                            <svg class="chevron-hint" viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" stroke-width="2.5" fill="none"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                                        </div>
+                                    </div>
+                                    <div class="hover-detail">
+                                        <div class="detail-strip">
+                                            <div class="detail-item">
+                                                <span class="detail-label">Role</span>
+                                                <span class="detail-value">{person.Role}</span>
+                                            </div>
+                                            <template if:true={person.hasOccupation}>
+                                                <div class="detail-divider"></div>
+                                                <div class="detail-item">
+                                                    <span class="detail-label">Occupation</span>
+                                                    <span class="detail-value">{person.Occupation}</span>
+                                                </div>
+                                            </template>
+                                            <template if:true={person.hasEmployer}>
+                                                <div class="detail-divider"></div>
+                                                <div class="detail-item">
+                                                    <span class="detail-label">Current Employer</span>
+                                                    <span class="detail-value">{person.Employer}</span>
+                                                </div>
+                                            </template>
+                                            <template if:true={person.hasAge}>
+                                                <div class="detail-divider"></div>
+                                                <div class="detail-item">
+                                                    <span class="detail-label">Age</span>
+                                                    <span class="detail-value">{person.Age}</span>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </template>
+                        <template if:false={hasPersons}>
+                            <div class="roster-empty">No household members added.</div>
+                        </template>
+                    </div>
+
+                    <!-- BUSINESS ENTITIES -->
+                    <div class="roster-section">
+                        <div class="roster-heading">
+                            <div class="roster-heading-icon green-icon">
+                                <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><path d="M9 22v-4h6v4"></path></svg>
+                            </div>
+                            <span><b>Corporate Entities</b></span>
+                            <span class="roster-count">{businesses.length}</span>
+                        </div>
+
+                        <template if:true={hasBusinesses}>
+                            <template for:each={businesses} for:item="biz">
+                                <div class="roster-row" key={biz.Id}>
+                                    <div class="row-main">
+                                        <div class="avatar-sm avatar-green">
+                                            <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect></svg>
+                                        </div>
+                                        <div class="roster-info">
+                                            <span class="roster-name"><b>{biz.Name}</b></span>
+                                            <template if:true={biz.subline}>
+                                                <span class="roster-sub">{biz.subline}</span>
+                                            </template>
+                                        </div>
+                                        <div class="row-right">
+                                            <template if:true={biz.hasOrgNumber}>
+                                                <span class="meta-chip mono">{biz.OrgNumber}</span>
+                                            </template>
+                                            <svg class="chevron-hint" viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" stroke-width="2.5" fill="none"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                                        </div>
+                                    </div>
+                                    <div class="hover-detail">
+                                        <div class="detail-strip">
+                                            <div class="detail-item">
+                                                <span class="detail-label">Entity Type</span>
+                                                <span class="detail-value">{biz.Type}</span>
+                                            </div>
+                                            <template if:true={biz.hasIndustry}>
+                                                <div class="detail-divider"></div>
+                                                <div class="detail-item">
+                                                    <span class="detail-label">Industry</span>
+                                                    <span class="detail-value">{biz.Industry}</span>
+                                                </div>
+                                            </template>
+                                            <template if:true={biz.hasOrgNumber}>
+                                                <div class="detail-divider"></div>
+                                                <div class="detail-item">
+                                                    <span class="detail-label">Org Number</span>
+                                                    <span class="detail-value mono">{biz.OrgNumber}</span>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </template>
+                        <template if:false={hasBusinesses}>
+                            <div class="roster-empty">No corporate entities added.</div>
+                        </template>
+                    </div>
+
+                </div>
+            </div>
+        </template>
+
+    </div>
+
+    </div>
+</template>

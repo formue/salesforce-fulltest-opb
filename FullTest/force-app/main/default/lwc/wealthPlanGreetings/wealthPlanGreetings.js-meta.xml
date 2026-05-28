@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>59.0</apiVersion>
+    <isExposed>true</isExposed>
+    <masterLabel>Wealth Plan: Personal Greetings</masterLabel>
+    <description>Premium SPA component for managing personalized client messages with Cyrano AI ghostwriter capabilities.</description>
+    <targets>
+        <target>lightning__FlowScreen</target>
+    </targets>
+    <targetConfigs>
+        <targetConfig targets="lightning__FlowScreen">
+            <!-- INPUTS -->
+            <property name="recordId" type="String" label="0. Input: Record ID" role="inputOnly" description="The Context ID."/>
+            <property name="inputGreetings" type="@salesforce/schema/FF_PersonalGreeting__c[]" label="1. Input: Greetings Collection" role="inputOnly" description="Existing greeting records."/>
+            <property name="backgroundColor" type="String" label="2. Style: Background Color" default="#f0f9ff" role="inputOnly" description="Component background color."/>
+            <property name="inputIsPublished" type="Boolean" label="3. Input: Is Plan Published?" default="false" role="inputOnly" description="Locks the publish toggle."/>
+            
+            <property name="rowsPerPage" type="Integer" label="4a. Display: Visible Rows (Pagination)" default="5" role="inputOnly" description="How many greetings to show in the table before pagination starts."/>
+            <property name="visibleLines" type="Integer" label="4b. Display: Visible Text Lines" default="3" role="inputOnly" description="How many lines of the greeting message to show before making it scrollable."/>
+            <property name="autoFitGreetingBox" type="Boolean" label="4c. Editor: Auto-fit Greeting Text Box?" default="false" role="inputOnly" description="If true, the editor text box dynamically grows with the content."/>
+            
+            <property name="useModalForEditor" type="Boolean" label="4d. UI: Open Editor in Modal?" default="false" role="inputOnly" description="If true, the editor opens in a beautiful overlay modal instead of replacing the entire dashboard view."/>
+            <!-- NEW PROPERTY FOR MODAL WIDTH -->
+            <property name="editorModalWidth" type="String" label="4e. UI: Editor Modal Width" default="1000px" role="inputOnly" description="Set the width of the modal (e.g., '800px', '1000px', '80%'). Only applies if 'Open Editor in Modal' is true."/>
+            
+            <property name="inputActiveGreeting" type="@salesforce/schema/FF_PersonalGreeting__c" label="5. Input: Active Greeting Record" role="inputOnly" description="The currently active personal greeting record."/>
+            
+            <!-- APEX FLOW INTEGRATION (GHOSTWRITER) -->
+            <property name="inputAiFlowApiName" type="String" label="6. Setup: AI Flow API Name (Editor)" role="inputOnly" description="The exact API name of the Autolaunched Flow that returns the AI Ghostwriter output."/>
+
+            <!-- DASHBOARD AI MODULE INPUTS (LIKE GOALS/ASSETS) -->
+            <property name="showAiSection" type="Boolean" label="8. AI: Show Dashboard AI Accordion?" default="false" role="inputOnly" description="Set to true to display the Formue Intelligence section on the main dashboard."/>
+            <property name="defaultAccordionOpen" type="Boolean" label="8b. AI: Default Dashboard Accordion Open?" default="false" role="inputOnly" description="If true, the dashboard AI panel starts expanded."/>
+            <property name="isAiLoading" type="Boolean" label="9. AI: Show Dashboard Loading Animation?" default="false" role="inputOnly" description="Set to true while waiting for AI generation from the Flow."/>
+            <property name="aiInsightSummary" type="String" label="10. AI: Dashboard Insight HTML" role="inputOnly" description="The Rich Text output from the AI for the Dashboard Overview."/>
+
+            <!-- LEGACY FIELDS TO PREVENT DEPLOYMENT CRASH -->
+            <property name="inputAutoOpenRecordId" type="String" label="[LEGACY] Input: Auto-Open Record ID" role="inputOnly" description="Do not use. Kept to prevent deployment errors."/>
+            <property name="outputAiPromptContext" type="String" label="[LEGACY] Output: AI Context" role="outputOnly" description="Do not use. Kept to prevent deployment errors."/>
+            <property name="aiDraftGreeting" type="String" label="[LEGACY] AI: Ghostwriter Draft Text" role="inputOnly" description="Do not use. Kept to prevent deployment errors."/>
+
+            <!-- OUTPUTS -->
+            <property name="outputAction" type="String" label="Output: Action (SAVE)" role="outputOnly" description="Routing action emitted on save."/>
+            <property name="outputIsPublished" type="Boolean" label="Output: Is Published" role="outputOnly" description="State of the publish toggle."/>
+            <property name="outputGreetings" type="@salesforce/schema/FF_PersonalGreeting__c[]" label="Output: Greetings (To Save)" role="outputOnly" description="Updated records for DML."/>
+            <property name="outputGreetingsToDelete" type="@salesforce/schema/FF_PersonalGreeting__c[]" label="Output: Greetings (To DELETE)" role="outputOnly" description="Records flagged for deletion."/>
+        </targetConfig>
+    </targetConfigs>
+</LightningComponentBundle>

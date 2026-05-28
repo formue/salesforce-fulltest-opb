@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>66.0</apiVersion>
+    <isExposed>true</isExposed>
+    <targets>
+        <target>lightning__FlowScreen</target>
+    </targets>
+    <targetConfigs>
+        <targetConfig targets="lightning__FlowScreen">
+            <property name="recordId"           type="String"  label="Record Id"                          role="inputOnly"/>
+            <property name="progressPercent"    type="Integer" label="Progress % (0-100)"                 role="inputOnly" default="0"/>
+
+            <!-- Loading animation style -->
+            <property name="loadingVariant" type="String" label="AI Loading Animation" role="inputOnly" default="standard"
+                description="Loading animation while AI runs. Values: 'standard' (network SVG) or 'scanner' (AI IRIS optical scanner)."/>
+
+            <!-- AI flow configuration -->
+            <property name="flowApiName"        type="String"  label="AI Flow API Name"                   role="inputOnly"
+                description="API name of the Autolaunched Flow. Leave empty if passing HTML directly."/>
+            <property name="outputVariableName" type="String"  label="Flow Output Variable Name"          role="inputOnly" default="wealthPlanAnalysis"
+                description="Name of the output text variable in the AI Flow."/>
+            
+            <!-- Direct HTML Input (Fixes your deployment error) -->
+            <property name="wealthPlanAnalysis" type="String"  label="Wealth Plan Analysis HTML"          role="inputOnly" 
+                description="Map your AI-generated HTML string directly here to skip the background Apex call."/>
+
+            <!-- Section counts -->
+            <property name="goalsCount"                 type="Integer" label="Goals — Count"                  role="inputOnly" default="0"/>
+            <property name="incomeCount"                type="Integer" label="Income — Count"                 role="inputOnly" default="0"/>
+            <property name="assetsLiabilitiesCount"     type="Integer" label="Assets and Liabilities — Count" role="inputOnly" default="0"/>
+            <property name="milestonesCount"            type="Integer" label="Milestones — Count"             role="inputOnly" default="0"/>
+            <property name="sustainabilityCount"        type="Integer" label="Sustainability — Count"         role="inputOnly" default="0"/>
+            <property name="personalGreetingsCount"     type="Integer" label="Personal Greetings — Count"     role="inputOnly" default="0"/>
+            <property name="ownedCompaniesCount"        type="Integer" label="Owned Companies — Count"        role="inputOnly" default="0"/>
+            <property name="capitalNeedsCount"          type="Integer" label="Capital Needs — Future Events Count"  role="inputOnly" default="0"/>
+            <property name="investmentStrategyCount"    type="Integer" label="Investment Strategy — Count"          role="inputOnly" default="0"/>
+
+            <!-- Section published flags -->
+            <property name="goalsPublished"             type="Boolean" label="Goals — Published"                  role="inputOnly" default="false"/>
+            <property name="incomePublished"            type="Boolean" label="Income — Published"                 role="inputOnly" default="false"/>
+            <property name="assetsLiabilitiesPublished" type="Boolean" label="Assets and Liabilities — Published" role="inputOnly" default="false"/>
+            <property name="milestonesPublished"        type="Boolean" label="Milestones — Published"             role="inputOnly" default="false"/>
+            <property name="sustainabilityPublished"    type="Boolean" label="Sustainability — Published"         role="inputOnly" default="false"/>
+            <property name="personalGreetingsPublished" type="Boolean" label="Personal Greetings — Published"     role="inputOnly" default="false"/>
+            <property name="ownedCompaniesPublished"    type="Boolean" label="Owned Companies — Published"        role="inputOnly" default="false"/>
+
+            <!-- Investment Preferences (single record, published flag only) -->
+            <property name="investmentPreferencesPublished" type="Boolean" label="Investment Preferences — Published" role="inputOnly" default="false"/>
+
+            <!-- Capital Needs -->
+            <property name="capitalNeedsHasData"        type="Boolean" label="Capital Needs — Has Data"            role="inputOnly" default="false"/>
+
+            <!-- Risk % Lock-In (CapitalNeedsSummary__c) -->
+            <property name="riskValue"                  type="String"  label="Risk % (CapitalNeedsSummary__c.Risk__c)"    role="inputOnly"
+                description="Risk__c value from the CapitalNeedsSummary__c record."/>
+            <property name="lockInValue"                type="String"  label="Lock-In % (CapitalNeedsSummary__c.LockIn__c)" role="inputOnly"
+                description="LockIn__c value from the CapitalNeedsSummary__c record."/>
+
+            <!-- Investment Strategy -->
+            <property name="investmentStrategyActive"   type="Boolean" label="Investment Strategy — Active"        role="inputOnly" default="false"/>
+        </targetConfig>
+    </targetConfigs>
+</LightningComponentBundle>

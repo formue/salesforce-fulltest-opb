@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>66.0</apiVersion>
+    <isExposed>true</isExposed>
+    <masterLabel>Wealth Plan: Executive Summary Dashboard</masterLabel>
+    <targets>
+        <target>lightning__FlowScreen</target>
+    </targets>
+    <targetConfigs>
+        <targetConfig targets="lightning__FlowScreen">
+            <property name="investmentPrefs" type="@salesforce/schema/Account" label="Investment Preferences" />
+            <property name="goals" type="@salesforce/schema/FinServ__FinancialGoal__c[]" label="Goals Collection" />
+            <property name="income" type="@salesforce/schema/FF_Income__c[]" label="Income Collection" />
+            <property name="assets" type="@salesforce/schema/FinServ__AssetsAndLiabilities__c[]" label="Assets/Liabilities Collection" />
+            <property name="milestones" type="@salesforce/schema/Household_Milestones__c[]" label="Milestones Collection" />
+            <property name="ownership" type="@salesforce/schema/Company_Ownership__c[]" label="Ownership Collection" />
+            <property name="inputCompanies" type="@salesforce/schema/Account[]" label="Companies Collection (for name resolution)" />
+            <property name="inputPersons" type="@salesforce/schema/Account[]" label="Persons Collection (for name resolution)" />
+            <property name="inputHouseholdMembers" type="@salesforce/schema/Account[]" label="Household Members (Relationships section)" />
+            <property name="inputBusinessAccounts" type="@salesforce/schema/Account[]" label="Business Accounts (Relationships section)" />
+            <property name="inputPrimaryMemberId" type="String" label="Primary Member ID (for Relationships)" />
+            <property name="sustainabilityPrefs" type="@salesforce/schema/SustainabilityPreferences__c[]" label="Sustainability Preferences Collection" />
+            <property name="capitalNeeds" type="@salesforce/schema/CapitalNeeds__c[]" label="Capital Needs Collection" />
+            <property name="capitalNeedsSummary" type="@salesforce/schema/CapitalNeedsSummary__c" label="Capital Needs Summary (Risk/Lock-In)" />
+            <property name="investmentStrategies" type="@salesforce/schema/InvestmentStrategy__c[]" label="Investment Strategies Collection" />
+            <property name="greetings" type="@salesforce/schema/FF_PersonalGreeting__c[]" label="Greetings Collection" />
+            <property name="backgroundColor" type="String" label="Background Color" default="#f8fafc" />
+        </targetConfig>
+    </targetConfigs>
+</LightningComponentBundle>

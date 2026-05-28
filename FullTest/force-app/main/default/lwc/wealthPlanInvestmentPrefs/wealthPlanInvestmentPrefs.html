@@ -1,0 +1,198 @@
+<template>
+    <c-wealth-plan-view-shell
+        style={dynamicBgStyle}
+        dashboard-title="Investment Preferences"
+        dashboard-subtitle="Review the client's knowledge, experience, and portfolio risk tolerance."
+        editor-title="Edit Investment Profile"
+        is-editor-view={isEditorView}
+        is-dirty={isDirty}
+        use-modal-editor
+        onshellsave={handleSaveToFlow}
+        onshellcancel={handleCancelEdit}
+        onshellapply={handleApplyEdit}>
+
+        <div slot="dashboard-content" class="dashboard-content-wrapper">
+            
+            <div class="stats-row">
+                <c-wealth-plan-stat-card label="Risk Profile" value={displayRiskProfile} variant="highlight"></c-wealth-plan-stat-card>
+                <c-wealth-plan-stat-card label="Knowledge Classes" value={knowledgeCount} variant="blue"></c-wealth-plan-stat-card>
+                <c-wealth-plan-stat-card label="Experience Classes" value={experienceCount} variant="green"></c-wealth-plan-stat-card>
+                
+                <div class={publishCardClass} title={publishTitleText}>
+                    <div class="publish-info">
+                        <template if:false={localIsPublished}>
+                            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" class="draft-icon"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                            <span><b>Unpublished</b></span>
+                        </template>
+                        <template if:true={localIsPublished}>
+                            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2.5" fill="none" class="published-icon"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                            <span><b>Published</b></span>
+                        </template>
+                    </div>
+                    <label class="premium-toggle">
+                        <input type="checkbox" checked={localIsPublished} onchange={handlePublishToggle} disabled={isToggleDisabled}>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+
+                <button class="btn-create-card btn-update-large" onclick={handleEditRequest}>
+                    <div class="create-icon-wrap">
+                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                    </div>
+                    <b>Update Profile</b>
+                </button>
+            </div>
+
+            <!-- ========================================================= -->
+            <!-- STANDARDIZED AI ACCORDION MODULE                          -->
+            <!-- ========================================================= -->
+            <template if:true={showAiSection}>
+                <div class="ai-accordion-panel fade-in">
+                    <div class="ai-header" onclick={toggleAiPanel}>
+                        <div class="ai-header-left">
+                            <span class="ai-badge">
+                                <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                                <b>AI ANALYSIS</b>
+                            </span>
+                            <span class="ai-title"><b>Investment Profile Insights</b></span>
+                        </div>
+                        <div class="ai-header-right">
+                            <span class="ai-provider"><span class="blue-dot"></span> Formue Intelligence</span>
+                            <svg class={chevronClass} viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </div>
+                    </div>
+
+                    <div class={aiBodyClass}>
+                        <!-- STANDARDIZED SVG NEURAL NETWORK LOADER (Matches Goals) -->
+                        <template if:true={isAiLoading}>
+                            <div class="ai-formue-loader">
+                                <div class="loader-graphic live-network">
+                                    <svg viewBox="0 0 100 100" width="120" height="120">
+                                        <defs>
+                                            <radialGradient id="coreGlowInv" cx="50%" cy="50%" r="50%">
+                                                <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.6"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0"/>
+                                            </radialGradient>
+                                        </defs>
+                                        <circle cx="50" cy="50" r="32" fill="none" stroke="#e0e7ff" stroke-width="0.75" class="spin-slow" stroke-dasharray="4 8" />
+                                        <circle cx="50" cy="50" r="18" fill="none" stroke="#e0e7ff" stroke-width="0.5" />
+                                        <g stroke="#c7d2fe" stroke-width="1.5">
+                                            <line x1="50" y1="50" x2="20" y2="25" class="data-stream delay-1" /><line x1="50" y1="50" x2="80" y2="25" class="data-stream delay-2" /><line x1="50" y1="50" x2="15" y2="60" class="data-stream delay-3" /><line x1="50" y1="50" x2="85" y2="60" class="data-stream delay-4" /><line x1="50" y1="50" x2="50" y2="85" class="data-stream delay-5" /><line x1="20" y1="25" x2="80" y2="25" class="data-stream perimeter delay-3" /><line x1="80" y1="25" x2="85" y2="60" class="data-stream perimeter delay-1" /><line x1="85" y1="60" x2="50" y2="85" class="data-stream perimeter delay-4" /><line x1="50" y1="85" x2="15" y2="60" class="data-stream perimeter delay-2" /><line x1="15" y1="60" x2="20" y2="25" class="data-stream perimeter delay-5" />
+                                        </g>
+                                        <g class="orbit-fast" transform-origin="50px 50px"><circle cx="18" cy="50" r="2" fill="#a855f7" /></g>
+                                        <g class="orbit-slow" transform-origin="50px 50px"><circle cx="76" cy="35" r="1.5" fill="#8b5cf6" /></g>
+                                        <g class="orbit-reverse" transform-origin="50px 50px"><circle cx="36" cy="80" r="2" fill="#60a5fa" /></g>
+                                        <g fill="#ffffff" stroke="#818cf8" stroke-width="1.5">
+                                            <circle cx="20" cy="25" r="4" class="pulse-node delay-1" transform-origin="20px 25px" /><circle cx="80" cy="25" r="4" class="pulse-node delay-2" transform-origin="80px 25px" /><circle cx="15" cy="60" r="4" class="pulse-node delay-3" transform-origin="15px 60px" /><circle cx="85" cy="60" r="4" class="pulse-node delay-4" transform-origin="85px 60px" /><circle cx="50" cy="85" r="4" class="pulse-node delay-5" transform-origin="50px 85px" />
+                                        </g>
+                                        <circle cx="50" cy="50" r="20" fill="url(#coreGlowInv)" class="core-glow" transform-origin="50px 50px" /><circle cx="50" cy="50" r="11" fill="#60a5fa" class="pulse-center" transform-origin="50px 50px" />
+                                        <polygon points="50,43 51.5,47.5 56,47.5 52.5,50.5 54,55 50,52 46,55 47.5,50.5 44,47.5 48.5,47.5" fill="#ffffff" />
+                                    </svg>
+                                </div>
+                                <div class="loader-brand"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z"/></svg><b>Formue Intelligence</b></div>
+                                <div class="loader-status"><span class="status-dot"></span> Analyzing Invesment Profile...</div>
+                                <div class="loader-bar-container"><div class="loader-bar"></div></div>
+                            </div>
+                        </template>
+                        <template if:false={isAiLoading}>
+                            <div class="ai-content-rich"><lightning-formatted-rich-text value={aiInsightSummary}></lightning-formatted-rich-text></div>
+                            <div class="ai-footer">Generated by Formue AI · Wealth Plan Intelligence</div>
+                        </template>
+                    </div>
+                </div>
+            </template>
+
+            <!-- ========================================================= -->
+            <!-- SYMMETRICAL DASHBOARD GRID                                 -->
+            <!-- ========================================================= -->
+            <div class="profile-cards-grid fade-in-up">
+                
+                <!-- CARD 1: KNOWLEDGE & EXPERIENCE -->
+                <div class="profile-card">
+                    <div class="card-header">
+                        <div class="header-title">
+                            <div class="header-icon"><svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg></div>
+                            <h3><b>Knowledge and Experience</b></h3>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="knowledge-section">
+                            <h4><b>Asset Class Knowledge</b></h4>
+                            <div class="badge-container">
+                                <template if:true={hasKnowledge}>
+                                    <template for:each={knowledgeBadges} for:item="badge">
+                                        <span key={badge.id} class="pill-badge blue-pill"><b>{badge.label}</b></span>
+                                    </template>
+                                </template>
+                                <template if:false={hasKnowledge}><span class="empty-text">No knowledge registered.</span></template>
+                            </div>
+                        </div>
+                        <div class="knowledge-section" style="margin-top: 24px;">
+                            <h4><b>Asset Class Experience</b></h4>
+                            <div class="badge-container">
+                                <template if:true={hasExperience}>
+                                    <template for:each={experienceBadges} for:item="badge">
+                                        <span key={badge.id} class="pill-badge green-pill"><b>{badge.label}</b></span>
+                                    </template>
+                                </template>
+                                <template if:false={hasExperience}><span class="empty-text">No experience registered.</span></template>
+                            </div>
+                        </div>
+                        <div class="content-section" style="margin-top: 32px; border-top: 1px solid #f1f5f9; padding-top: 16px;">
+                            <h4><b>Knowledge & Training Comment</b></h4>
+                            <p class="body-text">{investmentData.comment}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CARD 2: PORTFOLIO TOLERANCE (Fixed Layout & Bolding) -->
+                <div class="profile-card">
+                    <div class="card-header">
+                        <div class="header-title">
+                            <div class="header-icon purple-icon"><svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M3 3v18h18"></path><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"></path></svg></div>
+                            <h3><b>Portfolio Tolerance</b></h3>
+                        </div>
+                    </div>
+                    <div class="card-body tolerance-stack">
+                        <div class="tolerance-item">
+                            <span class="tol-label">Risk Profile</span>
+                            <span class="tol-value"><b>{displayRiskProfile}</b></span>
+                        </div>
+                        <div class="tolerance-item">
+                            <span class="tol-label">Risk Profile Details</span>
+                            <p class="body-text">{investmentData.riskProfileDetails}</p>
+                        </div>
+                        <div class="tolerance-item">
+                            <span class="tol-label">Loss Aversion Details</span>
+                            <p class="body-text">{investmentData.lossAversion}</p>
+                        </div>
+                        <div class="tolerance-item">
+                            <span class="tol-label">Winning Appetite Details</span>
+                            <p class="body-text">{investmentData.winningAppetite}</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <div slot="editor-form">
+            <h3 class="editor-section-title"><b>Update Invesment Profile</b></h3>
+            <div class="form-row split-row dual-listbox-wrapper">
+                <lightning-dual-listbox name="knowledge" label="Asset Class Knowledge" options={knowledgeOptions} value={investmentData.knowledgeList} data-field="knowledgeList" onchange={handleDualListChange}></lightning-dual-listbox>
+                <lightning-dual-listbox name="experience" label="Asset Class Experience" options={experienceOptions} value={investmentData.experienceList} data-field="experienceList" onchange={handleDualListChange}></lightning-dual-listbox>
+            </div>
+            <div class="form-row">
+                <c-wealth-plan-premium-input label="Knowledge & Training Comment" type="textarea" field-name="comment" value={investmentData.comment} onvaluechange={handleFormChange}></c-wealth-plan-premium-input>
+            </div>
+            <div class="editor-divider"></div>
+            <div class="form-row split-row">
+                <c-wealth-plan-premium-input label="Risk Profile" field-name="riskProfile" value={investmentData.riskProfile} read-only></c-wealth-plan-premium-input>
+                <c-wealth-plan-premium-input label="Risk Profile Details" field-name="riskProfileDetails" value={investmentData.riskProfileDetails} read-only></c-wealth-plan-premium-input>
+            </div>
+            <div class="form-row split-row">
+                <c-wealth-plan-premium-input label="Loss Aversion Details" field-name="lossAversion" value={investmentData.lossAversion} read-only></c-wealth-plan-premium-input>
+                <c-wealth-plan-premium-input label="Winning Appetite Details" field-name="winningAppetite" value={investmentData.winningAppetite} read-only></c-wealth-plan-premium-input>
+            </div>
+        </div>
+    </c-wealth-plan-view-shell>
+</template>

@@ -1,8 +1,8 @@
 <template>
     <c-wealth-plan-view-shell
         style={dynamicBgStyle}
-        dashboard-title="Income Streams Overview"
-        dashboard-subtitle="Manage household salary, dividends, and other recurring revenue."
+        dashboard-title="Household Milestones"
+        dashboard-subtitle="Track important life events and AML-related milestones."
         editor-title={modalTitle}
         is-editor-view={isEditorView}
         is-dirty={isDirty}
@@ -12,19 +12,17 @@
         onshellapply={handleApplyEdit}>
 
         <div slot="dashboard-content" class="dashboard-content-wrapper">
-
             <div class="stats-row">
-                <c-wealth-plan-stat-card label="Total Annual Income" value={formattedTotalIncome} variant="highlight"></c-wealth-plan-stat-card>
-                <c-wealth-plan-stat-card label="Income Streams" value={totalIncomeCount}></c-wealth-plan-stat-card>
-
+                <c-wealth-plan-stat-card label="Total Milestones" value={totalMilestones} variant="highlight"></c-wealth-plan-stat-card>
+                
                 <div class={publishCardClass} title={publishTitleText}>
                     <div class="publish-info">
                         <template if:false={localIsPublished}>
-                            <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" class="draft-icon"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" class="draft-icon"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
                             <span><b>Unpublished</b></span>
                         </template>
                         <template if:true={localIsPublished}>
-                            <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" fill="none" class="published-icon"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2.5" fill="none" class="published-icon"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
                             <span><b>Published</b></span>
                         </template>
                     </div>
@@ -36,12 +34,15 @@
 
                 <button class="btn-create-card" onclick={handleAddNew}>
                     <div class="create-icon-wrap">
-                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 5v14m-7-7h14"></path></svg>
                     </div>
-                    <b>Add New Income</b>
+                    <b>Add Milestone</b>
                 </button>
             </div>
 
+            <!-- ========================================================= -->
+            <!-- SLEEK AI ACCORDION MODULE                                 -->
+            <!-- ========================================================= -->
             <template if:true={showAiSection}>
                 <div class="ai-accordion-panel fade-in">
                     <div class="ai-header" onclick={toggleAiPanel}>
@@ -50,7 +51,7 @@
                                 <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
                                 <b>AI ANALYSIS</b>
                             </span>
-                            <span class="ai-title"><b>Income Overview</b></span>
+                            <span class="ai-title"><b>Milestones Overview</b></span>
                         </div>
                         <div class="ai-header-right">
                             <span class="ai-provider"><span class="blue-dot"></span> Formue Intelligence</span>
@@ -77,7 +78,7 @@
                                     </svg>
                                 </div>
                                 <div class="loader-brand"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z"/></svg><b>Formue Intelligence</b></div>
-                                <div class="loader-status"><span class="status-dot"></span> Reading your Wealth Plan...</div>
+                                <div class="loader-status"><span class="status-dot"></span> Analyzing the Milestones...</div>
                                 <div class="loader-bar-container"><div class="loader-bar"></div></div>
                             </div>
                         </template>
@@ -90,63 +91,40 @@
             </template>
 
             <div class="compact-table-container">
-                <template if:true={hasIncomes}>
+                <template if:true={hasMilestones}>
                     <div class="table-header">
-                        <div class="th-name">Income Source</div>
-                        <div class="th-type align-center">Type</div>
-                        <div class="th-amount align-right">Annual Amount</div>
-                        <div class="th-owner">Owner</div>
+                        <div class="th-name">Milestone Name</div>
+                        <div class="th-year">Year</div>
+                        <div class="th-aml">AML Info</div>
+                        <div class="th-desc">Description</div>
+                        <div class="th-date">Updated</div>
                         <div class="th-actions align-center">Actions</div>
                     </div>
-
                     <div class="table-body">
-                        <template for:each={paginatedIncomes} for:item="inc">
-                            <div class={inc.rowClass} key={inc.Id}>
-
+                        <template for:each={paginatedData} for:item="m">
+                            <div class={m.rowClass} key={m.Id}>
                                 <div class="td-name">
                                     <div class="name-stack">
-                                        <template if:true={inc.isMarkedForDeletion}><span class="text-strikethrough"><b>{inc.DisplayTitle}</b></span></template>
-                                        <template if:false={inc.isMarkedForDeletion}><b>{inc.DisplayTitle}</b></template>
-                                        <span class="td-sub">Updated: {inc.formattedDate}</span>
+                                        <template if:true={m.isMarkedForDeletion}><span class="text-strikethrough"><b>{m.Name}</b></span></template>
+                                        <template if:false={m.isMarkedForDeletion}><b>{m.Name}</b></template>
+                                        <div class="td-sub">{m.HouseholdName}</div>
                                     </div>
                                 </div>
-
-                                <div class="td-type align-center">
-                                    <span class="badge-tiny badge-neutral"><b>{inc.DisplayType}</b></span>
-                                </div>
-
-                                <div class="td-amount align-right">
-                                    <template if:true={inc.isMarkedForDeletion}><span class="text-strikethrough amount-green"><b>{inc.formattedAmount}</b></span></template>
-                                    <template if:false={inc.isMarkedForDeletion}><span class="amount-green"><b>{inc.formattedAmount}</b></span></template>
-                                </div>
-
-                                <div class="td-owner">
-                                    <div class="owner-stack">
-                                        <b>{inc.OwnerName}</b>
-                                        <template if:true={isBusinessContext}>
-                                            <template if:true={inc.BusinessName}><span class="td-sub biz-text">{inc.BusinessName}</span></template>
-                                        </template>
-                                    </div>
-                                </div>
-
+                                <div class="td-year"><span class="badge-tiny badge-neutral">{m.Milestone_Year__c}</span></div>
+                                <div class="td-aml"><div class="scrollable-text">{m.FF_AdditionalAMLInfo__c}</div></div>
+                                <div class="td-desc"><div class="scrollable-text">{m.FF_AppDescription__c}</div></div>
+                                <div class="td-date"><span class="td-sub">{m.formattedDate}</span></div>
                                 <div class="td-actions align-center">
-                                    <template if:false={inc.isMarkedForDeletion}>
-                                        <button class="btn-icon-only" onclick={handleEditRequest} data-id={inc.Id} title="Edit Income">
-                                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                                        </button>
+                                    <template if:false={m.isMarkedForDeletion}>
+                                        <button class="btn-icon-only" onclick={handleEditRequest} data-id={m.Id}><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>
                                     </template>
-                                    <template if:true={inc.isMarkedForDeletion}>
-                                        <button class="btn-restore" onclick={handleRestoreIncome} data-id={inc.Id} title="Undo Delete">
-                                            <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><polyline points="3 3 3 8 8 8"></polyline></svg>
-                                            <b>Undo</b>
-                                        </button>
+                                    <template if:true={m.isMarkedForDeletion}>
+                                        <button class="btn-restore" onclick={handleRestore} data-id={m.Id}><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><polyline points="3 3 3 8 8 8"></polyline></svg><b>Undo</b></button>
                                     </template>
                                 </div>
-
                             </div>
                         </template>
                     </div>
-
                     <template if:true={showPagination}>
                         <div class="pagination-controls">
                             <button class="btn-page" disabled={isFirstPage} onclick={handlePrevPage}><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg><b>Previous</b></button>
@@ -155,50 +133,48 @@
                         </div>
                     </template>
                 </template>
-
-                <template if:false={hasIncomes}>
+                <template if:false={hasMilestones}>
                     <div class="empty-state">
-                        <div class="icon-circle">
-                            <svg viewBox="0 0 24 24" width="32" height="32" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
-                        </div>
-                        <h2><b>No Income Sources Defined</b></h2>
-                        <p>Add salary, dividends, or rental income to build the wealth profile.</p>
+                        <div class="icon-circle"><svg viewBox="0 0 24 24" width="32" height="32" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 5v14m-7-7h14"></path></svg></div>
+                        <h2><b>No Milestones Found</b></h2>
+                        <p>Create a milestone to track important events.</p>
                     </div>
                 </template>
             </div>
-
         </div>
 
         <div slot="editor-form">
             <div class="form-row split-row">
-                <c-wealth-plan-premium-input label="Income Name" field-name="Name" value={currentIncome.Name} onvaluechange={handleFormChange}></c-wealth-plan-premium-input>
-                <c-wealth-plan-premium-input label="Annual Amount (kr)" type="number" field-name="FF_Amount__c" value={currentIncome.FF_Amount__c} is-money="true" onvaluechange={handleFormChange}></c-wealth-plan-premium-input>
+                <c-wealth-plan-premium-input label="Household Milestones Name" field-name="Name" value={currentMilestone.Name} required="true" onvaluechange={handleFormChange}></c-wealth-plan-premium-input>
+                <c-wealth-plan-premium-input label="Milestone Year" type="select" field-name="Milestone_Year__c" value={currentMilestone.Milestone_Year__c} options={currentYearOptions} onvaluechange={handleFormChange}></c-wealth-plan-premium-input>
+            </div>
+            
+            <div class="form-row">
+                <c-wealth-plan-premium-input label="Related Household" type="select" field-name="RelatedHousehold__c" value={currentHouseholdValue} options={currentHouseholdOptions} onvaluechange={handleFormChange}></c-wealth-plan-premium-input>
             </div>
 
-            <div class="form-row split-row">
-                <c-wealth-plan-premium-input label="Income Type" type="select" field-name="FF_Type__c" options={currentTypeOptions} onvaluechange={handleFormChange}></c-wealth-plan-premium-input>
-                <template if:true={isCustomType}>
-                    <c-wealth-plan-premium-input label="Custom Type (Required)" field-name="FF_Type_Other__c" value={currentIncome.FF_Type_Other__c} required="true" onvaluechange={handleFormChange}></c-wealth-plan-premium-input>
-                </template>
-                <template if:false={isCustomType}><div></div></template>
+            <div class="form-row expanded-textarea-row">
+                <div class="form-group-direct">
+                    <label><b>Additional AML info (Internal)</b></label>
+                    <textarea class="premium-input-direct textarea-direct" name="FF_AdditionalAMLInfo__c" oninput={handleDirectTextareaChange}></textarea>
+                </div>
             </div>
 
-            <div class="form-row split-row">
-                <c-wealth-plan-premium-input label="Household Member" type="select" field-name="FF_Account__c" options={currentOwnerOptions} onvaluechange={handleFormChange}></c-wealth-plan-premium-input>
-                <template if:true={isBusinessContext}>
-                    <c-wealth-plan-premium-input label="Select Foundation/Business" type="select" field-name="FoundationBusiness__c" options={currentBusinessOptions} onvaluechange={handleFormChange}></c-wealth-plan-premium-input>
-                </template>
+            <div class="form-row expanded-textarea-row">
+                <div class="form-group-direct">
+                    <label><b>Description (app)</b></label>
+                    <textarea class="premium-input-direct textarea-direct" name="FF_AppDescription__c" oninput={handleDirectTextareaChange}></textarea>
+                </div>
             </div>
 
             <template if:false={isNewRecord}>
                 <div class="form-row delete-action-row">
                     <button class="btn-delete-goal" onclick={handleDeleteClick}>
                         <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-                        <b>Delete Income</b>
+                        <b>Delete Milestone</b>
                     </button>
                 </div>
             </template>
         </div>
-
     </c-wealth-plan-view-shell>
 </template>

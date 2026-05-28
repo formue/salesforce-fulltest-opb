@@ -1,0 +1,137 @@
+<template>
+    <div class="hub-root-container">
+        <c-wealth-plan-view-shell
+            style={dynamicBgStyle}
+            view-only="true"
+            dashboard-title="WealthPlan Readiness"
+            dashboard-subtitle="Real-time completeness overview across all data modules.">
+
+            <div slot="dashboard-content" class="dashboard-content-wrapper">
+
+                <!-- ============================================= -->
+                <!-- HERO: READINESS RING + STATS                  -->
+                <!-- ============================================= -->
+                <div class="mission-control-hero fade-in">
+                    <div class="hero-ambient-glow"></div>
+
+                    <template if:true={isPlanComplete}>
+                        <div class="complete-crown">
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="#fbbf24"><path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z"/></svg>
+                            <b>Plan Complete</b>
+                        </div>
+                    </template>
+
+                    <div class="hero-content">
+
+                        <!-- Animated SVG ring -->
+                        <div class="readiness-meter">
+                            <svg viewBox="0 0 36 36" class="circular-chart">
+                                <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                <path class="circle" stroke-dasharray={readinessDashArray} stroke={readinessRingColor} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                <text x="18" y="20.35" class="percentage">{planReadinessScore}%</text>
+                            </svg>
+                        </div>
+
+                        <!-- Text block -->
+                        <div class="hero-text">
+                            <p class="hero-eyebrow">Plan Readiness Score</p>
+                            <h2 class="hero-score-display">{planReadinessScore}<span class="hero-score-unit">%</span></h2>
+                            <p class="hero-message">{readinessMessage}</p>
+
+                            <!-- Horizontal module progress track -->
+                            <div class="module-track-wrap">
+                                <div class="module-track">
+                                    <div class="module-track-fill" style={moduleProgressStyle}></div>
+                                </div>
+                                <span class="module-track-label">{activeModuleCount} / {totalModules}</span>
+                            </div>
+
+                            <!-- Stat chips -->
+                            <div class="hero-stat-row">
+                                <span class="hero-stat-chip">
+                                    <svg viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" stroke-width="2.5" fill="none"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+                                    <b>{activeModuleCount}</b> modules complete
+                                </span>
+                                <span class="hero-stat-chip">
+                                    <svg viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" stroke-width="2.5" fill="none"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                                    <b>{totalRecords}</b> records total
+                                </span>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- ============================================= -->
+                <!-- MODULE CHECKLIST GRID                         -->
+                <!-- ============================================= -->
+                <div class="checklist-section fade-in" style="animation-delay: 0.15s;">
+                    <div class="checklist-header">
+                        <h3><b>Data Modules</b></h3>
+                        <span class="checklist-status">Pre-flight Verification</span>
+                    </div>
+
+                    <div class="checklist-grid">
+                        <template for:each={checklistModules} for:item="mod">
+                            <div class={mod.cardClass} key={mod.title} style={mod.animationDelay}>
+                                <div class="check-icon" style={mod.iconColor}>
+                                    <template if:true={mod.hasData}>
+                                        <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2.5" fill="none"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    </template>
+                                    <template if:false={mod.hasData}>
+                                        <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                                    </template>
+                                </div>
+                                <div class="check-content">
+                                    <div class="check-top">
+                                        <span class="check-title"><b>{mod.title}</b></span>
+                                        <span class={mod.badgeClass}><b>{mod.countText}</b></span>
+                                    </div>
+                                    <span class="check-desc">{mod.desc}</span>
+                                    <div class="check-fill-track">
+                                        <div class="check-fill-bar" style={mod.fillStyle}></div>
+                                    </div>
+                                </div>
+                                <!-- Hover tooltip -->
+                                <div class="card-tooltip">
+                                    <span class="tooltip-count">{mod.tooltipCount}</span>
+                                    <span class="tooltip-fill">{mod.tooltipFill}</span>
+                                    <span class="tooltip-hint">{mod.tooltipHint}</span>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- ============================================= -->
+                <!-- MISSING MODULES CALLOUT                        -->
+                <!-- ============================================= -->
+                <template if:true={hasMissingModules}>
+                    <div class="missing-callout fade-in" style="animation-delay: 0.3s;">
+                        <div class="missing-icon">
+                            <svg viewBox="0 0 24 24" width="18" height="18" stroke="#b45309" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                        </div>
+                        <p class="missing-text">
+                            <b>{missingCount} {missingLabel} still need data —</b> {missingModulesList}
+                        </p>
+                    </div>
+                </template>
+
+                <!-- ============================================= -->
+                <!-- PRINT ACTION FOOTER                            -->
+                <!-- ============================================= -->
+                <div class="print-footer fade-in" style="animation-delay: 0.4s;">
+                    <button class="print-btn" onclick={handlePrint} aria-label="Print Data">
+                        <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none">
+                            <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                            <rect x="6" y="14" width="12" height="8"></rect>
+                        </svg>
+                        <b>Print Data</b>
+                    </button>
+                </div>
+
+            </div>
+        </c-wealth-plan-view-shell>
+    </div>
+</template>

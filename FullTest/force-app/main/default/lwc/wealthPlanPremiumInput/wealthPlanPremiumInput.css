@@ -1,0 +1,86 @@
+.input-group {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 1.25rem;
+    width: 100%;
+}
+
+.input-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.required-asterisk {
+    color: #e11d48;
+}
+
+.input-wrapper, .select-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.premium-input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border-radius: 0.75rem;
+    border: 1px solid #cbd5e1;
+    background-color: #f8fafc;
+    color: #0f172a;
+    font-size: 1rem;
+    font-family: inherit;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+}
+
+.premium-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    background-color: #ffffff;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.premium-input.is-money {
+    padding-left: 2rem;
+}
+
+.currency-symbol {
+    position: absolute;
+    left: 1rem;
+    color: #64748b;
+    font-weight: 500;
+    pointer-events: none;
+}
+
+.select-wrapper .premium-input {
+    cursor: pointer;
+}
+
+.premium-textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+.premium-textarea.massive {
+    min-height: 200px;
+}
+
+.premium-input.is-readonly {
+    background-color: #f1f5f9;
+    color: #64748b;
+    cursor: default;
+    border-style: solid;
+    border-color: #e2e8f0;
+}
+
+.premium-input.is-readonly:focus {
+    border-color: #e2e8f0;
+    box-shadow: none;
+    background-color: #f1f5f9;
+}
