@@ -1,5 +1,5 @@
 <template>
-    <div class="wp-outer" style={dynamicBgStyle}>
+    <div class={wpOuterClass} style={dynamicBgStyle}>
 
         <!-- ── Title header ── -->
         <div class="wp-shell-header">
@@ -10,6 +10,19 @@
                         <span class="status-badge-dot" aria-hidden="true"></span>
                         <b>{statusBadgeText}</b>
                     </span>
+                    <template if:true={isCorporateTheme}>
+                        <span class="beta-sticker">BETA</span>
+                    </template>
+                </div>
+                <div class={themePillWrapClass}>
+                    <button class={classicSegmentClass} onclick={handleSetClassic} aria-label="Classic theme">
+                        <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line></svg>
+                        <b>Classic</b>
+                    </button>
+                    <button class={corporateSegmentClass} onclick={handleSetCorporate} aria-label="Corporate theme">
+                        <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M3 9h18M9 21V9"></path></svg>
+                        <b>Corporate</b>
+                    </button>
                 </div>
                 <button class="refresh-btn" onclick={handleRefresh} aria-label="Refresh Data">
                     <svg class="refresh-icon" viewBox="0 0 16 16" fill="none" width="14" height="14" aria-hidden="true">

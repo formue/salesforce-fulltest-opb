@@ -402,3 +402,39 @@ b, strong { font-weight: 800; color: inherit; font-family: 'Salesforce Sans', sy
 @keyframes glowBreathe  { 0% { transform: scale(0.8); opacity: 0.4; } 100% { transform: scale(1.3); opacity: 1; } }
 @keyframes centerBeat   { 0% { transform: scale(0.95); filter: drop-shadow(0 0 4px rgba(96,165,250,0.5)); } 100% { transform: scale(1.05); filter: drop-shadow(0 0 12px rgba(59,130,246,0.9)); } }
 @keyframes slideBar     { 0% { left: -50%; width: 30%; } 50% { width: 50%; } 100% { left: 100%; width: 30%; } }
+
+/* =========================================================
+   CORPORATE THEME
+   ========================================================= */
+.theme-corporate .wp-shell-header {
+    background: #0d1b48;
+    margin: -24px -24px 0;
+    padding: 20px 24px 24px;
+    border-radius: 24px 24px 0 0;
+}
+.theme-corporate .wp-title-row { padding-right: 0; }
+.theme-corporate .wp-title     { color: #ffffff; }
+.theme-corporate .wp-subtitle  { color: rgba(255,255,255,0.6); }
+.theme-corporate .refresh-btn  {
+    background: rgba(255,255,255,0.12);
+    border-color: rgba(255,255,255,0.2);
+    color: #ffffff;
+    box-shadow: none;
+}
+.theme-corporate .refresh-btn:hover {
+    background: rgba(255,255,255,0.22);
+    border-color: rgba(255,255,255,0.4);
+    color: #ffffff;
+}
+
+.theme-pill-toggle { display: flex; background: rgba(0,0,0,0.08); border-radius: 99px; padding: 3px; gap: 2px; }
+.theme-pill-dark { background: rgba(255,255,255,0.18); }
+.segment-btn { display: flex; align-items: center; gap: 5px; padding: 6px 16px; border-radius: 99px; border: none; background: transparent; color: rgba(0,0,0,0.45); font-size: 0.76rem; font-family: 'Salesforce Sans', sans-serif; cursor: pointer; transition: all 0.2s; }
+.theme-pill-dark .segment-btn { color: rgba(255,255,255,0.6); }
+.segment-btn.segment-active { background: #ffffff; color: #0f172a; box-shadow: 0 1px 4px rgba(0,0,0,0.18); }
+.segment-btn b { font-size: 0.76rem; color: inherit; font-weight: 700; }
+.segment-btn.segment-active b { color: #0f172a; }
+.segment-btn svg { flex-shrink: 0; }
+
+.beta-sticker { background: #fef08a; color: #1c1917; font-size: 0.78rem; font-weight: 800; padding: 10px 18px 16px; border-radius: 1px; transform: rotate(-2deg); display: inline-block; position: relative; box-shadow: 0 1px 0 rgba(0,0,0,0.08), 0 3px 6px rgba(0,0,0,0.22), 0 14px 22px -6px rgba(0,0,0,0.32), inset 0 -4px 10px rgba(0,0,0,0.06); letter-spacing: 0.1em; text-transform: uppercase; font-family: 'Salesforce Sans', sans-serif; line-height: 1; border-top: 4px solid rgba(0,0,0,0.08); }
+.beta-sticker::after { content: ''; position: absolute; bottom: 0; right: 0; width: 0; height: 0; border-style: solid; border-width: 0 0 14px 14px; border-color: transparent transparent rgba(0,0,0,0.18) transparent; }

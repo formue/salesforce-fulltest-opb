@@ -344,7 +344,25 @@ export default class WealthPlanProgress extends LightningElement {
         return `${base} status-badge--red`;
     }
 
-    get dynamicBgStyle() { return `--outer-bg: ${this.backgroundColor};`; }
+    @track isCorporateTheme = true;
+
+    get dynamicBgStyle() {
+        return `--outer-bg: ${this.isCorporateTheme ? '#eeebe5' : this.backgroundColor};`;
+    }
+    get wpOuterClass() {
+        return this.isCorporateTheme ? 'wp-outer theme-corporate' : 'wp-outer';
+    }
+    get themePillWrapClass() {
+        return this.isCorporateTheme ? 'theme-pill-toggle theme-pill-dark' : 'theme-pill-toggle';
+    }
+    get classicSegmentClass() {
+        return this.isCorporateTheme ? 'segment-btn' : 'segment-btn segment-active';
+    }
+    get corporateSegmentClass() {
+        return this.isCorporateTheme ? 'segment-btn segment-active' : 'segment-btn';
+    }
+    handleSetClassic() { this.isCorporateTheme = false; }
+    handleSetCorporate() { this.isCorporateTheme = true; }
 
     _n(v) { const n = parseInt(v, 10); return isNaN(n) ? 0 : n; }
     _b(v) { return v === true || v === 'true'; }
