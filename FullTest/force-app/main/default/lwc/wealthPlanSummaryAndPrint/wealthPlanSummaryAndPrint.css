@@ -17,14 +17,14 @@ b, strong { font-weight: 800; color: var(--brand-dark); font-family: 'Salesforce
     border-radius: 13px;
     border: 1px solid #334155;
     box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.5), inset 0 1px 0 rgba(255,255,255,0.08);
-    padding: 32px;
+    padding: 22px;
     position: relative;
     overflow: hidden;
 }
 
 .hero-ambient-glow {
     position: absolute;
-    width: 400px; height: 400px;
+    width: 280px; height: 280px;
     background: radial-gradient(circle, rgba(14,165,233,0.12) 0%, transparent 70%);
     top: 50%; left: -10%;
     transform: translateY(-50%);
@@ -54,9 +54,9 @@ b, strong { font-weight: 800; color: var(--brand-dark); font-family: 'Salesforce
     to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-.hero-content { display: flex; align-items: center; gap: 38px; position: relative; z-index: 2; flex-wrap: wrap; }
+.hero-content { display: flex; align-items: center; gap: 27px; position: relative; z-index: 2; flex-wrap: wrap; }
 
-.readiness-meter { width: 104px; height: 104px; flex-shrink: 0; }
+.readiness-meter { width: 73px; height: 73px; flex-shrink: 0; }
 .circular-chart  { display: block; max-width: 100%; }
 .circle-bg  { fill: none; stroke: rgba(255,255,255,0.08); stroke-width: 3.8; }
 .circle     { fill: none; stroke-width: 2.8; stroke-linecap: round; animation: ringDraw 1s ease-out forwards; }
@@ -64,13 +64,13 @@ b, strong { font-weight: 800; color: var(--brand-dark); font-family: 'Salesforce
 .percentage { fill: #ffffff; font-family: 'Salesforce Sans', sans-serif; font-size: 7.5px; font-weight: 800; text-anchor: middle; }
 
 .hero-text     { display: flex; flex-direction: column; flex-grow: 1; min-width: 200px; }
-.hero-eyebrow  { font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.1em; color: #64748b; margin: 0 0 5px; font-weight: 700; }
-.hero-score-display { font-size: 2.8rem; color: #ffffff; margin: 0 0 3px; font-weight: 800; line-height: 1; font-family: 'Salesforce Sans', system-ui, sans-serif; }
-.hero-score-unit    { font-size: 1.44rem; color: #94a3b8; font-weight: 400; margin-left: 2px; }
-.hero-message  { font-size: 0.76rem; color: #94a3b8; margin: 0 0 16px; line-height: 1.5; }
+.hero-eyebrow  { font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.1em; color: #64748b; margin: 0 0 4px; font-weight: 700; }
+.hero-score-display { font-size: 2rem; color: #ffffff; margin: 0 0 3px; font-weight: 800; line-height: 1; font-family: 'Salesforce Sans', system-ui, sans-serif; }
+.hero-score-unit    { font-size: 1rem; color: #94a3b8; font-weight: 400; margin-left: 2px; }
+.hero-message  { font-size: 0.73rem; color: #94a3b8; margin: 0 0 11px; line-height: 1.5; }
 
 .module-track-wrap {
-    display: flex; align-items: center; gap: 10px; margin-bottom: 13px;
+    display: flex; align-items: center; gap: 10px; margin-bottom: 9px;
 }
 .module-track {
     flex: 1; height: 5px; background: rgba(255,255,255,0.1); border-radius: 99px; overflow: hidden;
@@ -248,19 +248,15 @@ b, strong { font-weight: 800; color: var(--brand-dark); font-family: 'Salesforce
 /* =========================================================
    PRINT FOOTER
    ========================================================= */
-.print-footer {
-    display: flex;
-    justify-content: flex-end;
-    padding: 3px 0 6px;
-}
 .print-btn {
     display: flex; align-items: center; gap: 6px;
     background: var(--brand-dark); color: #ffffff;
     border: none; border-radius: 8px;
-    padding: 8px 18px; cursor: pointer;
+    padding: 6px 14px; cursor: pointer;
     font-family: 'Salesforce Sans', system-ui, sans-serif;
-    font-size: 0.70rem;
+    font-size: 0.66rem;
     transition: background 0.15s ease, transform 0.1s ease;
+    flex-shrink: 0;
 }
 .print-btn b { color: #ffffff; }
 .print-btn:hover  { background: #1e293b; transform: translateY(-1px); }

@@ -154,7 +154,9 @@ export default class WealthPlanSummaryAndPrint extends LightningElement {
                 '--shell-header-radius: 24px 24px 0 0',
                 '--shell-title-color: #ffffff',
                 '--shell-subtitle-color: rgba(255,255,255,0.6)',
-                '--shell-btn-primary-bg: #10b981',
+                '--shell-btn-primary-bg: rgba(255,255,255,0.12)',
+                '--shell-btn-border: 1.5px solid rgba(255,255,255,0.28)',
+                '--shell-btn-color: #ffffff',
             ].join('; ');
         }
         return `--component-bg-color: ${this.backgroundColor};`;

@@ -82,7 +82,14 @@
                 <div class="checklist-section fade-in" style="animation-delay: 0.15s;">
                     <div class="checklist-header">
                         <h3><b>Data Modules</b></h3>
-                        <span class="checklist-status">Pre-flight Verification</span>
+                        <button class="print-btn" onclick={handlePrint} aria-label="Print Data">
+                            <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
+                                <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                                <rect x="6" y="14" width="12" height="8"></rect>
+                            </svg>
+                            <b>Print / Export</b>
+                        </button>
                     </div>
 
                     <div class="checklist-grid">
@@ -131,19 +138,6 @@
                     </div>
                 </template>
 
-                <!-- ============================================= -->
-                <!-- PRINT ACTION FOOTER                            -->
-                <!-- ============================================= -->
-                <div class="print-footer fade-in" style="animation-delay: 0.4s;">
-                    <button class="print-btn" onclick={handlePrint} aria-label="Print Data">
-                        <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none">
-                            <polyline points="6 9 6 2 18 2 18 9"></polyline>
-                            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
-                            <rect x="6" y="14" width="12" height="8"></rect>
-                        </svg>
-                        <b>Print Data</b>
-                    </button>
-                </div>
 
             </div>
         </c-wealth-plan-view-shell>

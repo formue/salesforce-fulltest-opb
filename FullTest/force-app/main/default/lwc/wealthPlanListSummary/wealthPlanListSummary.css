@@ -19,8 +19,8 @@
 .header-section {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 26px;
+    align-items: center;
+    margin-bottom: 16px;
 }
 
 .header-badge {
@@ -709,7 +709,7 @@
 .theme-corporate .record-row { border-color: #f1f5f9; }
 .theme-corporate .record-row:hover { background: #f9fafb; }
 
-.list-summary-header { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+.list-summary-header { display: none; }
 
 .theme-pill-toggle { display: flex; background: rgba(0,0,0,0.08); border-radius: 99px; padding: 3px; gap: 2px; }
 .theme-pill-dark { background: rgba(255,255,255,0.18); }

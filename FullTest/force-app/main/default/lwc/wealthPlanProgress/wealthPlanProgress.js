@@ -250,15 +250,15 @@ export default class WealthPlanProgress extends LightningElement {
         const raw = [
             { label: 'Goals',                    shortLabel: 'Goals',        count: this._n(this.goalsCount),             pub: this._b(this.goalsPublished),             hasData: null,        publishable: true  },
             { label: 'Income',                   shortLabel: 'Income',       count: this._n(this.incomeCount),            pub: this._b(this.incomePublished),            hasData: null,        publishable: true  },
-            { label: 'Assets & Liabilities',     shortLabel: 'Assets',       count: this._n(this.assetsLiabilitiesCount), pub: this._b(this.assetsLiabilitiesPublished), hasData: null,        publishable: true  },
-            { label: 'Capital Needs',            shortLabel: 'Cap. Needs',   count: capCount,    pub: false,       hasData: capHasData,  publishable: false },
-            { label: 'Milestones',               shortLabel: 'Milestones',   count: this._n(this.milestonesCount),        pub: this._b(this.milestonesPublished),        hasData: null,        publishable: true  },
-            { label: 'Company Ownership',        shortLabel: 'Companies',    count: this._n(this.ownedCompaniesCount),    pub: this._b(this.ownedCompaniesPublished),    hasData: null,        publishable: true  },
-            { label: 'Risk & Lock-In',           shortLabel: 'Risk',         count: 0,           pub: false,       hasData: riskHasData, publishable: false, extra: riskHasData ? `${riskVal}` : '' },
-            { label: 'Sustainability Pref.',     shortLabel: 'Sust. Pref.',  count: this._n(this.sustainabilityCount),    pub: this._b(this.sustainabilityPublished),    hasData: null,        publishable: true  },
-            { label: 'Investment Preferences',   shortLabel: 'Inv. Pref.',   count: invPrefPub ? 1 : 0, pub: invPrefPub, hasData: invPrefPub, publishable: true  },
-            { label: 'Investment Strategy',      shortLabel: 'Strategy',     count: stratCount,  pub: false,       hasData: stratCount > 0, publishable: false, active: stratActive },
-            { label: 'Personal Greeting',        shortLabel: 'Greeting',     count: this._n(this.personalGreetingsCount), pub: this._b(this.personalGreetingsPublished), hasData: null,        publishable: true  },
+            { label: 'Assets & Liabilities',     shortLabel: 'Assets & Liab.', count: this._n(this.assetsLiabilitiesCount), pub: this._b(this.assetsLiabilitiesPublished), hasData: null,        publishable: true  },
+            { label: 'Capital Needs',            shortLabel: 'Cap. Needs',     count: capCount,    pub: false,       hasData: capHasData,  publishable: false },
+            { label: 'Milestones',               shortLabel: 'Milestones',     count: this._n(this.milestonesCount),        pub: this._b(this.milestonesPublished),        hasData: null,        publishable: true  },
+            { label: 'Company Ownership',        shortLabel: 'Co. Ownership',  count: this._n(this.ownedCompaniesCount),    pub: this._b(this.ownedCompaniesPublished),    hasData: null,        publishable: true  },
+            { label: 'Risk & Lock-In',           shortLabel: 'Risk & Lock-In', count: 0,           pub: false,       hasData: riskHasData, publishable: false, extra: riskHasData ? `${riskVal}` : '' },
+            { label: 'Sustainability Pref.',     shortLabel: 'Sust. Pref.',    count: this._n(this.sustainabilityCount),    pub: this._b(this.sustainabilityPublished),    hasData: null,        publishable: true  },
+            { label: 'Investment Preferences',   shortLabel: 'Inv. Pref.',     count: invPrefPub ? 1 : 0, pub: invPrefPub, hasData: invPrefPub, publishable: true  },
+            { label: 'Investment Strategy',      shortLabel: 'Inv. Strategy',  count: stratCount,  pub: false,       hasData: stratCount > 0, publishable: false, active: stratActive },
+            { label: 'Personal Greeting',        shortLabel: 'P. Greeting',    count: this._n(this.personalGreetingsCount), pub: this._b(this.personalGreetingsPublished), hasData: null,        publishable: true  },
         ];
 
         return raw.map((s, i) => {
