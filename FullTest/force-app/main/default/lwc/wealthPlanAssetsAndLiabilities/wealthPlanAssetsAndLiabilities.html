@@ -6,6 +6,7 @@
         editor-title={modalTitle}
         is-editor-view={isEditorView}
         is-dirty={isDirty}
+        is-corporate-theme={isCorporateTheme}
         use-modal-editor
         onshellsave={handleSaveToFlow}
         onshellcancel={handleCancelEdit}
@@ -22,7 +23,6 @@
             </button>
         </div>
         <template if:true={isCorporateTheme}>
-            <span slot="title-badge" class="beta-sticker">BETA</span>
         </template>
 
         <div slot="dashboard-content" class={dashboardWrapperClass}>

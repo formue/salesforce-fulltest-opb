@@ -463,10 +463,11 @@ export default class WealthPlanListSummary extends LightningElement {
     }
 
     get dynamicStyle() {
-        return `background-color: ${this.isCorporateTheme ? '#eeebe5' : this.backgroundColor};`;
+        if (this.isCorporateTheme) return '';
+        return `--component-bg-color: ${this.backgroundColor};`;
     }
-    get listSummaryWrapClass() {
-        return this.isCorporateTheme ? 'dashboard-wrapper theme-corporate' : 'dashboard-wrapper';
+    get contentThemeClass() {
+        return this.isCorporateTheme ? 'theme-corporate' : '';
     }
     get themePillWrapClass() {
         return this.isCorporateTheme ? 'theme-pill-toggle theme-pill-dark' : 'theme-pill-toggle';

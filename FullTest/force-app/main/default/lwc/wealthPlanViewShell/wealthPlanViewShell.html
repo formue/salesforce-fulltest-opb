@@ -25,7 +25,7 @@
                                     <b>Unsaved Changes</b>
                                 </div>
                             </template>
-                            <button class="btn-stay" onclick={handleShellSave} disabled={isSaveDisabled}>
+                            <button class={saveBtnClass} onclick={handleShellSave} disabled={isSaveDisabled}>
                                 <b>Save/Update</b>
                             </button>
                         </div>
@@ -52,7 +52,7 @@
                 </div>
                 <div class="editor-footer">
                     <button class="btn-discard" onclick={handleShellCancel}><b>Discard Changes</b></button>
-                    <button class="btn-stay" onclick={handleShellApply}><b>Apply Changes</b></button>
+                    <button class={saveBtnClass} onclick={handleShellApply}><b>Apply Changes</b></button>
                 </div>
             </div>
         </template>
@@ -74,7 +74,7 @@
                 </div>
                 <div class="editor-footer">
                     <button class="btn-discard" onclick={handleShellCancel}><b>Discard Changes</b></button>
-                    <button class="btn-stay" onclick={handleShellApply}><b>Apply Changes</b></button>
+                    <button class={saveBtnClass} onclick={handleShellApply}><b>Apply Changes</b></button>
                 </div>
             </div>
         </div>

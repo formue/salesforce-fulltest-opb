@@ -713,7 +713,7 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
 
     // ── Style / layout getters ───────────────────────────────────────────────
     get dynamicBgStyle() {
-        if (this.isCorporateTheme) return '--component-bg-color: #eeebe5';
+        if (this.isCorporateTheme) return '--component-bg-color: #f4f4f2';
         return `--component-bg-color: ${this.backgroundColor};`;
     }
     get isSummaryStep()    { return this._step === 'summary' || this._step === 'review'; }

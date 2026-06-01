@@ -3669,7 +3669,7 @@ b, strong { font-weight: 800; color: var(--text-main); }
 /* =========================================================
    CORPORATE THEME OVERRIDES
    ========================================================= */
-.theme-corporate.wph-container { background: var(--component-bg-color, #eeebe5); }
+.theme-corporate.wph-container { background: var(--component-bg-color, #f4f4f2); }
 .theme-corporate .wph-bg-pattern { display: none; }
 .theme-corporate .wph-accent-bar { display: none; }
 

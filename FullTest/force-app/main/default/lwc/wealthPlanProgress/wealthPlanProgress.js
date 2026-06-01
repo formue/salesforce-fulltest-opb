@@ -347,7 +347,7 @@ export default class WealthPlanProgress extends LightningElement {
     @track isCorporateTheme = true;
 
     get dynamicBgStyle() {
-        return `--outer-bg: ${this.isCorporateTheme ? '#eeebe5' : this.backgroundColor};`;
+        return `--outer-bg: ${this.isCorporateTheme ? '#f4f4f2' : this.backgroundColor};`;
     }
     get wpOuterClass() {
         return this.isCorporateTheme ? 'wp-outer theme-corporate' : 'wp-outer';

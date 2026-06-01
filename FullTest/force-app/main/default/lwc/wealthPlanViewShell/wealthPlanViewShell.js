@@ -7,12 +7,17 @@ export default class WealthPlanViewShell extends LightningElement {
     @api isEditorView = false;
     @api isDirty = false;
     @api viewOnly = false;
+    @api isCorporateTheme = false;
 
     @api useModalEditor = false;
     @api modalWidth = '1000px';
 
     get isSaveDisabled() {
         return !this.isDirty;
+    }
+
+    get saveBtnClass() {
+        return `btn-stay${this.isDirty ? ' btn-active' : ''}`;
     }
 
     get showDashboard() {
@@ -33,6 +38,7 @@ export default class WealthPlanViewShell extends LightningElement {
 
     renderedCallback() {
         document.body.style.overflow = this.showModalEditor ? 'hidden' : '';
+        this.template.host.classList.toggle('theme-corporate', this.isCorporateTheme);
     }
 
     disconnectedCallback() {

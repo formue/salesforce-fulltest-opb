@@ -1,13 +1,13 @@
 /* (Keep all existing View Shell CSS the same, just replace the .editor-modal block below) */
 :host { --brand-blue: #0f172a; --warning-orange: #f59e0b; --success-green: #10b981; --color-bg-card: #ffffff; --color-text-main: #0f172a; --color-text-muted: #64748b; --glass-border: rgba(226, 232, 240, 0.8); --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03); --shadow-heavy: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02); }
 b, strong { font-weight: 700; color: var(--color-text-main); font-family: 'Salesforce Sans', system-ui, sans-serif; }
-.view-shell-wrapper { position: relative; width: 100%; background: var(--component-bg-color, linear-gradient(165deg, #f8fafc 0%, #f1f5f9 100%)); border-radius: 24px; box-shadow: var(--shadow-heavy); border: 1px solid var(--glass-border); font-family: 'Salesforce Sans', sans-serif; padding: var(--shell-padding, 24px); color: var(--color-text-main); box-sizing: border-box; animation: fadeIn 0.3s ease-out forwards; }
-.view-panel { display: flex; flex-direction: column; gap: var(--shell-gap, 20px); }
+.view-shell-wrapper { position: relative; width: 100%; background: var(--component-bg-color, linear-gradient(165deg, #f8fafc 0%, #f1f5f9 100%)); border-radius: 24px; box-shadow: var(--shadow-heavy); border: 1px solid var(--glass-border); font-family: 'Salesforce Sans', sans-serif; padding: var(--shell-padding, 18px); color: var(--color-text-main); box-sizing: border-box; animation: fadeIn 0.3s ease-out forwards; }
+.view-panel { display: flex; flex-direction: column; gap: var(--shell-gap, 16px); }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes fadeInUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
 .fade-in { animation: fadeIn 0.3s; }
 .fade-in-up { animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
-.btn-stay { padding: 12px 28px; border-radius: 12px; border: var(--shell-btn-border, none); background: var(--shell-btn-primary-bg, var(--brand-blue)); color: var(--shell-btn-color, #ffffff); cursor: pointer; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2); transition: all 0.2s; font-family: 'Salesforce Sans', sans-serif; animation: var(--shell-btn-anim, none); }
+.btn-stay { padding: 12px 28px; border-radius: 12px; border: var(--shell-btn-border, none); background: var(--shell-btn-primary-bg, var(--brand-blue)); color: var(--shell-btn-color, #ffffff); cursor: pointer; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2); transition: all 0.2s; font-family: 'Salesforce Sans', sans-serif; }
 .btn-stay b { color: inherit; }
 .btn-stay:hover { transform: translateY(-2px); box-shadow: 0 8px 16px rgba(15, 23, 42, 0.3); animation-play-state: paused; }
 @keyframes shellBtnGlow { 0%, 100% { filter: drop-shadow(0 0 5px rgba(255,255,255,0.3)) drop-shadow(0 2px 6px rgba(0,0,0,0.08)); } 50% { filter: drop-shadow(0 0 16px rgba(255,255,255,0.65)) drop-shadow(0 0 8px rgba(255,255,255,0.3)); } }
@@ -17,8 +17,8 @@ b, strong { font-weight: 700; color: var(--color-text-main); font-family: 'Sales
 .btn-back:hover, .btn-back:hover b { color: var(--brand-blue); }
 .dashboard-header { display: flex; justify-content: space-between; align-items: flex-end; background: var(--shell-header-bg, transparent); margin: var(--shell-header-margin, 0); padding: var(--shell-header-padding, 0); border-radius: var(--shell-header-radius, 0); }
 .title-line { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
-.header-titles h2 { font-size: 1.5rem; margin: 0; font-weight: 700; color: var(--shell-title-color, var(--color-text-main)); }
-.header-titles p { margin: 0; color: var(--shell-subtitle-color, var(--color-text-muted)); }
+.header-titles h2 { font-size: 1.1rem; margin: 0; font-weight: 700; color: var(--shell-title-color, var(--color-text-main)); }
+.header-titles p { margin: 0; font-size: 0.74rem; color: var(--shell-subtitle-color, var(--color-text-muted)); }
 .header-titles b, .header-titles strong { color: var(--shell-title-color, var(--color-text-main)); }
 .header-widget-area { flex-grow: 1; display: flex; justify-content: center; padding: 0 40px; }
 .header-actions { display: flex; align-items: center; gap: 16px; }
@@ -124,3 +124,28 @@ b, strong { font-weight: 700; color: var(--color-text-main); font-family: 'Sales
 
 /* Inline editor passthrough panel */
 .editor-inline-panel { display: contents; }
+
+/* =========================================================
+   CORPORATE THEME — all static vars on :host so they cascade
+   to both .view-shell-wrapper AND the sibling .modal-root
+   ========================================================= */
+:host(.theme-corporate) {
+    --component-bg-color: #f4f4f2;
+    --shell-header-bg: #0d1b48;
+    --shell-header-margin: -18px -18px 0;
+    --shell-header-padding: 14px 18px 18px;
+    --shell-header-radius: 24px 24px 0 0;
+    --shell-title-color: #ffffff;
+    --shell-subtitle-color: rgba(255,255,255,0.6);
+    --shell-btn-primary-bg: rgba(255,255,255,0.12);
+    --shell-btn-border: 1.5px solid rgba(255,255,255,0.28);
+    --shell-btn-color: #ffffff;
+    --modal-header-bg: #0d1b48;
+    --modal-title-color: #ffffff;
+    --modal-footer-bg: #f4f4f2;
+    --modal-btn-bg: #0d1b48;
+}
+
+:host(.theme-corporate) .btn-stay.btn-active {
+    animation: shellBtnGlow 2.4s ease-in-out infinite;
+}

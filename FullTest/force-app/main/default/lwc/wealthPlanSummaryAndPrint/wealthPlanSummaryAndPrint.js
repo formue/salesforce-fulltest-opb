@@ -145,20 +145,7 @@ export default class WealthPlanSummaryAndPrint extends LightningElement {
 
     // ── Style ───────────────────────────────────────────────────
     get dynamicBgStyle() {
-        if (this.isCorporateTheme) {
-            return [
-                '--component-bg-color: #eeebe5',
-                '--shell-header-bg: #0d1b48',
-                '--shell-header-margin: -24px -24px 0',
-                '--shell-header-padding: 20px 24px 24px',
-                '--shell-header-radius: 24px 24px 0 0',
-                '--shell-title-color: #ffffff',
-                '--shell-subtitle-color: rgba(255,255,255,0.6)',
-                '--shell-btn-primary-bg: rgba(255,255,255,0.12)',
-                '--shell-btn-border: 1.5px solid rgba(255,255,255,0.28)',
-                '--shell-btn-color: #ffffff',
-            ].join('; ');
-        }
+        if (this.isCorporateTheme) return '';
         return `--component-bg-color: ${this.backgroundColor};`;
     }
 

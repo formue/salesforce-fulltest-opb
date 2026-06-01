@@ -57,25 +57,7 @@ export default class WealthPlanGoals extends LightningElement {
     @track isCorporateTheme = true;
 
     get dynamicBgStyle() {
-        if (this.isCorporateTheme) {
-            return [
-                '--component-bg-color: #eeebe5',
-                '--shell-header-bg: #0d1b48',
-                '--shell-header-margin: -24px -24px 0',
-                '--shell-header-padding: 20px 24px 24px',
-                '--shell-header-radius: 24px 24px 0 0',
-                '--shell-title-color: #ffffff',
-                '--shell-subtitle-color: rgba(255,255,255,0.6)',
-                '--shell-btn-primary-bg: rgba(255,255,255,0.12)',
-                '--shell-btn-border: 1.5px solid rgba(255,255,255,0.28)',
-                '--shell-btn-color: #ffffff',
-                `--shell-btn-anim: ${this.isDirty ? 'shellBtnGlow 2.4s ease-in-out infinite' : 'none'}`,
-                '--modal-header-bg: #0d1b48',
-                '--modal-title-color: #ffffff',
-                '--modal-footer-bg: #eeebe5',
-                '--modal-btn-bg: #0d1b48',
-            ].join('; ');
-        }
+        if (this.isCorporateTheme) return '';
         return `--component-bg-color: ${this.backgroundColor};`;
     }
 
