@@ -3653,3 +3653,64 @@ b, strong { font-weight: 800; color: var(--text-main); }
     border-radius: 4px;
 }
 .wph-wsn-close:hover { background: #a7f3d0; }
+
+/* =========================================================
+   THEME TOGGLE PILL
+   ========================================================= */
+.theme-pill-toggle { display: flex; background: rgba(0,0,0,0.08); border-radius: 99px; padding: 3px; gap: 2px; }
+.theme-pill-dark   { background: rgba(255,255,255,0.18); }
+.segment-btn { display: flex; align-items: center; gap: 5px; padding: 6px 16px; border-radius: 99px; border: none; background: transparent; color: rgba(0,0,0,0.45); font-size: 0.76rem; font-family: 'Salesforce Sans', sans-serif; cursor: pointer; transition: all 0.2s; }
+.theme-pill-dark .segment-btn { color: rgba(255,255,255,0.6); }
+.segment-btn.segment-active { background: #ffffff; color: #0f172a; box-shadow: 0 1px 4px rgba(0,0,0,0.18); }
+.segment-btn b { font-size: 0.76rem; color: inherit; font-weight: 700; }
+.segment-btn.segment-active b { color: #0f172a; }
+.segment-btn svg { flex-shrink: 0; }
+
+/* =========================================================
+   CORPORATE THEME OVERRIDES
+   ========================================================= */
+.theme-corporate.wph-container { background: var(--component-bg-color, #eeebe5); }
+.theme-corporate .wph-bg-pattern { display: none; }
+.theme-corporate .wph-accent-bar { display: none; }
+
+.theme-corporate.wph-container,
+.theme-corporate.wph-overlay-panel.wph-container { padding-top: 0; }
+
+.theme-corporate .wph-header {
+    background: #0d1b48;
+    margin: 0 -36px;
+    padding: 18px 36px 20px;
+    border-radius: 20px 20px 0 0;
+    top: 0;
+    margin-bottom: 16px;
+}
+.theme-corporate .wph-header-icon {
+    background: #ffffff;
+    color: #2563eb;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.2);
+    animation: none;
+}
+.theme-corporate .wph-title {
+    background: none;
+    -webkit-background-clip: unset;
+    background-clip: unset;
+    -webkit-text-fill-color: #ffffff;
+    color: #ffffff;
+}
+.theme-corporate .wph-subtitle { color: rgba(255,255,255,0.6); }
+.theme-corporate .wph-beta-badge {
+    background: rgba(254,243,199,0.15);
+    color: #fde68a;
+    border-color: rgba(253,212,74,0.4);
+    box-shadow: none;
+}
+.theme-corporate .wph-guide-trigger {
+    background: rgba(255,255,255,0.1);
+    border-color: rgba(255,255,255,0.3);
+    color: #ffffff;
+    box-shadow: none;
+}
+.theme-corporate .wph-guide-trigger:hover {
+    background: rgba(255,255,255,0.2);
+    color: #ffffff;
+}

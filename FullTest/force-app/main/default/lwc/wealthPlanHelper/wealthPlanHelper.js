@@ -396,6 +396,7 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
     @api outputGreetingsToDelete     = [];
 
     // ── Local state ──────────────────────────────────────────────────────────
+    @track isCorporateTheme = true;
     @track _step = 'input';         // 'input' | 'loading' | 'review'
     @track _wpGenerating = false;   // wealth plan generation in-progress (loading shown inline in right panel)
     @track _freeText = '';
@@ -711,7 +712,10 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
     ];
 
     // ── Style / layout getters ───────────────────────────────────────────────
-    get dynamicBgStyle() { return `--component-bg-color: ${this.backgroundColor};`; }
+    get dynamicBgStyle() {
+        if (this.isCorporateTheme) return '--component-bg-color: #eeebe5';
+        return `--component-bg-color: ${this.backgroundColor};`;
+    }
     get isSummaryStep()    { return this._step === 'summary' || this._step === 'review'; }
     get isLoadingStep()    { return this._step === 'loading'; }
     get isReviewStep()     { return this._step === 'review'; }
@@ -3551,7 +3555,15 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
     get showLauncher()     { return this.modalMode && !this._modalOpen; }
     get showMainContent()  { return !this.modalMode || this._modalOpen; }
     get rootWrapperClass() { return this.modalMode ? 'wph-overlay-root' : 'wph-inline-root'; }
-    get containerClass()   { return this.modalMode ? 'wph-container wph-overlay-panel' : 'wph-container'; }
+    get containerClass() {
+        const base = this.modalMode ? 'wph-container wph-overlay-panel' : 'wph-container';
+        return this.isCorporateTheme ? `${base} theme-corporate` : base;
+    }
+    get themePillWrapClass()    { return this.isCorporateTheme ? 'theme-pill-toggle theme-pill-dark' : 'theme-pill-toggle'; }
+    get classicSegmentClass()   { return this.isCorporateTheme ? 'segment-btn' : 'segment-btn segment-active'; }
+    get corporateSegmentClass() { return this.isCorporateTheme ? 'segment-btn segment-active' : 'segment-btn'; }
+    handleSetClassic()   { this.isCorporateTheme = false; }
+    handleSetCorporate() { this.isCorporateTheme = true; }
     get launcherStatusLabel() {
         if (this.isNotePublished)    return 'Meeting summary published';
         if (this.hasSummaryForEvent) return 'Draft summary available';
