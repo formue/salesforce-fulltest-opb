@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>66.0</apiVersion>
+    <isExposed>true</isExposed>
+    <masterLabel>Wealth Plan Orchestrator Hub</masterLabel>
+    <description>Navigation hub for all Wealth Plan sections. Each section tab launches its own Flow.</description>
+    <targets>
+        <target>lightning__FlowScreen</target>
+        <target>lightning__RecordPage</target>
+        <target>lightning__AppPage</target>
+    </targets>
+    <targetConfigs>
+        <targetConfig targets="lightning__FlowScreen">
+
+            <!-- ── SHARED INPUTS ─────────────────────────────────── -->
+            <property name="hubRecordId"          type="String"  label="Record ID"         role="inputOnly"/>
+            <property name="hubInputIsPublished"  type="Boolean" label="Is Published"      role="inputOnly"/>
+            <property name="hubHouseholdMembers"  type="@salesforce/schema/Contact[]"  label="Household Members"  role="inputOnly"/>
+            <property name="hubBusinessAccounts"  type="@salesforce/schema/Account[]"  label="Business Accounts"  role="inputOnly"/>
+            <property name="hubPrimaryMemberId"   type="String"  label="Primary Member ID" role="inputOnly"/>
+
+            <!-- ── SECTION FLOW API NAMES ────────────────────────── -->
+            <property name="hubGoalsFlowApiName"           type="String" label="Goals Flow API Name"                role="inputOnly"/>
+            <property name="hubIncomeFlowApiName"          type="String" label="Income Flow API Name"               role="inputOnly"/>
+            <property name="hubAssetsFlowApiName"          type="String" label="Assets Flow API Name"               role="inputOnly"/>
+            <property name="hubMilestonesFlowApiName"      type="String" label="Milestones Flow API Name"           role="inputOnly"/>
+            <property name="hubOwnershipFlowApiName"       type="String" label="Company Ownership Flow API Name"    role="inputOnly"/>
+            <property name="hubGreetingsFlowApiName"       type="String" label="Greetings Flow API Name"            role="inputOnly"/>
+            <property name="hubSustainabilityFlowApiName"  type="String" label="Sustainability Flow API Name"       role="inputOnly"/>
+            <property name="hubInvestmentPrefsFlowApiName" type="String" label="Investment Prefs Flow API Name"     role="inputOnly"/>
+
+        </targetConfig>
+    </targetConfigs>
+</LightningComponentBundle>

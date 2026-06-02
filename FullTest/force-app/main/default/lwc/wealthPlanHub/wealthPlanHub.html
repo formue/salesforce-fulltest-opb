@@ -1,0 +1,149 @@
+<template>
+    <div class="spa-shell">
+
+        <!-- MASTER NAVIGATION BAR -->
+        <header class="nav-container">
+            <div class="header-left">
+                <div class="client-avatar"><b>AJ</b></div>
+                <div class="header-titles">
+                    <h1><b>Wealth Plan Hub</b></h1>
+                    <p class="client-name">Client: <b>Anne Jacobsen DEMO</b></p>
+                </div>
+            </div>
+
+            <div class="nav-pills">
+                <button class={getTabClassGoals}      onclick={handleTabChange} data-tab="Goals"><b>Goals</b></button>
+                <button class={getTabClassWealth}     onclick={handleTabChange} data-tab="Wealth"><b>Wealth</b></button>
+                <button class={getTabClassFamily}     onclick={handleTabChange} data-tab="Family"><b>Family &amp; Ownership</b></button>
+                <button class={getTabClassInvestment} onclick={handleTabChange} data-tab="Investment"><b>Investment Profile</b></button>
+            </div>
+
+            <div class="header-right">
+                <div class="global-badge published-badge">
+                    <div class="pulse-dot"></div>
+                    <b>Published</b>
+                </div>
+            </div>
+        </header>
+
+        <!-- CONTENT AREA -->
+        <main class="content-area">
+
+            <!-- SUB-NAVIGATION -->
+            <template if:true={hasSubTabs}>
+                <div class="sub-nav-wrapper">
+                    <div class="nav-pills sub-pills">
+                        <template if:true={isWealthTab}>
+                            <button class={getSubTabClassIncome}  onclick={handleSubTabChange} data-subtab="Income"><b>Income</b></button>
+                            <button class={getSubTabClassAssets}  onclick={handleSubTabChange} data-subtab="Assets"><b>Assets &amp; Liabilities</b></button>
+                            <button class={getSubTabClassCapital} onclick={handleSubTabChange} data-subtab="Capital"><b>Capital Needs</b></button>
+                        </template>
+                        <template if:true={isFamilyTab}>
+                            <button class={getSubTabClassRelationship} onclick={handleSubTabChange} data-subtab="Relationship"><b>Relationship</b></button>
+                            <button class={getSubTabClassMilestones}   onclick={handleSubTabChange} data-subtab="Milestones"><b>Milestones</b></button>
+                            <button class={getSubTabClassCompany}      onclick={handleSubTabChange} data-subtab="Company"><b>Company Ownership</b></button>
+                            <button class={getSubTabClassGreetings}    onclick={handleSubTabChange} data-subtab="Greetings"><b>Personal Greeting</b></button>
+                        </template>
+                        <template if:true={isInvestmentTab}>
+                            <button class={getSubTabClassSustainability}  onclick={handleSubTabChange} data-subtab="Sustainability"><b>Sustainability</b></button>
+                            <button class={getSubTabClassInvestmentPrefs} onclick={handleSubTabChange} data-subtab="InvestmentPrefs"><b>Investment Profile</b></button>
+                        </template>
+                    </div>
+                </div>
+            </template>
+
+            <div class="fade-in" key={renderKey}>
+
+                <!-- GOALS -->
+                <template if:true={isGoalsTab}>
+                    <lightning-flow
+                        flow-api-name={hubGoalsFlowApiName}
+                        flow-input-variables={flowInputVars}
+                        onstatuschange={handleFlowStatusChange}>
+                    </lightning-flow>
+                </template>
+
+                <!-- WEALTH → INCOME -->
+                <template if:true={isWealthIncome}>
+                    <lightning-flow
+                        flow-api-name={hubIncomeFlowApiName}
+                        flow-input-variables={flowInputVars}
+                        onstatuschange={handleFlowStatusChange}>
+                    </lightning-flow>
+                </template>
+
+                <!-- WEALTH → ASSETS & LIABILITIES -->
+                <template if:true={isWealthAssets}>
+                    <lightning-flow
+                        flow-api-name={hubAssetsFlowApiName}
+                        flow-input-variables={flowInputVars}
+                        onstatuschange={handleFlowStatusChange}>
+                    </lightning-flow>
+                </template>
+
+                <!-- WEALTH → CAPITAL NEEDS (placeholder) -->
+                <template if:true={isWealthCapital}>
+                    <div class="placeholder-card">
+                        <h2><b>Capital Needs</b></h2>
+                        <p>Capital Needs component coming soon.</p>
+                    </div>
+                </template>
+
+                <!-- FAMILY → RELATIONSHIP (placeholder) -->
+                <template if:true={isFamilyRelationship}>
+                    <div class="placeholder-card">
+                        <h2><b>Relationship</b></h2>
+                        <p>Relationship component coming soon.</p>
+                    </div>
+                </template>
+
+                <!-- FAMILY → MILESTONES -->
+                <template if:true={isFamilyMilestones}>
+                    <lightning-flow
+                        flow-api-name={hubMilestonesFlowApiName}
+                        flow-input-variables={flowInputVars}
+                        onstatuschange={handleFlowStatusChange}>
+                    </lightning-flow>
+                </template>
+
+                <!-- FAMILY → COMPANY OWNERSHIP -->
+                <template if:true={isFamilyCompany}>
+                    <lightning-flow
+                        flow-api-name={hubOwnershipFlowApiName}
+                        flow-input-variables={flowInputVars}
+                        onstatuschange={handleFlowStatusChange}>
+                    </lightning-flow>
+                </template>
+
+                <!-- FAMILY → PERSONAL GREETING -->
+                <template if:true={isFamilyGreetings}>
+                    <lightning-flow
+                        flow-api-name={hubGreetingsFlowApiName}
+                        flow-input-variables={flowInputVars}
+                        onstatuschange={handleFlowStatusChange}>
+                    </lightning-flow>
+                </template>
+
+                <!-- INVESTMENT → SUSTAINABILITY -->
+                <template if:true={isInvestmentSustainability}>
+                    <lightning-flow
+                        flow-api-name={hubSustainabilityFlowApiName}
+                        flow-input-variables={flowInputVars}
+                        onstatuschange={handleFlowStatusChange}>
+                    </lightning-flow>
+                </template>
+
+                <!-- INVESTMENT → INVESTMENT PREFS -->
+                <template if:true={isInvestmentPrefs}>
+                    <lightning-flow
+                        flow-api-name={hubInvestmentPrefsFlowApiName}
+                        flow-input-variables={flowInputVars}
+                        onstatuschange={handleFlowStatusChange}>
+                    </lightning-flow>
+                </template>
+
+            </div>
+        </main>
+
+    </div>
+</template>
