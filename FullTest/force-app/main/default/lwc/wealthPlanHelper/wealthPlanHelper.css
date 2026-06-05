@@ -35,7 +35,7 @@ b, strong { font-weight: 800; color: var(--text-main); }
 
 /* ── Container with dot pattern ─────────────────────────── */
 .wph-container {
-    background: var(--component-bg-color, #f4f7fb);
+    background: var(--component-bg-color, linear-gradient(165deg, #f3f6fb 0%, #e6ecf7 100%));
     border-radius: var(--radius-xl); padding: 0 36px 36px;
     position: relative;
 }
@@ -46,28 +46,24 @@ b, strong { font-weight: 800; color: var(--text-main); }
 }
 .wph-container > *:not(.wph-bg-pattern):not(.wph-accent-bar) { position: relative; z-index: 1; }
 
-/* Gradient accent bar */
-.wph-accent-bar {
-    height: 4px; width: 100%; position: relative; z-index: 1;
-    background: linear-gradient(90deg, var(--brand-accent), var(--brand-purple), var(--brand-teal));
-    border-radius: 0 0 4px 4px; margin-bottom: 28px;
-}
+/* Gradient accent bar — hidden in both themes */
+.wph-accent-bar { display: none; }
 
 /* ── Header ─────────────────────────────────────────────── */
 .wph-header {
-    display: flex; justify-content: space-between; align-items: flex-start;
+    display: flex; justify-content: space-between; align-items: center;
     margin-bottom: 24px; gap: 16px; flex-wrap: wrap;
     position: sticky; top: 0; z-index: 40;
-    background: var(--component-bg-color, #f4f7fb);
-    padding-top: 16px;
+    background: var(--component-bg-solid, #edf2f9);
+    padding-top: 20px; padding-bottom: 20px;
     overflow: visible;
 }
 .wph-header-left { display: flex; align-items: center; gap: 16px; }
 .wph-header-icon {
     background: linear-gradient(135deg, #0f2044 0%, #1e4080 100%);
-    color: #fff; padding: 14px; border-radius: var(--radius-md);
-    box-shadow: 0 8px 24px rgba(15,32,68,0.3);
-    display: flex; align-items: center; justify-content: center;
+    color: #fff; padding: 10px; border-radius: var(--radius-md);
+    box-shadow: 0 6px 16px rgba(15,32,68,0.25);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     animation: wphIconPulse 3s ease-in-out infinite;
 }
 .wph-title-row { display: flex; align-items: center; gap: 10px; position: relative; }
@@ -87,6 +83,87 @@ b, strong { font-weight: 800; color: var(--text-main); }
     white-space: nowrap;
 }
 .wph-header-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+/* ── Classic / Corporate theme toggle (matches wealthPlanViewShell pattern) ── */
+.theme-pill-toggle {
+    display: flex; background: rgba(0,0,0,0.08); border-radius: 99px; padding: 3px; gap: 2px;
+}
+.theme-pill-dark { background: rgba(255,255,255,0.18); }
+.segment-btn {
+    display: flex; align-items: center; gap: 5px; padding: 6px 16px; border-radius: 99px;
+    border: none; background: transparent; color: rgba(0,0,0,0.45);
+    font-size: 0.76rem; font-family: 'Salesforce Sans', system-ui, sans-serif;
+    cursor: pointer; transition: all 0.2s;
+}
+.theme-pill-dark .segment-btn { color: rgba(255,255,255,0.6); }
+.segment-btn.segment-active { background: #ffffff; color: #0f172a; box-shadow: 0 1px 4px rgba(0,0,0,0.18); }
+.segment-btn b { font-size: 0.76rem; color: inherit; font-weight: 700; }
+.segment-btn.segment-active b { color: #0f172a; }
+.segment-btn svg { flex-shrink: 0; }
+
+/* Corporate: dark navy header — bleeds edge-to-edge, same height as Classic */
+.wph-theme-corporate .wph-accent-bar { display: none; }
+.wph-theme-corporate .wph-header {
+    background: #0d1b48;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    margin: 0 -36px 24px;
+    padding: 20px 36px;
+    align-items: center;
+}
+.wph-theme-corporate .wph-header-icon {
+    background: #ffffff;
+    color: #0d1b48;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+.wph-theme-corporate .wph-title {
+    background: none; -webkit-text-fill-color: #ffffff; color: #ffffff;
+}
+.wph-theme-corporate .wph-subtitle { color: rgba(255,255,255,0.6); }
+.wph-theme-corporate .wph-beta-badge {
+    background: rgba(254,243,199,0.12); color: #fcd34d; border-color: rgba(252,211,77,0.35);
+}
+.wph-theme-corporate .wph-guide-trigger {
+    color: rgba(255,255,255,0.65); border-color: rgba(255,255,255,0.18);
+    background: rgba(255,255,255,0.07);
+}
+.wph-theme-corporate .wph-guide-trigger:hover { background: rgba(255,255,255,0.14); color: #fff; }
+/* Undo / redo / expand on dark header */
+.wph-theme-corporate .wph-undo-btn,
+.wph-theme-corporate .wph-redo-btn,
+.wph-theme-corporate .wph-expand-btn {
+    background: rgba(255,255,255,0.08);
+    border-color: rgba(255,255,255,0.18);
+    color: rgba(255,255,255,0.7);
+    box-shadow: none;
+}
+.wph-theme-corporate .wph-undo-btn:hover:not(:disabled),
+.wph-theme-corporate .wph-redo-btn:hover:not(:disabled),
+.wph-theme-corporate .wph-expand-btn:hover {
+    background: rgba(255,255,255,0.16);
+    border-color: rgba(255,255,255,0.35);
+    color: #fff;
+    transform: none;
+    box-shadow: none;
+}
+
+/* ── Corporate body: re-warm the CSS variable palette ────────── */
+/* --bg-surface and --bg-subtle are cool-grey by default; override to warm cream
+   so every element that uses var(--bg-surface/subtle) stays on-palette */
+.wph-theme-corporate {
+    --bg-surface:   #faf7f2;
+    --bg-subtle:    #f2ece3;
+    --border-color: #e0d5c8;
+}
+
+/* Dot pattern: warm brown tint (default is dark navy dots) */
+.wph-theme-corporate .wph-bg-pattern {
+    background-image: radial-gradient(circle, rgba(120,80,30,0.08) 1px, transparent 1px);
+}
+
+/* Generate bar (hardcoded #edf2f9 — override to warm tone) */
+.wph-theme-corporate .wph-generate-bar {
+    background: linear-gradient(to top, #f0ebe1 70%, transparent);
+}
 
 /* ── Header tab navigation ──────────────────────────────── */
 .wph-header-tabs {
@@ -845,7 +922,7 @@ b, strong { font-weight: 800; color: var(--text-main); }
     gap: 8px; flex-wrap: wrap;
     margin-bottom: 0;
     padding: 10px 0 12px; border-bottom: 1px solid var(--border-color);
-    background: var(--component-bg-color, #f4f7fb);
+    background: var(--component-bg-solid, #edf2f9);
 }
 .wph-tab-bar-left { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .wph-main-tab {
@@ -1700,7 +1777,7 @@ b, strong { font-weight: 800; color: var(--text-main); }
 .wph-generate-bar {
     border-top: 1px solid var(--border-color);
     padding: 16px 20px;
-    background: linear-gradient(to top, var(--component-bg-color, #f4f7fb) 70%, transparent);
+    background: linear-gradient(to top, #edf2f9 70%, transparent);
 }
 
 .wph-label { display: block; font-size: 0.82rem; color: var(--text-main); margin-bottom: 10px; }
@@ -3138,7 +3215,7 @@ b, strong { font-weight: 800; color: var(--text-main); }
     display: flex;
     align-items: center;
     gap: 12px;
-    margin: 10px 20px 0;
+    margin: 10px 0 0;
     padding: 12px 16px;
     background: linear-gradient(135deg, #eff6ff 0%, #e8f0fa 100%);
     border: 1.5px solid rgba(37,99,235,0.25);
@@ -3331,8 +3408,7 @@ b, strong { font-weight: 800; color: var(--text-main); }
     display: flex; flex-direction: column; overflow: hidden;
     box-shadow: 0 25px 60px rgba(0, 0, 0, 0.35);
 }
-.wph-overlay-panel .wph-accent-bar { display: none; }
-.wph-overlay-panel.wph-container { padding-top: 32px; }
+.wph-overlay-panel.wph-container { padding-top: 0; }
 
 /* ── Modal-mode flex height chain ─────────────────────────── */
 .wph-overlay-panel .wph-summary-step   { flex: 1; min-height: 0; }

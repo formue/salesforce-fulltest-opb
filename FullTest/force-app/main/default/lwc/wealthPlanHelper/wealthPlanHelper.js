@@ -42,7 +42,16 @@ const SECTIONS = [
     { key: 'goals',          label: 'Financial Goals',           icon: 'goals',       object: 'FinServ__FinancialGoal__c',
       fields: [
         { api: 'FF_Goal__c',               label: 'Goal Category',   type: 'select', selectKey: 'goalOptions',   required: true, role: 'title' },
-        { api: 'FF_Custom_Goal__c',        label: 'Custom Goal',     type: 'text', role: 'subtitle' },
+        { api: 'FF_Custom_Goal__c',        label: 'Custom Goal',     type: 'text', role: 'subtitle',
+          crossValidate(rec) {
+            const goalLc = (rec.FF_Goal__c || '').toLowerCase();
+            const isOther = goalLc === 'other' || goalLc === 'annet' || goalLc === 'annat';
+            if (isOther && !rec.FF_Custom_Goal__c)
+                return "Please fill in the Custom Goal before clicking 'Save'";
+            if (rec.FF_Custom_Goal__c && !isOther)
+                return "A Custom Goal can only be created if the value 'Other/Annet/Annat' is chosen from the picklist";
+            return null;
+          }},
         { api: 'FinServ__Description__c',  label: 'Description',     type: 'textarea', role: 'description' },
         { api: 'FinServ__Status__c',       label: 'Status',          type: 'select', selectKey: 'statusOptions', required: true, role: 'meta' },
         { api: 'FinServ__PrimaryOwner__c', label: 'Primary Owner',   type: 'select', selectKey: 'ownerOptions',  required: true, role: 'meta' },
@@ -51,7 +60,16 @@ const SECTIONS = [
       fields: [
         { api: 'Name',              label: 'Name',            type: 'text', role: 'title' },
         { api: 'FF_Type__c',        label: 'Income Type',     type: 'select', selectKey: 'incomeTypeOptions', role: 'subtitle' },
-        { api: 'FF_Type_Other__c',  label: 'Custom Type',     type: 'text' },
+        { api: 'FF_Type_Other__c',  label: 'Custom Type',     type: 'text',
+          crossValidate(rec) {
+            const typeLc = (rec.FF_Type__c || '').toLowerCase();
+            const isOther = typeLc === 'other' || typeLc === 'annet' || typeLc === 'annat';
+            if (isOther && !rec.FF_Type_Other__c)
+                return "Type (Other) must be filled if 'Other' is chosen in picklist";
+            if (rec.FF_Type_Other__c && !isOther)
+                return "Type 'Other' must be chosen in Picklist to register a custom Income Type";
+            return null;
+          }},
         { api: 'FF_Amount__c',      label: 'Amount (NOK)',    type: 'number', role: 'meta' },
         { api: 'FF_Account__c',     label: 'Account Holder',  type: 'select', selectKey: 'ownerOptions', role: 'meta' },
       ]},
@@ -224,7 +242,7 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
     @api meetingSummaryFlowApiName;        // Meeting Summary flow (returns plain text/HTML summary)
     @api regenerateSummaryFlowApiName;     // Dedicated regeneration flow (inputs: currentSummary, instructions; output: generatedResponse)
     @api saveSummaryFlowApiName;           // Background save flow (inputs: noteId, noteHtml, eventId, published; output: savedNoteId)
-    @api backgroundColor = '#f0f9ff';
+    @api backgroundColor = 'linear-gradient(165deg, #f3f6fb 0%, #e6ecf7 100%)';
     @api inputTasks        = [];
     // inputMeetingNotes uses a setter so late-arriving flow data is handled explicitly
     _inputMeetingNotes = [];
@@ -670,23 +688,35 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
         return opts;
     }
 
-    /** Options for Company_Owned__c — company accounts only */
+    /** Options for Company_Owned__c — household member accounts */
     _buildCompanyOptions() {
         const opts = [{ label: '-- Select Company --', value: '' }];
-        (this.inputCompanies || []).forEach(c => {
-            if (c && c.Id && c.Name) opts.push({ label: c.Name, value: c.Id });
+        const seen = new Set();
+        if (this.inputPrimaryMember?.Id && this.inputPrimaryMember?.Name) {
+            opts.push({ label: this.inputPrimaryMember.Name, value: this.inputPrimaryMember.Id });
+            seen.add(this.inputPrimaryMember.Id);
+        }
+        (this.inputHouseholdMembers || []).forEach(m => {
+            if (m?.Id && m?.Name && !seen.has(m.Id)) {
+                opts.push({ label: m.Name, value: m.Id });
+                seen.add(m.Id);
+            }
         });
         return opts;
     }
 
-    /** Options for Company_Owner__c — all household members (persons + companies, as an owner can be either) */
+    /** Options for Company_Owner__c — all household members (persons + companies can be owners) */
     _buildEntityOptions() {
         const opts = [{ label: '-- Select Owner --', value: '' }];
         const seen = new Set();
-        (this.inputPersons || []).forEach(e => {
-            if (e && e.Id && e.Name && !seen.has(e.Id)) {
-                opts.push({ label: e.Name, value: e.Id });
-                seen.add(e.Id);
+        if (this.inputPrimaryMember?.Id && this.inputPrimaryMember?.Name) {
+            opts.push({ label: `${this.inputPrimaryMember.Name} (Primary)`, value: this.inputPrimaryMember.Id });
+            seen.add(this.inputPrimaryMember.Id);
+        }
+        (this.inputHouseholdMembers || []).forEach(m => {
+            if (m?.Id && m?.Name && !seen.has(m.Id)) {
+                opts.push({ label: m.Name, value: m.Id });
+                seen.add(m.Id);
             }
         });
         return opts;
@@ -711,7 +741,14 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
     ];
 
     // ── Style / layout getters ───────────────────────────────────────────────
-    get dynamicBgStyle() { return `--component-bg-color: ${this.backgroundColor};`; }
+    get dynamicBgStyle() {
+        if (this._theme === 'corporate') {
+            return '--component-bg-color: linear-gradient(165deg, #f8f4ee 0%, #ede8de 100%); --component-bg-solid: #f0ebe1;';
+        }
+        const bg = this.backgroundColor || 'linear-gradient(165deg, #f3f6fb 0%, #e6ecf7 100%)';
+        const solid = bg.startsWith('linear-gradient') || bg.startsWith('radial-gradient') ? '#edf2f9' : bg;
+        return `--component-bg-color: ${bg}; --component-bg-solid: ${solid};`;
+    }
     get isSummaryStep()    { return this._step === 'summary' || this._step === 'review'; }
     get isLoadingStep()    { return this._step === 'loading'; }
     get isReviewStep()     { return this._step === 'review'; }
@@ -1958,6 +1995,7 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
     get briefChevronClass() { return `wph-chevron${this._briefExpanded ? ' wph-chevron-up' : ''}`; }
     handleToggleBrief()     { this._briefExpanded = !this._briefExpanded; }
     // ── Two-column layout collapse / ratio ──────────────────────────────────
+    @track _theme               = 'corporate'; // 'classic' | 'corporate'
     @track _leftPanelCollapsed  = false;
     @track _panelEqualOverride  = false;
     @track _eventDropdownOpen   = false;
@@ -2403,6 +2441,12 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
                 }
                 if (invalid) { hasErrors = true; break; }
             }
+            // Cross-field validation (e.g. Other picklist + companion text)
+            if (!hasErrors) {
+                for (const f of fields) {
+                    if (f.crossValidate?.(rec)) { hasErrors = true; break; }
+                }
+            }
         }
         return {
             _hasErrors: hasErrors,
@@ -2472,13 +2516,20 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
                     const isEmpty = rawValue === '' || rawValue === null || rawValue === undefined;
                     const isRequiredEmpty = !!f.required && isEmpty;
 
+                    const crossMsg = (!isRowLocked && f.crossValidate) ? f.crossValidate(rec) : null;
+                    if (crossMsg) isInvalid = true;
+                    const invalidMsg = crossMsg
+                        ?? (isRequiredEmpty ? 'Required' : null)
+                        ?? (isInvalid       ? 'Not in picklist' : null)
+                        ?? null;
+
                     return {
                         api: f.api, label: f.label, type: f.type,
                         role: f.role || '',
                         required: !!f.required,
                         value: rawValue, displayValue,
                         isSelect, isCheckbox, isTextarea, isNumber, isText,
-                        selectOptions, isInvalid,
+                        selectOptions, isInvalid, invalidMsg,
                         isRequiredEmpty,
                         checkboxValue: rec[f.api] === true || rec[f.api] === 'true',
                         selectClass: isInvalid ? 'wph-field-select wph-select-invalid' : 'wph-field-select',
@@ -2716,8 +2767,6 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
             if (this._lockedSections[s.key]) return true;
             return s.records.some(r =>
                 !!this._lockedRows[r._id] ||
-                r._source === 'manual' ||
-                !!this._editedRows?.[r._id] ||
                 !!this._deletedRows?.[r._id]
             );
         });
@@ -2745,8 +2794,14 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
 
     // ── Detailed stats ───────────────────────────────────────────────────────
     get lockedRecordCount() {
-        return Object.keys(this._lockedRows).length + this._sections.reduce((sum, s) =>
-            sum + (this._lockedSections[s.key] ? s.records.length : 0), 0);
+        let count = 0;
+        for (const s of this._sections) {
+            const sectionLocked = !!this._lockedSections[s.key];
+            for (const r of s.records) {
+                if (sectionLocked || !!this._lockedRows[r._id]) count++;
+            }
+        }
+        return count;
     }
 
     // ── Expand / Collapse all ────────────────────────────────────────────────
@@ -3295,13 +3350,16 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
     // ── Lock row / section ──────────────────────────────────────────────────
     handleLockRow(event) {
         const id = event.currentTarget.dataset.id;
-        const milestonesSec = this._sections.find(s => s.key === 'milestones');
-        if (milestonesSec) {
-            const rec = milestonesSec.records.find(r => r._id === id);
-            if (rec && !rec.Milestone_Year__c) {
-                this._showToast('Required Field Missing', 'Please set the Milestone Year before locking this record.', 'error');
+        const optMap = this._selectOptionsMap;
+        for (const sec of this._sections) {
+            const rec = sec.records.find(r => r._id === id);
+            if (!rec) continue;
+            const stat = this._computeRecordStat(rec, sec.key, sec.fields, optMap);
+            if (stat._hasErrors) {
+                this._showToast('Validation Error', 'Please fix all field errors before accepting this record.', 'error');
                 return;
             }
+            break;
         }
         this._lockedRows = { ...this._lockedRows, [id]: true };
         this._pushUndo({ type: 'lock', recId: id });
@@ -3341,15 +3399,8 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
         let toLock = 0, toSkipErrors = 0, alreadyLocked = 0;
         sec.records.forEach(rec => {
             if (this._lockedRows[rec._id]) { alreadyLocked++; return; }
-            const hasErrors = sec.fields.some(f => {
-                if (f.type !== 'select' || !f.selectKey) return false;
-                const val = rec[f.api] != null ? String(rec[f.api]) : '';
-                if (val === '') return false;
-                const opts = optMap[f.selectKey] || [];
-                const trimLow = val.trim().toLowerCase();
-                return !opts.some(o => o.value === val || o.value.trim().toLowerCase() === trimLow || (o.label && o.label.trim().toLowerCase() === trimLow));
-            });
-            if (hasErrors) toSkipErrors++;
+            const stat = this._computeRecordStat(rec, key, sec.fields, optMap);
+            if (stat._hasErrors) toSkipErrors++;
             else toLock++;
         });
         this._bulkLockPreview = { sectionKey: key, sectionLabel: sec.label, toLock, toSkipErrors, alreadyLocked };
@@ -3551,7 +3602,14 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
     get showLauncher()     { return this.modalMode && !this._modalOpen; }
     get showMainContent()  { return !this.modalMode || this._modalOpen; }
     get rootWrapperClass() { return this.modalMode ? 'wph-overlay-root' : 'wph-inline-root'; }
-    get containerClass()   { return this.modalMode ? 'wph-container wph-overlay-panel' : 'wph-container'; }
+    get containerClass() {
+        const base = this.modalMode ? 'wph-container wph-overlay-panel' : 'wph-container';
+        return this._theme === 'corporate' ? `${base} wph-theme-corporate` : base;
+    }
+    get themeToggleClass()  { return this._theme === 'corporate' ? 'theme-pill-toggle theme-pill-dark' : 'theme-pill-toggle'; }
+    get classicBtnClass()   { return `segment-btn${this._theme === 'classic'   ? ' segment-active' : ''}`; }
+    get corporateBtnClass() { return `segment-btn${this._theme === 'corporate' ? ' segment-active' : ''}`; }
+    handleThemeSwitch(event) { this._theme = event.currentTarget.dataset.theme; }
     get launcherStatusLabel() {
         if (this.isNotePublished)    return 'Meeting summary published';
         if (this.hasSummaryForEvent) return 'Draft summary available';
@@ -3636,6 +3694,12 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
                 milestones.update.forEach(r => { r.RelatedHousehold__c = this.recordId; });
             }
 
+            const greetings = route('greetings');
+            if (this.recordId) {
+                greetings.create.forEach(r => { r.FF_HouseholdId__c = this.recordId; });
+                greetings.update.forEach(r => { r.FF_HouseholdId__c = this.recordId; });
+            }
+
             const payload = {
                 goals:          route('goals'),
                 income:         route('income'),
@@ -3643,7 +3707,7 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
                 milestones,
                 ownership:      route('ownership'),
                 sustainability: route('sustainability'),
-                greetings:      route('greetings'),
+                greetings,
                 todos:          route('todos')
             };
 
@@ -4212,15 +4276,8 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
         const lockedIds = [];
         sec.records.forEach(rec => {
             if (updated[rec._id]) return;
-            const hasErrors = sec.fields.some(f => {
-                if (f.type !== 'select' || !f.selectKey) return false;
-                const val = rec[f.api] != null ? String(rec[f.api]) : '';
-                if (val === '') return false;
-                const opts = optMap[f.selectKey] || [];
-                const trimLow = val.trim().toLowerCase();
-                return !opts.some(o => o.value === val || o.value.trim().toLowerCase() === trimLow || (o.label && o.label.trim().toLowerCase() === trimLow));
-            });
-            if (!hasErrors) {
+            const stat = this._computeRecordStat(rec, key, sec.fields, optMap);
+            if (!stat._hasErrors) {
                 updated[rec._id] = true;
                 lockedIds.push(rec._id);
             }
