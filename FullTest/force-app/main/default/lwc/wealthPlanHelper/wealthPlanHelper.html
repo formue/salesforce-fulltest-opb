@@ -1,4 +1,12 @@
 <template>
+    <!-- Drag overlay: covers viewport during editor resize drag; must be at template root -->
+    <template lwc:if={_isDragging}>
+        <div class="wph-drag-overlay"
+             onmousemove={handleRteResizeDrag}
+             onmouseup={handleRteResizeDragEnd}
+             ontouchend={handleRteResizeDragEnd}>
+        </div>
+    </template>
     <!-- Launcher card: shown when modalMode=true and overlay is closed -->
     <template lwc:if={showLauncher}>
         <div class="wph-launcher-card">
@@ -1134,6 +1142,33 @@
                             <!-- Meeting summary output -->
                             <template lwc:if={isMeetingSection}>
                                 <div class="wph-ms-scroll-area">
+
+                                <!-- Version history — shown whenever the selected event has versions -->
+                                <template lwc:if={hasVersionHistory}>
+                                    <div class="wph-version-history">
+                                        <button class="wph-version-history-toggle" onclick={handleToggleVersionHistory}>
+                                            <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none">
+                                                <polyline points="6 9 12 15 18 9"></polyline>
+                                            </svg>
+                                            Version History ({_meetingNoteVersions.length})
+                                        </button>
+                                        <template lwc:if={_showVersionHistory}>
+                                            <ul class="wph-version-list">
+                                                <template for:each={sortedVersions} for:item="ver">
+                                                    <li key={ver.Id} class="wph-version-item">
+                                                        <span class="wph-version-name">{ver.Name}</span>
+                                                        <span class="wph-version-status">{ver.Status__c}</span>
+                                                        <span class="wph-version-date">{ver.DateActive__c}</span>
+                                                        <button class="wph-version-view-btn"
+                                                                data-id={ver.Id}
+                                                                onclick={handlePreviewVersion}>View</button>
+                                                    </li>
+                                                </template>
+                                            </ul>
+                                        </template>
+                                    </div>
+                                </template>
+
                                 <div class="wph-preloaded-summary-card">
 
                                     <!-- No event selected yet -->
@@ -1155,12 +1190,12 @@
                                                 <div class="wph-summary-html-body">
                                                     <lightning-formatted-rich-text value={summaryDisplayHtml}></lightning-formatted-rich-text>
                                                 </div>
-                                                <div class="wph-published-notice">
-                                                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                                                    <div>
-                                                        <b>This summary is published</b>
-                                                        <span> — Published summaries cannot be edited or regenerated.</span>
-                                                    </div>
+                                            </template>
+
+                                            <!-- Historical version preview: read-only view -->
+                                            <template lwc:elseif={isPreviewingHistoricalVersion}>
+                                                <div class="wph-summary-html-body">
+                                                    <lightning-formatted-rich-text value={summaryDisplayHtml}></lightning-formatted-rich-text>
                                                 </div>
                                             </template>
 
@@ -1207,7 +1242,7 @@
                                                     <div class="wph-summary-actions">
                                                         <button class="wph-summary-action-btn" onclick={handleEditSummaryDirect}>
                                                             <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                                                            <b>Edit</b>
+                                                            <b>Edit Summary</b>
                                                         </button>
                                                         <template lwc:if={canRevertSummary}>
                                                             <button class="wph-summary-action-btn wph-summary-action-btn-danger" onclick={handleRevertSummary} title="Discard edits and restore the original note">
@@ -1221,10 +1256,30 @@
                                                 <!-- Edit mode: rich text editor -->
                                                 <template lwc:if={_summaryEditMode}>
                                                     <div class="wph-summary-editor-wrap">
-                                                        <lightning-input-rich-text
-                                                            value={_summaryEditValue}
-                                                            onchange={handleSummaryRichTextChange}>
-                                                        </lightning-input-rich-text>
+                                                        <!-- Collapse/expand header -->
+                                                        <button class={rteCollapseHeaderClass} onclick={handleToggleRteCollapse}>
+                                                            <div class="wph-rte-collapse-header-left">
+                                                                <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                                                <b>Edit content</b>
+                                                            </div>
+                                                            <svg class={rteCollapseChevronClass} viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><polyline points="6 9 12 15 18 9"/></svg>
+                                                        </button>
+                                                        <!-- Collapsible body: editor + drag handle -->
+                                                        <div class={rteCollapseBodyClass}>
+                                                            <div class="wph-rte-resize-wrap">
+                                                                <lightning-input-rich-text
+                                                                    value={_summaryEditValue}
+                                                                    onchange={handleSummaryRichTextChange}>
+                                                                </lightning-input-rich-text>
+                                                            </div>
+                                                            <!-- Drag handle — drag up/down to resize the editor -->
+                                                            <div class="wph-rte-drag-bar" onmousedown={handleRteDragStart} title="Drag to resize editor">
+                                                                <svg viewBox="0 0 40 8" width="40" height="8" fill="none" aria-hidden="true">
+                                                                    <line x1="4" y1="2" x2="36" y2="2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                                                    <line x1="4" y1="5" x2="36" y2="5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                                                </svg>
+                                                            </div>
+                                                        </div>
                                                         <div class="wph-summary-editor-actions">
                                                             <button class="wph-summary-save-btn" onclick={handleSaveSummaryEdit}>
                                                                 <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><polyline points="20 6 9 17 4 12"></polyline></svg>
@@ -1253,9 +1308,37 @@
                                                                 </template>
                                                             </button>
                                                             <template lwc:if={_briefExpanded}>
-                                                                <div class="wph-brief-body fade-in">
-                                                                    <lightning-formatted-rich-text value={_meetingBrief}></lightning-formatted-rich-text>
-                                                                </div>
+                                                                <template lwc:if={_briefEditMode}>
+                                                                    <div class="wph-summary-editor-wrap">
+                                                                        <lightning-input-rich-text
+                                                                            value={_briefEditValue}
+                                                                            onchange={handleBriefRichTextChange}>
+                                                                        </lightning-input-rich-text>
+                                                                        <div class="wph-summary-editor-actions">
+                                                                            <button class="wph-summary-save-btn" onclick={handleSaveBriefEdit}>
+                                                                                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                                                                <b>Apply</b>
+                                                                            </button>
+                                                                            <button class="wph-summary-cancel-btn" onclick={handleCancelBriefEdit}>Cancel</button>
+                                                                        </div>
+                                                                    </div>
+                                                                </template>
+                                                                <template lwc:else>
+                                                                    <div class="wph-brief-body fade-in">
+                                                                        <lightning-formatted-rich-text value={briefDisplayHtml}></lightning-formatted-rich-text>
+                                                                        <template lwc:if={isPreviewingHistoricalVersion}>
+                                                                            <!-- no edit button when previewing a historical version -->
+                                                                        </template>
+                                                                        <template lwc:else>
+                                                                            <div class="wph-brief-edit-row">
+                                                                                <button class="wph-summary-action-btn" onclick={handleEditBrief}>
+                                                                                    <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                                                                    <b>Edit Brief</b>
+                                                                                </button>
+                                                                            </div>
+                                                                        </template>
+                                                                    </div>
+                                                                </template>
                                                             </template>
                                                         </div>
                                                     </template>
@@ -1328,6 +1411,35 @@
                                 </div><!-- end wph-preloaded-summary-card -->
                                 </div><!-- end wph-ms-scroll-area -->
 
+                                <!-- Published notice floating bar -->
+                                <template lwc:if={isNotePublished}>
+                                    <div class="wph-published-notice">
+                                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                                        <div class="wph-published-notice-content">
+                                            <div class="wph-published-notice-text">
+                                                <span class="wph-published-badge">Published</span>
+                                                <span>This summary is published and locked. To make changes, create a new version — the published note will remain as a record.</span>
+                                            </div>
+                                            <button class="wph-new-version-btn" onclick={handleCreateNewVersion}>
+                                                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                                <b>Create New Version</b>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </template>
+
+                                <!-- Version preview floating banner -->
+                                <template lwc:if={isPreviewingHistoricalVersion}>
+                                    <div class="wph-version-preview-banner">
+                                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none">
+                                            <circle cx="12" cy="12" r="10"></circle>
+                                            <polyline points="12 6 12 12 16 14"></polyline>
+                                        </svg>
+                                        <span>Viewing <b>{previewingVersion.Name}</b> — read only</span>
+                                        <button class="wph-version-exit-btn" onclick={handleExitVersionPreview}>Exit Preview</button>
+                                    </div>
+                                </template>
+
                                 <!-- Save bar -->
                                 <template lwc:if={showMsSaveBar}>
                                     <div class="wph-summary-save-bar">
@@ -1383,6 +1495,13 @@
                                                     <line x1="21" y1="12" x2="9" y2="12"/>
                                                 </svg>
                                                 <b>Publish &amp; Exit</b>
+                                            </button>
+                                        </template>
+                                        <template lwc:if={canDeleteNote}>
+                                            <span class="wph-save-bar-divider"></span>
+                                            <button class="wph-delete-note-btn" onclick={handleShowDeleteNoteConfirm} disabled={_saveBarBusy}>
+                                                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>
+                                                Delete Note
                                             </button>
                                         </template>
                                     </div>
@@ -1654,6 +1773,29 @@
                                     <button class="wph-publish-confirm-btn" onclick={handlePublish}>
                                         <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
                                         <b>Confirm &amp; Publish</b>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- Delete note confirmation modal -->
+                    <template lwc:if={_showDeleteNoteConfirm}>
+                        <div class="wph-modal-root">
+                            <div class="wph-modal-backdrop" onclick={handleCancelDeleteNote}></div>
+                            <div class="wph-modal-card fade-in">
+                                <div class="wph-confirm-header">
+                                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="#c0392b" stroke-width="2" fill="none"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>
+                                    <h3>Delete Meeting Note?</h3>
+                                </div>
+                                <div class="wph-confirm-body">
+                                    <p>This will permanently delete the meeting note. <b>This action cannot be undone.</b></p>
+                                </div>
+                                <div class="wph-confirm-actions">
+                                    <button class="wph-modal-cancel-btn" onclick={handleCancelDeleteNote}>Cancel</button>
+                                    <button class="wph-delete-confirm-btn" onclick={handleConfirmDeleteNote}>
+                                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path></svg>
+                                        <b>Delete</b>
                                     </button>
                                 </div>
                             </div>

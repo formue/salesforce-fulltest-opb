@@ -6,6 +6,7 @@ import saveMeetingNote from '@salesforce/apex/MeetingSummaryController.saveMeeti
 import saveTodos           from '@salesforce/apex/MeetingSummaryController.saveTodos';
 import saveFileToEvent     from '@salesforce/apex/MeetingSummaryController.saveFileToEvent';
 import saveWealthPlan      from '@salesforce/apex/MeetingSummaryController.saveWealthPlan';
+import getMeetingNoteVersions from '@salesforce/apex/MeetingSummaryController.getMeetingNoteVersions';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import { NavigationMixin } from 'lightning/navigation';
 import { FlowAttributeChangeEvent, FlowNavigationNextEvent } from 'lightning/flowSupport';
@@ -242,6 +243,8 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
     @api meetingSummaryFlowApiName;        // Meeting Summary flow (returns plain text/HTML summary)
     @api regenerateSummaryFlowApiName;     // Dedicated regeneration flow (inputs: currentSummary, instructions; output: generatedResponse)
     @api saveSummaryFlowApiName;           // Background save flow (inputs: noteId, noteHtml, eventId, published; output: savedNoteId)
+    @api versionHistoryFlowApiName = '';  // Subflow fired on event select; input: EventId; output collection: MeetingNoteVersions
+    @api createVersionFlowApiName  = '';  // Flow called when saving a new-version draft; creates MeetingNoteVersion__c + updates MeetingNote__c
     @api backgroundColor = 'linear-gradient(165deg, #f3f6fb 0%, #e6ecf7 100%)';
     @api inputTasks        = [];
     // inputMeetingNotes uses a setter so late-arriving flow data is handled explicitly
@@ -372,6 +375,75 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
 
     }
 
+    _rteResizeObserver = null;
+
+    _setupRteResize() {
+        const wrap = this.template.querySelector('.wph-rte-resize-wrap');
+        if (!wrap) return;
+        // Default height: 45% of viewport, floor 350px — substantially larger than SLDS default
+        const targetH = Math.round(Math.max(350, window.innerHeight * 0.45));
+        wrap.style.height = targetH + 'px';
+        this._resizeSummaryEditor();
+        // Retry once after an extra tick in case Quill hasn't fully painted yet
+        // eslint-disable-next-line @lwc/lwc/no-async-operation
+        setTimeout(() => this._resizeSummaryEditor(), 200);
+        if (window.ResizeObserver && !this._rteResizeObserver) {
+            this._rteResizeObserver = new ResizeObserver(() => {
+                this._resizeSummaryEditor();
+            });
+            this._rteResizeObserver.observe(wrap);
+        }
+    }
+
+    _resizeSummaryEditor() {
+        const wrap = this.template.querySelector('.wph-rte-resize-wrap');
+        if (!wrap) return;
+        const totalH = wrap.offsetHeight;
+        if (totalH <= 0) return;
+
+        const rte = this.template.querySelector('.wph-rte-resize-wrap lightning-input-rich-text');
+        if (!rte) return;
+        rte.style.height = totalH + 'px';
+        rte.style.display = 'block';
+
+        // Try three traversal strategies — at least one works in every Salesforce shadow mode:
+        // 1. this.template.querySelector  — LWC synthetic-shadow aware
+        // 2. rte.querySelector            — direct query on the host element
+        // 3. wrap.querySelector           — from the plain wrapper div (synthetic shadow)
+        const _q = sel =>
+            this.template.querySelector(sel) ||
+            rte.querySelector(sel) ||
+            wrap.querySelector(sel);
+
+        const toolbar = _q('.slds-rich-text-editor__toolbar');
+        const toolbarH = toolbar ? toolbar.offsetHeight : 44;
+        const contentH = Math.max(80, totalH - toolbarH - 2);
+
+        // Size intermediate SLDS containers so their flex chain propagates height inward
+        ['.slds-form-element', '.slds-form-element__control', '.slds-rich-text-editor'].forEach(sel => {
+            const el = _q(sel);
+            if (el) { el.style.height = totalH + 'px'; el.style.overflow = 'hidden'; }
+        });
+
+        // Size the actual editor content area
+        ['.slds-rich-text-editor__textarea', '.ql-container', '.ql-editor'].forEach(sel => {
+            const el = _q(sel);
+            if (el) {
+                el.style.height    = contentH + 'px';
+                el.style.minHeight = contentH + 'px';
+                el.style.overflowY = 'auto';
+            }
+        });
+    }
+
+    _teardownRteResize() {
+        if (this._rteResizeObserver) {
+            this._rteResizeObserver.disconnect();
+            this._rteResizeObserver = null;
+        }
+        this._isDragging = false;
+    }
+
     _on(v, prop) {
         if (prop && this._explicitlyDisabled[prop]) return false;
         if (v === 'false') return false;
@@ -383,6 +455,7 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
     @api outputMeetingSummary        = '';
     @api outputMeetingNote           = null;   // MeetingNote__c record for update { Id, Note__c, NoteMarkdown__c } — mutually exclusive with outputMeetingNoteToCreate
     @api outputMeetingNoteToCreate   = null;   // MeetingNote__c shell for create { Note__c, NoteMarkdown__c } — populated when no existing note exists
+    @api outputNoteIdToDelete        = '';     // Deprecated — retained for flow backwards compatibility; deletion handled via deleteNote flag in saveSummaryFlowApiName
     @api outputNoteMarkdown          = '';     // Markdown string derived from Note__c — for web app consumption
     @api outputMeetingType           = '';     // 'whiteboard' | 'status' | 'annual' | ''
     @api outputHasTodos              = false;  // whether To-Do's format was selected
@@ -499,6 +572,10 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
     @track _ownerPropagationPrompt = null; // { sectionKey, fieldApi, fieldLabel, value, ownerLabel, count }
     @track _meetingSummaryResult = '';
     @track _summaryTabOpen       = false;
+    @track _rteCollapsed         = false;  // editor body collapsed (header still visible)
+    @track _isDragging           = false;  // drag-resize overlay active
+    _dragStartY = 0;
+    _dragStartH = 0;
 
     // ── Event selection + meeting type modal ─────────────────────────────────
     @track _selectedEventId      = null;   // Id of the selected Salesforce Event
@@ -524,6 +601,8 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
     @track _summaryInstructions    = '';
     @track _summaryEditMode        = false;
     @track _summaryEditValue       = '';
+    @track _briefEditMode          = false;
+    @track _briefEditValue         = '';
     @track _regeneratingSummaryOnly = false; // kept for loadingTitle getter (wealth plan loading step)
     @track _currentNoteHtml         = null;  // regenerated HTML; null = read from original note
     @track _summarySaved            = false; // true after handleSaveSummary; reset when content changes
@@ -539,6 +618,11 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
     @track _publishExitPending      = false; // set by Publish & Exit — triggers exit after handlePublish succeeds
     @track _backgroundSavedNoteId   = null;  // Id of a MeetingNote__c created via background save (no existing note)
     @track _lastSavedHtml           = null;  // HTML last successfully background-saved; baseline for Revert
+    @track _showDeleteNoteConfirm   = false; // true while delete confirmation modal is open
+    @track _creatingNewVersion      = false; // true after handleCreateNewVersion — forces create path in _applyNoteOutputs
+    @track _meetingNoteVersions     = [];    // MeetingNoteVersion__c records loaded for the selected event
+    @track _showVersionHistory      = false; // version history panel open/collapsed
+    @track _previewingVersionId     = null;  // Id of version being previewed; null = live note
     _savedNoteCache                 = {};    // { [eventId]: { noteId, noteHtml, published } } — persists across event switches
     _meetingTypeCache               = {};    // { [eventId]: { type, hasTodos } } — per-event meeting type
     _selectedTaskIdsCache           = {};    // { [eventId]: { [taskId]: true } } — per-event task selections
@@ -549,6 +633,8 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
     @track _meetingBrief            = null;  // "At a Glance" content returned by the flow
     @track _briefExpanded           = false;
     @track _briefGenerating         = false;
+    @track _noteDeletedLocally      = false; // true after note deleted this session; cleared on event re-select
+    @track _versionSavedLocally     = false; // true after version save; makes isNotePublished ignore selectedEventNote?.Published__c
     // _noNoteSelectedArtifactIds and _noNoteStagedFiles removed — now using shared _selectedArtifactFileIds and _sharedFiles
 
     // ── Picklist metadata (wired from Salesforce) ──────────────────────────
@@ -810,13 +896,33 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
 
     // ── Meeting note getters ─────────────────────────────────────────────────
     get selectedEventNote() {
+        if (this._noteDeletedLocally) return null;
         const evt = (this._inputEvents || []).find(e => e.Id === this._selectedEventId);
         if (!evt?.MeetingNote__c) return null;
         return (this._inputMeetingNotes || []).find(n => n.Id === evt.MeetingNote__c) || null;
     }
     // True when a note record is linked to the selected event (Note__c may be empty)
-    get hasSummaryForEvent()  { return !!this._selectedEventId && (!!(this.selectedEventNote) || !!this._currentNoteHtml); }
-    get summaryDisplayHtml()  { return this._currentNoteHtml ?? this.selectedEventNote?.Note__c ?? null; }
+    get hasSummaryForEvent() {
+        if (this._noteDeletedLocally) return false;
+        return !!this._selectedEventId && (!!(this.selectedEventNote) || !!this._currentNoteHtml || this._meetingNoteVersions.length > 0);
+    }
+    get summaryDisplayHtml() {
+        if (this._previewingVersionId) {
+            return this._meetingNoteVersions.find(v => v.Id === this._previewingVersionId)?.Note__c ?? null;
+        }
+        return this._currentNoteHtml ?? this.selectedEventNote?.Note__c ?? null;
+    }
+    get briefDisplayHtml() {
+        if (this._previewingVersionId) return this.previewingVersion?.BriefSummary__c || null;
+        return this._meetingBrief;
+    }
+    get sortedVersions() {
+        return [...this._meetingNoteVersions]
+            .sort((a, b) => (b.DateActive__c || '').localeCompare(a.DateActive__c || ''));
+    }
+    get hasVersionHistory()             { return this._meetingNoteVersions.length > 0; }
+    get isPreviewingHistoricalVersion() { return !!this._previewingVersionId; }
+    get previewingVersion()             { return this._meetingNoteVersions.find(v => v.Id === this._previewingVersionId) || null; }
     // True when content has diverged from what was last saved (or from original if never saved)
     get canRevertSummary() {
         if (!this._currentNoteHtml) return false;
@@ -858,10 +964,15 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
     get meetingFormatBadges() { return this._hasTodos ? ["To-Do's"] : []; }
 
     // Published state — parent flow must include Published__c in its MeetingNote__c query
-    get isNotePublished()     { return !!this.selectedEventNote?.Published__c || this._notePublishedLocally; }
+    get isNotePublished() {
+        if (this._creatingNewVersion) return false;
+        if (this._versionSavedLocally) return this._notePublishedLocally;
+        return !!(this.selectedEventNote?.Published__c || this._notePublishedLocally);
+    }
+    get canDeleteNote()       { return !!(this._backgroundSavedNoteId || this.selectedEventNote?.Id) && !this.isNotePublished; }
     // Show the floating save bar when on the summary tab with a draft note that is not being regenerated
     get showMsSaveBar()       { return this.isSummaryTab && !this.noEventSelected && this.hasSummaryForEvent && !this.isNotePublished && !this._summaryGenerating; }
-    get _saveBarBusy()        { return this._summarySaving || this._briefGenerating; }
+    get _saveBarBusy()        { return this._summarySaving || this._briefGenerating || this.isPreviewingHistoricalVersion; }
     // Button label for inline summary generation (no-note state)
     get summaryGenerateBtnLabel() { return this._summaryGenerating ? 'Generating…' : 'Generate Meeting Summary'; }
     // True when the selected event has a meeting summary available to use as Wealth Plan input
@@ -1009,7 +1120,9 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
             this._meetingTodosCache = { ...this._meetingTodosCache, [this._selectedEventId]: this._meetingTodos };
         }
         // Radio-style: clicking the selected event deselects it
-        this._selectedEventId = this._selectedEventId === id ? null : id;
+        this._selectedEventId    = this._selectedEventId === id ? null : id;
+        this._noteDeletedLocally  = false;
+        this._versionSavedLocally = false;
         // Always keep the selected event Id output current
         this.outputSelectedEventId = this._selectedEventId || '';
         this.dispatchEvent(new FlowAttributeChangeEvent('outputSelectedEventId', this.outputSelectedEventId));
@@ -1035,6 +1148,8 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
             (this.briefOpenByDefault === true || this.briefOpenByDefault === 'true');
         this._summaryInstructions    = '';
         this._summaryEditMode        = false;
+        this._briefEditMode          = false;
+        this._briefEditValue         = '';
         this._selectedArtifactFileIds = new Set();
         this._sharedFiles            = [];
         this._sessionSavedFiles      = [];
@@ -1070,6 +1185,13 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
             this._msDocUploadOpen = this._sharedFiles?.length > 0;
             this._msNotesOpen = (this._freeText || '').trim().length > 0;
         });
+        // Reset version state and load versions for the newly selected event
+        this._previewingVersionId = null;
+        this._showVersionHistory  = false;
+        this._meetingNoteVersions = [];
+        if (this._selectedEventId) {
+            this._loadVersionHistory(this._selectedEventId);
+        }
     }
 
     handleArtifactFileSelect(event) {
@@ -1195,7 +1317,8 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
                 instructions:   this._summaryInstructions || '',
                 documentId:     [...this._selectedArtifactFileIds][0] || (this._stagedFile ? this._stagedFile.documentId : '') || ''
             });
-            this._currentNoteHtml = _stripStyleBlocks(result);
+            this._currentNoteHtml    = _stripStyleBlocks(result);
+            this._noteDeletedLocally = false;
             this.outputMeetingSummary = this._currentNoteHtml;
             this.dispatchEvent(new FlowAttributeChangeEvent('outputMeetingSummary', this._currentNoteHtml));
             this._summaryInstructions = '';
@@ -1212,6 +1335,11 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
     handleEditSummaryDirect() {
         this._summaryEditValue = this.summaryDisplayHtml || '';
         this._summaryEditMode  = true;
+        this._rteCollapsed     = false;
+        // Push the wrapper height into SLDS/Quill internals after init.
+        // CSS gives the wrapper a definite height immediately; 500 ms gives Quill time to mount.
+        // eslint-disable-next-line @lwc/lwc/no-async-operation
+        setTimeout(() => this._setupRteResize(), 500);
     }
 
     handleSummaryRichTextChange(event) {
@@ -1219,7 +1347,10 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
     }
 
     handleSaveSummaryEdit() {
-        this._currentNoteHtml = this._summaryEditValue;
+        this._teardownRteResize();
+        this._rteCollapsed       = false;
+        this._noteDeletedLocally = false;
+        this._currentNoteHtml    = this._summaryEditValue;
         this.outputMeetingSummary = this._currentNoteHtml;
         this.dispatchEvent(new FlowAttributeChangeEvent('outputMeetingSummary', this._currentNoteHtml));
         this._summaryEditMode = false;
@@ -1227,8 +1358,57 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
     }
 
     handleCancelSummaryEdit() {
+        this._teardownRteResize();
+        this._rteCollapsed     = false;
         this._summaryEditMode  = false;
         this._summaryEditValue = '';
+    }
+
+    handleRteDragStart(event) {
+        event.preventDefault();
+        const wrap = this.template.querySelector('.wph-rte-resize-wrap');
+        if (!wrap) return;
+        this._dragStartY = event.clientY;
+        this._dragStartH = wrap.offsetHeight;
+        this._isDragging = true;
+    }
+
+    handleRteResizeDrag(event) {
+        if (!this._isDragging) return;
+        const wrap = this.template.querySelector('.wph-rte-resize-wrap');
+        if (!wrap) return;
+        const minH = parseInt(getComputedStyle(wrap).minHeight, 10) || 250;
+        const maxH = parseInt(getComputedStyle(wrap).maxHeight, 10) || (window.innerHeight - 160);
+        const newH = Math.min(maxH, Math.max(minH, this._dragStartH + (event.clientY - this._dragStartY)));
+        wrap.style.height = newH + 'px';
+        this._resizeSummaryEditor();
+    }
+
+    handleRteResizeDragEnd() {
+        this._isDragging = false;
+    }
+
+    get rteCollapseHeaderClass() {
+        return this._rteCollapsed
+            ? 'wph-rte-collapse-header wph-rte-collapse-header--collapsed'
+            : 'wph-rte-collapse-header';
+    }
+    get rteCollapseBodyClass() {
+        return this._rteCollapsed
+            ? 'wph-rte-collapse-body wph-rte-collapse-body--hidden'
+            : 'wph-rte-collapse-body';
+    }
+    get rteCollapseChevronClass() {
+        return `wph-chevron${this._rteCollapsed ? '' : ' wph-chevron-up'}`;
+    }
+
+    handleToggleRteCollapse() {
+        this._rteCollapsed = !this._rteCollapsed;
+        if (!this._rteCollapsed) {
+            // Re-expanding: give the DOM one tick to restore, then sync SLDS internals
+            // eslint-disable-next-line @lwc/lwc/no-async-operation
+            setTimeout(() => this._resizeSummaryEditor(), 50);
+        }
     }
 
     handleRevertSummary() {
@@ -1252,6 +1432,7 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
         this._lastSavedHtml          = html;
         this._currentNoteHtml        = html;   // keep display in sync with saved state
         this._summarySaved           = true;
+        this._noteDeletedLocally     = false;  // a saved note exists again; re-enable normal getters
         if (noteId) this._backgroundSavedNoteId = noteId;
         if (published) this._notePublishedLocally = true;
         // Persist in cache so switching events and returning shows the saved content
@@ -1272,7 +1453,9 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
         const md = _htmlToMd(html);
         this.outputNoteMarkdown = md;
         this.dispatchEvent(new FlowAttributeChangeEvent('outputNoteMarkdown', md));
-        const noteId = this.selectedEventNote?.Id || this._backgroundSavedNoteId || null;
+        const noteId = (this._creatingNewVersion && this.createVersionFlowApiName)
+            ? (this.selectedEventNote?.Id || this._backgroundSavedNoteId || null)
+            : (this._creatingNewVersion ? null : (this.selectedEventNote?.Id || this._backgroundSavedNoteId || null));
         if (noteId) {
             const updated = { Id: noteId, Note__c: html, NoteMarkdown__c: md, ...(publishedFlag ? { Published__c: true } : {}) };
             this.outputMeetingNote = updated;
@@ -1293,6 +1476,35 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
     async handleSaveSummary() {
         const html = this.summaryDisplayHtml || '';
         this._applyNoteOutputs(html, false);
+        // New-version draft: route to dedicated version flow
+        if (this._creatingNewVersion && this.createVersionFlowApiName) {
+            this._summarySaving = true;
+            try {
+                const savedId = await saveMeetingNote({
+                    flowApiName:   this.createVersionFlowApiName,
+                    noteId:        this.selectedEventNote?.Id || this._backgroundSavedNoteId || '',
+                    noteHtml:      html,
+                    noteMarkdown:  _htmlToMd(html),
+                    briefHtml:     this._meetingBrief     || '',
+                    briefMarkdown: _htmlToMd(this._meetingBrief || ''),
+                    eventId:       this._selectedEventId  || '',
+                    published:     false,
+                    meetingType:   this.meetingTypeLabel || '',
+                    deleteNote:    false
+                });
+                this._creatingNewVersion  = false;
+                this._versionSavedLocally = true;
+                this._recordSaveSuccess(html, savedId, false);
+                this._loadVersionHistory(this._selectedEventId);
+            } catch (e) {
+                const msg = e.body ? e.body.message : e.message;
+                this._showToast('Save Failed', msg, 'error');
+            } finally {
+                this._summarySaving = false;
+            }
+            return;
+        }
+        // Standard save path
         if (!this.saveSummaryFlowApiName) {
             this._recordSaveSuccess(html, null, false);
             return;
@@ -1308,7 +1520,8 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
                 briefMarkdown: _htmlToMd(this._meetingBrief || ''),
                 eventId:       this._selectedEventId  || '',
                 published:     false,
-                meetingType:   this.meetingTypeLabel || ''
+                meetingType:   this.meetingTypeLabel || '',
+                deleteNote:    false
             });
             this._recordSaveSuccess(html, savedId, false);
         } catch (e) {
@@ -1387,6 +1600,37 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
         const html = this.summaryDisplayHtml || '';
         this._applyNoteOutputs(html, true);
         this._showPublishConfirm = false;
+        // New-version draft: route to dedicated version flow
+        if (this._creatingNewVersion && this.createVersionFlowApiName) {
+            this._summarySaving = true;
+            try {
+                const savedId = await saveMeetingNote({
+                    flowApiName:   this.createVersionFlowApiName,
+                    noteId:        this.selectedEventNote?.Id || this._backgroundSavedNoteId || '',
+                    noteHtml:      html,
+                    noteMarkdown:  _htmlToMd(html),
+                    briefHtml:     this._meetingBrief     || '',
+                    briefMarkdown: _htmlToMd(this._meetingBrief || ''),
+                    eventId:       this._selectedEventId  || '',
+                    published:     true,
+                    meetingType:   this.meetingTypeLabel || '',
+                    deleteNote:    false
+                });
+                this._creatingNewVersion  = false;
+                this._versionSavedLocally = true;
+                this._recordSaveSuccess(html, savedId, true);
+                this._loadVersionHistory(this._selectedEventId);
+                this._doExitIfPending();
+            } catch (e) {
+                this._publishExitPending = false;
+                const msg = e.body ? e.body.message : e.message;
+                this._showToast('Publish Failed', msg, 'error');
+            } finally {
+                this._summarySaving = false;
+            }
+            return;
+        }
+        // Standard publish path
         if (!this.saveSummaryFlowApiName) {
             this._recordSaveSuccess(html, null, true);
             this._doExitIfPending();
@@ -1403,7 +1647,8 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
                 briefMarkdown: _htmlToMd(this._meetingBrief || ''),
                 eventId:       this._selectedEventId  || '',
                 published:     true,
-                meetingType:   this.meetingTypeLabel || ''
+                meetingType:   this.meetingTypeLabel || '',
+                deleteNote:    false
             });
             this._recordSaveSuccess(html, savedId, true);
             this._doExitIfPending();
@@ -1422,6 +1667,82 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
         if (this.modalMode) this.handleCloseModal();
         try { this.dispatchEvent(new FlowNavigationNextEvent()); } catch(e) { /* not in a flow */ }
     }
+
+    // ── Delete meeting note ──────────────────────────────────────────────────
+    handleShowDeleteNoteConfirm() { this._showDeleteNoteConfirm = true; }
+    handleCancelDeleteNote()      { this._showDeleteNoteConfirm = false; }
+    async handleConfirmDeleteNote() {
+        const noteId = this._backgroundSavedNoteId || this.selectedEventNote?.Id;
+        if (!noteId) return;
+        this._showDeleteNoteConfirm = false;
+        if (this.saveSummaryFlowApiName) {
+            this._summarySaving = true;
+            try {
+                await saveMeetingNote({
+                    flowApiName:   this.saveSummaryFlowApiName,
+                    noteId:        noteId,
+                    noteHtml:      '',
+                    noteMarkdown:  '',
+                    briefHtml:     '',
+                    briefMarkdown: '',
+                    eventId:       this._selectedEventId || '',
+                    published:     false,
+                    meetingType:   '',
+                    deleteNote:    true
+                });
+            } catch (e) {
+                const msg = e.body ? e.body.message : e.message;
+                this._showToast('Delete Failed', msg, 'error');
+                return;
+            } finally {
+                this._summarySaving = false;
+            }
+        }
+        this._currentNoteHtml       = null;
+        this._summarySaved          = false;
+        this._backgroundSavedNoteId = null;
+        this._lastSavedHtml         = null;
+        this._noteDeletedLocally    = true;
+        this._meetingBrief          = null;
+        this._briefEditMode         = false;
+        this._briefEditValue        = '';
+        this._briefExpanded         = false;
+        this._summaryEditMode       = false;
+        this._summaryEditValue      = '';
+        this._showToast('Meeting Note Deleted', 'The meeting note has been deleted.', 'success');
+    }
+
+    // ── Create new version of a published note ───────────────────────────────
+    handleCreateNewVersion() {
+        this._currentNoteHtml  = null;
+        this._lastSavedHtml    = null;
+        this._meetingBrief     = null;
+        this._briefEditMode    = false;
+        this._briefEditValue   = '';
+        this._briefExpanded    = false;
+        this._summaryEditMode  = false;
+        this._summaryEditValue = '';
+        this._creatingNewVersion   = true;
+        this._notePublishedLocally = false;
+        this._summarySaved         = false;
+    }
+
+    // ── Version history ──────────────────────────────────────────────────────
+    async _loadVersionHistory(eventId) {
+        if (!this.versionHistoryFlowApiName || !eventId) return;
+        try {
+            const versions = await getMeetingNoteVersions({
+                flowApiName: this.versionHistoryFlowApiName,
+                eventId
+            });
+            this._meetingNoteVersions = versions || [];
+        } catch (e) {
+            this._meetingNoteVersions = [];
+        }
+    }
+    handleToggleVersionHistory() { this._showVersionHistory = !this._showVersionHistory; }
+    handlePreviewVersion(evt)    { this._previewingVersionId = evt.currentTarget.dataset.id; }
+    handleExitVersionPreview()   { this._previewingVersionId = null; }
 
     handleGenerateSummaryWithConfirm() { this._showGenerateOverwriteConfirm = true; }
     async handleConfirmGenerateOverwrite() {
@@ -1474,6 +1795,7 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
                 }
             } catch (_) { /* plain string — no-op */ }
             this._currentNoteHtml    = _stripStyleBlocks(summaryHtml);
+            this._noteDeletedLocally = false;  // new summary generated — note exists again
             this._meetingBrief       = null;
             this._briefExpanded      = false;
             this._meetingTodos       = [];
@@ -1991,9 +2313,28 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
         return !!(this._selectedMeetingType || this.msContextFiles.length || this.msContextNotesSnippet);
     }
     // "At a Glance" brief section
-    get showBriefSection()  { return (this.briefEnabled === true || this.briefEnabled === 'true') && (this._briefGenerating || !!this._meetingBrief); }
+    get showBriefSection() {
+        if (!(this.briefEnabled === true || this.briefEnabled === 'true')) return false;
+        if (this._previewingVersionId) return !!this.previewingVersion?.BriefSummary__c;
+        return this._briefGenerating || !!this._meetingBrief;
+    }
     get briefChevronClass() { return `wph-chevron${this._briefExpanded ? ' wph-chevron-up' : ''}`; }
     handleToggleBrief()     { this._briefExpanded = !this._briefExpanded; }
+    handleEditBrief() {
+        this._briefEditValue = this._meetingBrief || '';
+        this._briefEditMode  = true;
+    }
+    handleBriefRichTextChange(event) {
+        this._briefEditValue = event.target.value;
+    }
+    handleSaveBriefEdit() {
+        this._meetingBrief  = this._briefEditValue;
+        this._briefEditMode = false;
+    }
+    handleCancelBriefEdit() {
+        this._briefEditMode  = false;
+        this._briefEditValue = '';
+    }
     // ── Two-column layout collapse / ratio ──────────────────────────────────
     @track _theme               = 'corporate'; // 'classic' | 'corporate'
     @track _leftPanelCollapsed  = false;
@@ -2253,6 +2594,7 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
     }
 
     disconnectedCallback() {
+        this._teardownRteResize();
         this._stopLoadingCycle();
         this._stopSummaryLoadingCycle();
         if (this._eventsLoadingTimeoutId) {

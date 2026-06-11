@@ -171,7 +171,8 @@ public with sharing class MeetingSummaryController {
             String briefMarkdown,
             String eventId,
             Boolean published,
-            String meetingType) {
+            String meetingType,
+            Boolean deleteNote) {
         try {
             Map<String, Object> flowInputs = new Map<String, Object>();
             flowInputs.put('noteId',        noteId        != null ? noteId        : '');
@@ -182,6 +183,7 @@ public with sharing class MeetingSummaryController {
             flowInputs.put('eventId',       eventId       != null ? eventId       : '');
             flowInputs.put('published',     published     != null ? published     : false);
             flowInputs.put('meetingType',   meetingType   != null ? meetingType   : '');
+            flowInputs.put('deleteNote',    deleteNote    != null ? deleteNote    : false);
 
             Flow.Interview interview = Flow.Interview.createInterview(flowApiName, flowInputs);
             interview.start();
@@ -342,6 +344,24 @@ public with sharing class MeetingSummaryController {
             return 'success';
         } catch (Exception e) {
             throw new AuraHandledException(e.getMessage());
+        }
+    }
+
+    @AuraEnabled
+    public static List<MeetingNoteVersion__c> getMeetingNoteVersions(String flowApiName, String eventId) {
+        try {
+            Map<String, Object> flowInputs = new Map<String, Object>{
+                'EventId' => eventId != null ? eventId : ''
+            };
+            Flow.Interview interview = Flow.Interview.createInterview(flowApiName, flowInputs);
+            interview.start();
+            List<SObject> raw = (List<SObject>) interview.getVariableValue('MeetingNoteVersions');
+            if (raw == null) return new List<MeetingNoteVersion__c>();
+            List<MeetingNoteVersion__c> result = new List<MeetingNoteVersion__c>();
+            for (SObject obj : raw) { result.add((MeetingNoteVersion__c) obj); }
+            return result;
+        } catch (Exception e) {
+            throw new AuraHandledException('Error loading meeting note versions: ' + e.getMessage());
         }
     }
 }

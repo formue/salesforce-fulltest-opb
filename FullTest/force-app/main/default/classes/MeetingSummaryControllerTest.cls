@@ -75,7 +75,7 @@ private class MeetingSummaryControllerTest {
         Test.startTest();
         try {
             MeetingSummaryController.saveMeetingNote(
-                INVALID_FLOW, null, '<p>Note</p>', '# Note', '<p>Brief</p>', '# Brief', null, false, 'annual'
+                INVALID_FLOW, null, '<p>Note</p>', '# Note', '<p>Brief</p>', '# Brief', null, false, 'annual', false
             );
             Assert.fail('Expected AuraHandledException');
         } catch (AuraHandledException e) {
@@ -91,7 +91,7 @@ private class MeetingSummaryControllerTest {
         try {
             MeetingSummaryController.saveMeetingNote(
                 INVALID_FLOW, '001000000000001AAA', '<p>Published</p>', '# Published',
-                '<p>Brief</p>', '# Brief', null, true, 'whiteboard'
+                '<p>Brief</p>', '# Brief', null, true, 'whiteboard', false
             );
             Assert.fail('Expected AuraHandledException');
         } catch (AuraHandledException e) {
@@ -259,6 +259,20 @@ private class MeetingSummaryControllerTest {
         Test.startTest();
         try {
             MeetingSummaryController.saveFileToEvent(INVALID_FLOW, 'someDocumentId', 'someEventId');
+            Assert.fail('Expected AuraHandledException');
+        } catch (AuraHandledException e) {
+            Assert.isNotNull(e, 'AuraHandledException should be thrown for invalid flow');
+        }
+        Test.stopTest();
+    }
+
+    // ── getMeetingNoteVersions ───────────────────────────────────────────────
+
+    @IsTest
+    static void testGetMeetingNoteVersions_InvalidFlow_ThrowsException() {
+        Test.startTest();
+        try {
+            MeetingSummaryController.getMeetingNoteVersions(INVALID_FLOW, 'someEventId');
             Assert.fail('Expected AuraHandledException');
         } catch (AuraHandledException e) {
             Assert.isNotNull(e, 'AuraHandledException should be thrown for invalid flow');
