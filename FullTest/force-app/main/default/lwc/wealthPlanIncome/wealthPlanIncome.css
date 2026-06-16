@@ -109,9 +109,9 @@ b, strong { font-weight: 800; color: var(--color-text-main); font-family: 'Sales
 
 /* COMPACT TABLE */
 .compact-table-container { background: var(--color-bg-card); border-radius: 13px; border: 1px solid #e2e8f0; box-shadow: var(--shadow-card); overflow: hidden; }
-.table-header { display: grid; grid-template-columns: 2fr 120px 130px 1fr 64px; padding: 11px 16px; font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; font-weight: 800; border-bottom: 2px solid #f1f5f9; background: #f8fafc; }
+.table-header { display: grid; grid-template-columns: 2fr 1fr 1.5fr 1.5fr 80px; column-gap: 16px; padding: 11px 16px; font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; font-weight: 800; border-bottom: 2px solid #f1f5f9; background: #f8fafc; }
 .table-body { display: flex; flex-direction: column; }
-.compact-row { display: grid; grid-template-columns: 2fr 120px 130px 1fr 64px; align-items: center; padding: 11px 16px; border-bottom: 1px solid #f1f5f9; transition: background 0.2s; }
+.compact-row { display: grid; grid-template-columns: 2fr 1fr 1.5fr 1.5fr 80px; column-gap: 16px; align-items: center; padding: 11px 16px; border-bottom: 1px solid #f1f5f9; transition: background 0.2s; }
 .compact-row:last-child { border-bottom: none; }
 .compact-row:hover { background: #f8fafc; }
 

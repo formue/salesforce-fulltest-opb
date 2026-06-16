@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>BriefSummary__c</fullName>
+    <description>AI-generated brief summary of the meeting note version, stored as HTML. Shown in the "At a Glance" section of the component.</description>
+    <label>Brief Summary</label>
+    <length>131072</length>
+    <trackHistory>false</trackHistory>
+    <type>Html</type>
+    <visibleLines>25</visibleLines>
+</CustomField>

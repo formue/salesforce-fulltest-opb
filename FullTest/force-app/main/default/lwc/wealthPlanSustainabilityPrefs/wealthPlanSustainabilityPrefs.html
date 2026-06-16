@@ -22,10 +22,6 @@
                 <b>Corporate</b>
             </button>
         </div>
-        <template if:true={isCorporateTheme}>
-            <span slot="title-badge" class="beta-sticker">BETA</span>
-        </template>
-
         <!-- ========================================================= -->
         <!-- DASHBOARD CONTENT                                         -->
         <!-- ========================================================= -->
@@ -230,7 +226,6 @@
             </div>
 
             <div class="form-row split-row">
-                <c-wealth-plan-premium-input label="Sustainability Preferences Name" field-name="Name" value={currentRecord.Name} required="true" onvaluechange={handleFormChange}></c-wealth-plan-premium-input>
                 <c-wealth-plan-premium-input label="Date" type="date" field-name="Date__c" value={currentRecord.Date__c} onvaluechange={handleFormChange}></c-wealth-plan-premium-input>
             </div>
 

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Published__c</fullName>
+    <description>Indicates whether this version of the meeting note has been published and locked. Once true, the note content should not be modified.</description>
+    <defaultValue>false</defaultValue>
+    <label>Published</label>
+    <trackHistory>false</trackHistory>
+    <type>Checkbox</type>
+</CustomField>

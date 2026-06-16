@@ -326,7 +326,7 @@ export default class WealthPlanSustainabilityPrefs extends LightningElement {
 
     handleAddNew() {
         this.currentRecord = {
-            Name: '', Date__c: new Date().toISOString().split('T')[0], Active__c: true,
+            Date__c: new Date().toISOString().split('T')[0], Active__c: true,
             SustainabilityPreferences__c: '', EngagementStrategy__c: '',
             SustainableInvestmentsShare__c: '', ImproveNegativeImpacts__c: '',
             SpecificThemes__c: '', themesArray: [], AdvisorCommentPreferences__c: ''
@@ -396,13 +396,8 @@ export default class WealthPlanSustainabilityPrefs extends LightningElement {
     }
 
     handleApplyEdit() {
-        if (!this.currentRecord.Name || this.currentRecord.Name.trim() === '') {
-            alert('Sustainability Preferences Name is required.');
-            return;
-        }
-
         if (!this.isNewRecord && this._originalSnapshot) {
-            const fields = ['Name', 'Date__c', 'Active__c', 'SustainabilityPreferences__c', 'EngagementStrategy__c', 'SustainableInvestmentsShare__c', 'ImproveNegativeImpacts__c', 'SpecificThemes__c', 'AdvisorCommentPreferences__c'];
+            const fields = ['Date__c', 'Active__c', 'SustainabilityPreferences__c', 'EngagementStrategy__c', 'SustainableInvestmentsShare__c', 'ImproveNegativeImpacts__c', 'SpecificThemes__c', 'AdvisorCommentPreferences__c'];
             const hasChanges = fields.some(f => String(this.currentRecord[f] || '') !== String(this._originalSnapshot[f] || ''));
             if (!hasChanges) { this.isEditorView = false; this._originalSnapshot = null; return; }
         }

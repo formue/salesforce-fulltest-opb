@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>66.0</apiVersion>
+    <isExposed>true</isExposed>
+    <masterLabel>Portfolio Rebalancing Tool 2.0</masterLabel>
+    <description>Modern portfolio rebalancing tool with clean sidebar layout and complete business logic</description>
+    
+    <targets>
+        <target>lightning__RecordPage</target>
+        <target>lightning__AppPage</target>
+        <target>lightning__HomePage</target>
+        <target>lightning__FlowScreen</target>
+    </targets>
+    
+    <targetConfigs>
+        <!-- Config for Lightning Pages -->
+        <targetConfig targets="lightning__RecordPage,lightning__AppPage,lightning__HomePage">
+            <property name="flowApiName" type="String" label="Data Fetch Flow API Name" />
+            <property name="promptTemplateApiName" type="String" label="AI Portfolio Prompt Flow API Name" />
+            <property name="aiProductFlowApiName" type="String" label="AI Product Rationale Flow API Name" description="Flow for individual order rationale" />
+        </targetConfig>
+        
+        <!-- Config for Screen Flows -->
+        <targetConfig targets="lightning__FlowScreen">
+            <property name="recordId" type="String" label="Account ID" description="Pass the current Account ID" />
+            <property name="flowApiName" type="String" label="Data Fetch Flow API Name" />
+            <property name="promptTemplateApiName" type="String" label="AI Portfolio Prompt Flow API Name" />
+            <property name="aiProductFlowApiName" type="String" label="AI Product Rationale Flow API Name" description="Flow for individual order rationale" />
+        </targetConfig>
+    </targetConfigs>
+</LightningComponentBundle>

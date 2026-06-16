@@ -1,0 +1,1025 @@
+<template>
+    <div class={containerClass}>
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-title-row">
+                    <h1 class="sidebar-title"><b>Portfolio Rebalancer</b></h1>
+                </div>
+                <p class="sidebar-subtitle">Version 2.0</p>
+            </div>
+
+            <nav class="sidebar-nav">
+                <button class={insightsTabClass} onclick={handleTabChange} data-tab="insights">
+                    <span class="nav-item-icon">📊</span><span>Insights</span>
+                </button>
+                <button class={comparisonTabClass} onclick={handleTabChange} data-tab="comparison">
+                    <span class="nav-item-icon">🔄</span><span>Comparison</span>
+                </button>
+                <button class={rebalancingTabClass} onclick={handleTabChange} data-tab="rebalancing">
+                    <span class="nav-item-icon">⚖️</span><span>Rebalancing</span>
+                </button>
+                <button class={ordersTabClass} onclick={handleTabChange} data-tab="orders">
+                    <span class="nav-item-icon">📋</span><span>Orders</span>
+                </button>
+                <button class={aiTabClass} onclick={handleTabChange} data-tab="ai">
+                    <span class="nav-item-icon">✨</span><span>AI Engine</span>
+                </button>
+                <button class={analyticsTabClass} onclick={handleTabChange} data-tab="analytics">
+                    <span class="nav-item-icon">📈</span><span>Analytics</span>
+                </button>
+                <button class={summaryTabClass} onclick={handleTabChange} data-tab="summary">
+                    <span class="nav-item-icon">📑</span><span>Summary</span>
+                </button>
+                <button class={settingsTabClass} onclick={handleTabChange} data-tab="settings">
+                    <span class="nav-item-icon">⚙️</span><span>Settings</span>
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="theme-toggle" onclick={toggleTheme}>
+                    <span class="theme-toggle-label">{themeLabel}</span>
+                    <div class={themeSwitchClass}>
+                        <div class="theme-toggle-knob"></div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="main-content">
+            <div class="prt-accent-bar"></div>
+            <header class="content-header">
+                <h2 class="content-title">{activeTabTitle}</h2>
+                <div class="flex gap-1">
+                    <template if:true={showFetchButton}>
+                        <button class="btn btn-secondary" onclick={handleFetchHoldings} disabled={isLoading}>
+                            <span>🔄</span><span>Fetch Holdings</span>
+                        </button>
+                    </template>
+                    <template if:true={showExportButton}>
+                        <button class="btn btn-primary" onclick={handleExportPDF} disabled={isExportDisabled}>
+                            <span>📄</span><span>Export PDF</span>
+                        </button>
+                    </template>
+                    <template if:true={showAIButton}>
+                        <button class="btn btn-primary" onclick={handleGenerateAI} disabled={isAIDisabled}>
+                            <span>✨</span><span>Generate AI</span>
+                        </button>
+                    </template>
+                </div>
+            </header>
+
+            <div class="content-body">
+                <template if:true={isLoading}>
+                    <div class="card">
+                        <div class="flex-center" style="padding: 40px;">
+                            <div class="loading-spinner"></div>
+                            <span style="margin-left: 12px;">Loading holdings data...</span>
+                        </div>
+                    </div>
+                </template>
+
+                <template if:false={isLoading}>
+
+                    <!-- ═══════════════════════════════════════════ -->
+                    <!-- INSIGHTS TAB                                -->
+                    <!-- ═══════════════════════════════════════════ -->
+                    <template if:true={isInsightsTab}>
+                        <div class="portfolio-value-hero">
+                            <div class="hero-label">PORTFOLIO VALUE</div>
+                            <div class="hero-value-container">
+                                <span class="hero-currency">kr</span>
+                                <input
+                                    type="text"
+                                    class="hero-value-input"
+                                    placeholder="0"
+                                    value={formattedTotalValue}
+                                    onchange={handleTotalValueChange}
+                                    onfocus={handleHeroInputFocus}
+                                    onblur={handleHeroInputBlur}
+                                />
+                            </div>
+                            <template if:true={hasPortfolioDrift}>
+                                <div class="hero-drift">
+                                    <span class="hero-drift-label">PORTFOLIO DRIFT</span>
+                                    <span class={heroDriftClass}>{portfolioDrift}</span>
+                                </div>
+                            </template>
+                        </div>
+
+                        <!-- Traffic Light Summary -->
+                        <template if:true={trafficLightSummary}>
+                            <div class="traffic-light-bar">
+                                <span class="tl-pill tl-ok">✓ {trafficLightSummary.within} within target</span>
+                                <span class="tl-pill tl-breach">✕ {trafficLightSummary.outside} outside boundary</span>
+                                <template if:true={trafficLightSummary.noData}>
+                                    <span class="tl-pill tl-nodata">— {trafficLightSummary.noData} no target</span>
+                                </template>
+                            </div>
+                        </template>
+
+                        <!-- Asset Allocation Table -->
+                        <div class="card">
+                            <div class="card-header">
+                                <div>
+                                    <h3 class="card-title">Asset Allocation</h3>
+                                    <p class="card-subtitle">Target allocation across asset classes</p>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <template if:true={hasHoldings}>
+                                    <table class="data-table allocation-table">
+                                        <thead>
+                                            <tr>
+                                                <th style="text-align: left;">Asset Class</th>
+                                                <th>Target %</th>
+                                                <th>Boundary</th>
+                                                <th>Target Amount</th>
+                                                <th>Market Value</th>
+                                                <th>Actual %</th>
+                                                <th>Deviation</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <template for:each={detailedAssetAllocation} for:item="asset">
+                                                <tr key={asset.key}>
+                                                    <td style="text-align: left;">
+                                                        <div class="flex-center-left">
+                                                            <span class="asset-dot" style={asset.dotStyle}></span>
+                                                            <span style="font-weight: 500;">{asset.label}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td><strong>{asset.targetPct}</strong></td>
+                                                    <td class="text-muted">{asset.boundary}</td>
+                                                    <td><strong>{asset.targetAmount}</strong></td>
+                                                    <td>{asset.marketValue}</td>
+                                                    <td><strong>{asset.actualPct}</strong></td>
+                                                    <td><span class={asset.deviationClass}>{asset.deviation}</span></td>
+                                                </tr>
+                                            </template>
+                                            <tr class="table-footer">
+                                                <td style="text-align: left;"><strong>SUM</strong></td>
+                                                <td><strong>{totalTargetPct}</strong></td>
+                                                <td></td>
+                                                <td><strong>{totalTargetAmount}</strong></td>
+                                                <td><strong>{totalMarketValue}</strong></td>
+                                                <td></td>
+                                                <td></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </template>
+                                <template if:false={hasHoldings}>
+                                    <div class="empty-state">
+                                        <div class="empty-state-icon">📊</div>
+                                        <h4 class="empty-state-title">No Holdings Data</h4>
+                                        <p class="empty-state-text">Click "Fetch Holdings" to load portfolio data</p>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- ═══════════════════════════════════════════ -->
+                    <!-- COMPARISON TAB                              -->
+                    <!-- ═══════════════════════════════════════════ -->
+                    <template if:true={isComparisonTab}>
+                        <div class="card">
+                            <div class="card-header">
+                                <div>
+                                    <h3 class="card-title">Product Comparison</h3>
+                                    <p class="card-subtitle">Actual vs target per product, grouped by asset class</p>
+                                </div>
+                                <template if:true={hasHoldings}>
+                                    <button class="btn btn-secondary btn-sm" onclick={handleClearActuals}>Clear All</button>
+                                </template>
+                            </div>
+                            <div class="card-body">
+                                <template if:true={hasComparisonData}>
+                                    <template for:each={comparisonSections} for:item="section">
+                                        <div key={section.assetKey} class="cmp-section">
+                                            <!-- Section header -->
+                                            <div class="cmp-section-header">
+                                                <div class="flex-center-left">
+                                                    <span style={section.dotStyle}></span>
+                                                    <strong style="margin-left: 8px;">{section.assetClass}</strong>
+                                                </div>
+                                                <div class="cmp-section-totals">
+                                                    <span class="text-muted">Target: <strong>{section.sumTargetDisplay}</strong></span>
+                                                    <span class="text-muted" style="margin-left: 12px;">Actual: <strong>{section.sumActualDisplay}</strong></span>
+                                                    <span class={section.sumDevKrClass} style="margin-left: 12px; font-weight: 600;">{section.sumDevKrDisplay}</span>
+                                                    <span class={section.sumDevPctClass} style="margin-left: 6px; font-size: 12px;">{section.sumDevPctDisplay}</span>
+                                                </div>
+                                            </div>
+
+                                            <!-- Product rows -->
+                                            <template if:true={section.hasRows}>
+                                                <table class="data-table cmp-table">
+                                                    <colgroup>
+                                                        <col style="width: 34%;" />
+                                                        <col style="width: 8%;" />
+                                                        <col style="width: 13%;" />
+                                                        <col style="width: 8%;" />
+                                                        <col style="width: 13%;" />
+                                                        <col style="width: 13%;" />
+                                                        <col style="width: 8%;" />
+                                                        <col style="width: 28px;" />
+                                                    </colgroup>
+                                                    <thead>
+                                                        <tr>
+                                                            <th style="text-align: left;">Product</th>
+                                                            <th>Target %</th>
+                                                            <th>Target</th>
+                                                            <th>Actual %</th>
+                                                            <th>Actual (kr)</th>
+                                                            <th>Dev (kr)</th>
+                                                            <th>Dev %</th>
+                                                            <th style="width: 28px;"></th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <template for:each={section.rows} for:item="row">
+                                                            <tr key={row.symbol} class={row.rowClass}>
+                                                                <td style="text-align: left;">
+                                                                    <div class="flex-center-left cmp-product-cell">
+                                                                        <button
+                                                                            class="cmp-toggle-btn"
+                                                                            data-key={row.symbol}
+                                                                            onclick={handleToggleCmpRow}
+                                                                            title="Details"
+                                                                        >{row.toggleIcon}</button>
+                                                                        <div class="cmp-product-name">
+                                                                            <span class="cmp-product-label">{row.security}</span>
+                                                                            <span class="cmp-product-symbol">{row.symbol}</span>
+                                                                        </div>
+                                                                        <template if:true={row.isExtra}>
+                                                                            <span class="badge badge-info" style="font-size: 10px; padding: 2px 6px; margin-left: 4px;">Extra</span>
+                                                                        </template>
+                                                                    </div>
+                                                                </td>
+                                                                <td class="text-center">{row.targetPctDisplay}</td>
+                                                                <td>{row.targetDisplay}</td>
+                                                                <td class="text-center">{row.actualPctDisplay}</td>
+                                                                <td>
+                                                                    <input
+                                                                        type="text"
+                                                                        class="cmp-actual-input"
+                                                                        value={row.actualDisplay}
+                                                                        data-symbol={row.symbol}
+                                                                        onchange={handleCmpActualInput}
+                                                                        onfocus={handleFocusNum}
+                                                                        onblur={handleCmpActualBlur}
+                                                                        placeholder="0"
+                                                                    />
+                                                                </td>
+                                                                <td><span class={row.devKrClass}>{row.devKrDisplay}</span></td>
+                                                                <td><span class={row.devPctClass}>{row.devPctDisplay}</span></td>
+                                                                <td>
+                                                                    <template if:true={row.isExtra}>
+                                                                        <button
+                                                                            class="btn btn-ghost btn-icon btn-sm"
+                                                                            data-asset-key={section.assetKey}
+                                                                            data-symbol={row.symbol}
+                                                                            onclick={handleRemoveExtraProduct}
+                                                                            title="Remove"
+                                                                        >✕</button>
+                                                                    </template>
+                                                                </td>
+                                                            </tr>
+                                                            <template if:true={row.isExpanded}>
+                                                                <tr key={row.detailKey} class="cmp-detail-row">
+                                                                    <td colspan="8" style="padding: 6px 16px 10px;">
+                                                                        <div class="cmp-detail-content">
+                                                                            <span class="text-muted">Target %: <strong>{row.targetPctDisplay}</strong></span>
+                                                                            <span class="text-muted" style="margin-left: 20px;">Actual %: <strong>{row.actualPctDisplay}</strong></span>
+                                                                        </div>
+                                                                    </td>
+                                                                </tr>
+                                                            </template>
+                                                        </template>
+                                                    </tbody>
+                                                </table>
+                                            </template>
+
+                                            <!-- Add product row -->
+                                            <div class="cmp-add-row">
+                                                <button
+                                                    class="btn btn-ghost btn-sm"
+                                                    data-asset-key={section.assetKey}
+                                                    onclick={handleToggleAddForm}
+                                                >
+                                                    <template if:false={section.showAddForm}>+ Add Product</template>
+                                                    <template if:true={section.showAddForm}>✕ Cancel</template>
+                                                </button>
+                                                <template if:true={section.showAddForm}>
+                                                    <div class="cmp-add-form">
+                                                        <template if:true={section.hasSelectOptions}>
+                                                            <select
+                                                                class="input-field input-field-sm"
+                                                                data-asset-key={section.assetKey}
+                                                                onchange={handleAddSelectChange}
+                                                            >
+                                                                <option value="">-- Select product --</option>
+                                                                <template for:each={section.selectOptions} for:item="opt">
+                                                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                                                </template>
+                                                                <option value="__custom__">Custom...</option>
+                                                            </select>
+                                                        </template>
+                                                        <template if:true={section.showCustomInput}>
+                                                            <input
+                                                                type="text"
+                                                                class="input-field input-field-sm"
+                                                                placeholder="Product name or symbol"
+                                                                data-asset-key={section.assetKey}
+                                                                onchange={handleAddTextChange}
+                                                            />
+                                                        </template>
+                                                        <button
+                                                            class="btn btn-primary btn-sm"
+                                                            data-asset-key={section.assetKey}
+                                                            data-asset-class={section.assetClass}
+                                                            onclick={handleConfirmAddProduct}
+                                                        >Add</button>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </template>
+                                <template if:false={hasComparisonData}>
+                                    <div class="empty-state">
+                                        <div class="empty-state-icon">🔄</div>
+                                        <h4 class="empty-state-title">No Comparison Data</h4>
+                                        <p class="empty-state-text">Load holdings to see comparison details</p>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- ═══════════════════════════════════════════ -->
+                    <!-- REBALANCING TAB                             -->
+                    <!-- ═══════════════════════════════════════════ -->
+                    <template if:true={isRebalancingTab}>
+                        <template if:true={rebalancingData.hasData}>
+                            <!-- Trade balance bar -->
+                            <template if:true={tradeBalanceBar}>
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h3 class="card-title">Trade Balance</h3>
+                                        <div class="flex gap-2">
+                                            <span class="text-muted">Sell: <strong class="reb-sell">{tradeBalanceBar.sellDisplay}</strong></span>
+                                            <span class="text-muted">Buy: <strong class="reb-buy">{tradeBalanceBar.buyDisplay}</strong></span>
+                                        </div>
+                                    </div>
+                                    <div class="trade-balance-bar">
+                                        <div class="trade-balance-sell" style={tradeBalanceBar.sellStyle}></div>
+                                        <div class="trade-balance-buy" style={tradeBalanceBar.buyStyle}></div>
+                                    </div>
+                                </div>
+                            </template>
+
+                            <!-- Global actions -->
+                            <div class="reb-global-actions">
+                                <button class="btn btn-ghost btn-sm" onclick={handleResetAllTrades}>↺ Reset All to Zero</button>
+                            </div>
+
+                            <!-- Per-class cards -->
+                            <template for:each={rebalancingData.classes} for:item="cls">
+                                <div key={cls.key} class="card">
+                                    <div class="card-header">
+                                        <div class="flex-center-left">
+                                            <span style={cls.dotStyle} class="asset-dot"></span>
+                                            <h3 class="card-title" style="margin: 0 0 0 8px;">{cls.label}</h3>
+                                        </div>
+                                        <div class="flex gap-1">
+                                            <template if:true={cls.boundaryOk}>
+                                                <span class={cls.boundaryBadgeClass}>{cls.boundaryBadgeText}</span>
+                                            </template>
+                                            <template if:true={cls.hasProducts}>
+                                                <button class="btn btn-secondary btn-sm" data-asset-key={cls.key} onclick={handleAutoAllForClass}>Auto All</button>
+                                            </template>
+                                        </div>
+                                    </div>
+                                    <!-- Class summary row -->
+                                    <div class="reb-class-summary">
+                                        <div class="reb-summary-item">
+                                            <span class="reb-summary-label">Current</span>
+                                            <span class="reb-summary-value">{cls.currentTotalDisplay}</span>
+                                        </div>
+                                        <div class="reb-summary-item">
+                                            <span class="reb-summary-label">Target</span>
+                                            <span class="reb-summary-value">{cls.classTargetDisplay}</span>
+                                        </div>
+                                        <div class="reb-summary-item">
+                                            <span class="reb-summary-label">Net Trade</span>
+                                            <span class={cls.netTradeClass}>{cls.netTradeDisplay}</span>
+                                        </div>
+                                    </div>
+                                    <!-- Product-level trades -->
+                                    <template if:true={cls.hasProducts}>
+                                        <table class="data-table reb-table">
+                                            <thead>
+                                                <tr>
+                                                    <th style="text-align: left;">Product</th>
+                                                    <th>Actual</th>
+                                                    <th>Target %</th>
+                                                    <th>Target Amt</th>
+                                                    <th>Trade</th>
+                                                    <th>Action</th>
+                                                    <th>Amount / Override</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <template for:each={cls.productTrades} for:item="pt">
+                                                    <tr key={pt.symbol}>
+                                                        <td style="text-align: left; font-weight: 500;">{pt.security}</td>
+                                                        <td>{pt.actualDisplay}</td>
+                                                        <td><strong>{pt.rawTargetPctDisplay}</strong></td>
+                                                        <td>{pt.adjTargetDisplay}</td>
+                                                        <td><span class={pt.tradeClass}>{pt.tradeDisplay}</span></td>
+                                                        <td><span class={pt.actionClass}>{pt.actionHtml}</span></td>
+                                                        <td>
+                                                            <div class="reb-chips">
+                                                                <button class="reb-chip" data-symbol={pt.symbol} data-chip="suggested" data-actual={pt.actualRaw} data-traderaw={pt.tradeRawInt} onclick={handleTradeChip}>Auto</button>
+                                                                <button class="reb-chip" data-symbol={pt.symbol} data-chip="sellAll"   data-actual={pt.actualRaw} onclick={handleTradeChip}>Sell All</button>
+                                                                <button class="reb-chip" data-symbol={pt.symbol} data-chip="hold"      data-actual={pt.actualRaw} onclick={handleTradeChip}>Hold</button>
+                                                                <input
+                                                                    type="number"
+                                                                    class="reb-manual-input"
+                                                                    value={pt.tradeInputValue}
+                                                                    data-symbol={pt.symbol}
+                                                                    onchange={handleManualTradeInput}
+                                                                    placeholder="0"
+                                                                />
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                </template>
+                                                <template for:each={cls.lockedProducts} for:item="lp">
+                                                    <tr key={lp.security} class="reb-locked-row">
+                                                        <td style="text-align: left; font-weight: 500; color: var(--text-muted);">{lp.security}</td>
+                                                        <td>{lp.actualDisplay}</td>
+                                                        <td>—</td>
+                                                        <td>—</td>
+                                                        <td>—</td>
+                                                        <td><span class="reb-pill reb-pill-locked">🔒 Locked</span></td>
+                                                        <td>—</td>
+                                                    </tr>
+                                                </template>
+                                            </tbody>
+                                        </table>
+                                    </template>
+                                </div>
+                            </template>
+
+                            <!-- Total net cash -->
+                            <div class="card">
+                                <div class="flex-between">
+                                    <strong>Total Net Cash Flow</strong>
+                                    <span class={rebalancingData.totalNetCashClass}><strong>{rebalancingData.totalNetCashDisplay}</strong></span>
+                                </div>
+                            </div>
+                        </template>
+                        <template if:false={rebalancingData.hasData}>
+                            <div class="card">
+                                <div class="empty-state">
+                                    <div class="empty-state-icon">⚖️</div>
+                                    <h4 class="empty-state-title">No Rebalancing Data</h4>
+                                    <p class="empty-state-text">Load holdings to see rebalancing calculations</p>
+                                </div>
+                            </div>
+                        </template>
+                    </template>
+
+                    <!-- ═══════════════════════════════════════════ -->
+                    <!-- ORDERS TAB                                  -->
+                    <!-- ═══════════════════════════════════════════ -->
+                    <template if:true={isOrdersTab}>
+                        <!-- Controls bar -->
+                        <div class="card" style="padding: 12px 16px; margin-bottom: 16px;">
+                            <div class="flex-between">
+                                <div class="flex gap-1">
+                                    <button class={separateModeBtnClass} onclick={handleToggleSeparateMode}>{separateModeLabel}</button>
+                                    <button class={roundBtnClass} onclick={handleToggleRound}>Round to 1 000</button>
+                                </div>
+                                <template if:true={hasOverrides}>
+                                    <button class="btn btn-secondary btn-sm" onclick={handleClearOverrides}>Clear Overrides</button>
+                                </template>
+                            </div>
+                        </div>
+
+                        <template if:true={orderData.hasOrders}>
+                            <!-- Summary bar -->
+                            <div class="card ord-summary-bar">
+                                <div class="grid-4">
+                                    <div class="ord-summary-item">
+                                        <span class="ord-summary-label">Switches</span>
+                                        <span class="ord-summary-value">{orderData.summary.switchCount}</span>
+                                    </div>
+                                    <div class="ord-summary-item">
+                                        <span class="ord-summary-label">Intra-class</span>
+                                        <span class="ord-summary-value">{orderData.summary.intraCount}</span>
+                                    </div>
+                                    <div class="ord-summary-item">
+                                        <span class="ord-summary-label">Total Sells</span>
+                                        <span class="ord-summary-value reb-sell">{orderData.summary.totalSells}</span>
+                                    </div>
+                                    <div class="ord-summary-item">
+                                        <span class="ord-summary-label">Total Buys</span>
+                                        <span class="ord-summary-value reb-buy">{orderData.summary.totalBuys}</span>
+                                    </div>
+                                </div>
+                                <div style="margin-top: 12px; text-align: right;">
+                                    <button class="btn btn-secondary btn-sm" onclick={handleGenerateAllProductAI}>✨ Generate All Rationales</button>
+                                </div>
+                            </div>
+
+                            <!-- Switch mode -->
+                            <template if:true={switchModeActive}>
+                                <template for:each={orderData.switches} for:item="sw">
+                                    <div key={sw.key} class="card ord-switch-card">
+                                        <!-- Switch header (click to expand) -->
+                                        <div class="ord-switch-header" data-key={sw.key} onclick={handleToggleOrdRow}>
+                                            <div class="flex-center-left gap-1">
+                                                <span class="ord-switch-num">{sw.index}</span>
+                                                <template if:true={sw.crossClass}>
+                                                    <span class="badge badge-warning">Cross-class</span>
+                                                </template>
+                                                <template if:false={sw.crossClass}>
+                                                    <span class="badge badge-info">Intra-class</span>
+                                                </template>
+                                                <strong style="margin-left: 4px;">{sw.sell.security}</strong>
+                                                <span class="text-muted" style="font-size: 12px;">({sw.sell.assetClass})</span>
+                                            </div>
+                                            <div class="flex gap-1" style="align-items: center;">
+                                                <span class="reb-sell" style="font-weight: 600;">−kr {sw.sellAmountRawDisplay}</span>
+                                                <span class="ord-toggle">{sw.toggleIcon}</span>
+                                            </div>
+                                        </div>
+
+                                        <!-- Expanded legs -->
+                                        <template if:true={sw.isExpanded}>
+                                            <div class="ord-switch-body">
+                                                <!-- SELL leg -->
+                                                <div class="ord-leg ord-leg-sell">
+                                                    <div class="ord-leg-header">
+                                                        <span class="badge badge-error">SELL</span>
+                                                        <span class="ord-leg-product">{sw.sell.security}</span>
+                                                        <span class="text-muted" style="font-size: 12px;">{sw.sell.assetClass}</span>
+                                                    </div>
+                                                    <div class="ord-leg-amount">
+                                                        <input
+                                                            type="text"
+                                                            class={sw.sellInputClass}
+                                                            value={sw.sellAmountRawDisplay}
+                                                            data-symbol={sw.sell.symbol}
+                                                            data-legvalue={sw.sellAmountValue}
+                                                            onchange={handleOrderAmountChange}
+                                                            onfocus={handleFocusNum}
+                                                            onblur={handleBlurNum}
+                                                        />
+                                                        <template if:true={sw.sell.isManual}>
+                                                            <span class="ord-manual-badge">M</span>
+                                                        </template>
+                                                    </div>
+                                                    <template if:true={sw.sellAiText}>
+                                                        <div class="ord-ai-text"><lightning-formatted-rich-text value={sw.sellAiText}></lightning-formatted-rich-text></div>
+                                                    </template>
+                                                    <template if:false={sw.sellAiText}>
+                                                        <template if:true={sw.sellAiLoading}>
+                                                            <div class="flex-center" style="padding: 6px 0;">
+                                                                <div class="loading-spinner" style="width:14px;height:14px;border-width:2px;"></div>
+                                                                <span style="margin-left: 8px; font-size: 12px; color: var(--text-muted);">Generating rationale...</span>
+                                                            </div>
+                                                        </template>
+                                                        <template if:false={sw.sellAiLoading}>
+                                                            <button
+                                                                class="btn btn-ghost btn-sm ord-ai-btn"
+                                                                data-aikey={sw.sellAiKey}
+                                                                data-action="SELL"
+                                                                data-symbol={sw.sell.symbol}
+                                                                data-assetclass={sw.sell.assetClass}
+                                                                data-amount={sw.sellAmountRawDisplay}
+                                                                onclick={handleGenerateProductAI}
+                                                            >✨ Rationale</button>
+                                                        </template>
+                                                    </template>
+                                                </div>
+
+                                                <!-- BUY legs -->
+                                                <template for:each={sw.buyLegs} for:item="bl">
+                                                    <div key={bl.symbol} class="ord-leg ord-leg-buy">
+                                                        <div class="ord-leg-header">
+                                                            <span class="badge badge-success">BUY {bl.pct}%</span>
+                                                            <span class="ord-leg-product">{bl.security}</span>
+                                                            <span class="text-muted" style="font-size: 12px;">{bl.assetClass}</span>
+                                                        </div>
+                                                        <div class="ord-leg-amount">
+                                                            <input
+                                                                type="text"
+                                                                class={bl.inputClass}
+                                                                value={bl.legAmountRaw}
+                                                                data-symbol={bl.symbol}
+                                                                data-legvalue={bl.legAmountValue}
+                                                                onchange={handleOrderAmountChange}
+                                                                onfocus={handleFocusNum}
+                                                                onblur={handleBlurNum}
+                                                            />
+                                                            <template if:true={bl.isManual}>
+                                                                <span class="ord-manual-badge">M</span>
+                                                            </template>
+                                                        </div>
+                                                        <template if:true={bl.buyAiText}>
+                                                            <div class="ord-ai-text"><lightning-formatted-rich-text value={bl.buyAiText}></lightning-formatted-rich-text></div>
+                                                        </template>
+                                                        <template if:false={bl.buyAiText}>
+                                                            <template if:true={bl.buyAiLoading}>
+                                                                <div class="flex-center" style="padding: 6px 0;">
+                                                                    <div class="loading-spinner" style="width:14px;height:14px;border-width:2px;"></div>
+                                                                    <span style="margin-left: 8px; font-size: 12px; color: var(--text-muted);">Generating rationale...</span>
+                                                                </div>
+                                                            </template>
+                                                            <template if:false={bl.buyAiLoading}>
+                                                                <button
+                                                                    class="btn btn-ghost btn-sm ord-ai-btn"
+                                                                    data-aikey={bl.buyAiKey}
+                                                                    data-action="BUY"
+                                                                    data-symbol={bl.symbol}
+                                                                    data-assetclass={bl.assetClass}
+                                                                    data-amount={bl.legAmountRaw}
+                                                                    onclick={handleGenerateProductAI}
+                                                                >✨ Rationale</button>
+                                                            </template>
+                                                        </template>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </template>
+
+                                <!-- Residual block -->
+                                <template if:true={orderData.residualData}>
+                                    <div class="card ord-residual-card">
+                                        <div class="card-header">
+                                            <h3 class="card-title">Residual Cash</h3>
+                                            <span class="badge badge-warning">{orderData.residualData.amountDisplay}</span>
+                                        </div>
+                                        <template if:true={orderData.residualData.isSurplus}>
+                                            <div class="ord-residual-row">
+                                                <span class="badge badge-info">→ Kundekonto</span>
+                                                <span style="margin-left: 10px; font-weight: 600;">{orderData.residualData.amountDisplay}</span>
+                                            </div>
+                                        </template>
+                                        <template if:true={orderData.residualData.isDeficit}>
+                                            <div class="ord-residual-row">
+                                                <span class="badge badge-warning">← Kundekonto</span>
+                                                <span style="margin-left: 10px; font-weight: 600;">{orderData.residualData.amountDisplay}</span>
+                                            </div>
+                                            <template if:true={orderData.residualData.buyRows}>
+                                                <table class="data-table" style="margin-top: 12px;">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Action</th>
+                                                            <th style="text-align: left;">Product</th>
+                                                            <th>Amount (kr)</th>
+                                                            <th>Split %</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <template for:each={orderData.residualData.buyRows} for:item="br">
+                                                            <tr key={br.symbol}>
+                                                                <td><span class="badge badge-success">BUY</span></td>
+                                                                <td style="text-align: left;">{br.security}</td>
+                                                                <td>
+                                                                    <input
+                                                                        type="text"
+                                                                        class={br.inputClass}
+                                                                        value={br.legAmountRaw}
+                                                                        data-symbol={br.symbol}
+                                                                        data-legvalue={br.legAmountValue}
+                                                                        onchange={handleOrderAmountChange}
+                                                                        onfocus={handleFocusNum}
+                                                                        onblur={handleBlurNum}
+                                                                    />
+                                                                </td>
+                                                                <td>{br.pct}%</td>
+                                                            </tr>
+                                                        </template>
+                                                    </tbody>
+                                                </table>
+                                            </template>
+                                        </template>
+                                    </div>
+                                </template>
+                            </template>
+
+                            <!-- Separate mode -->
+                            <template if:false={switchModeActive}>
+                                <div class="grid-2">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h3 class="card-title">Sells</h3>
+                                        </div>
+                                        <div class="card-body">
+                                            <template if:true={separateOrderData.hasSells}>
+                                                <table class="data-table">
+                                                    <thead>
+                                                        <tr>
+                                                            <th style="text-align: left;">Product</th>
+                                                            <th>Asset Class</th>
+                                                            <th>Amount (kr)</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <template for:each={separateOrderData.sells} for:item="s">
+                                                            <tr key={s.symbol}>
+                                                                <td style="text-align: left;">{s.security}</td>
+                                                                <td>{s.assetClass}</td>
+                                                                <td><span class="reb-sell">{s.amountDisplay}</span></td>
+                                                            </tr>
+                                                        </template>
+                                                    </tbody>
+                                                </table>
+                                            </template>
+                                        </div>
+                                    </div>
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h3 class="card-title">Buys</h3>
+                                        </div>
+                                        <div class="card-body">
+                                            <template if:true={separateOrderData.hasBuys}>
+                                                <table class="data-table">
+                                                    <thead>
+                                                        <tr>
+                                                            <th style="text-align: left;">Product</th>
+                                                            <th>Asset Class</th>
+                                                            <th>Amount (kr)</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <template for:each={separateOrderData.buys} for:item="b">
+                                                            <tr key={b.symbol}>
+                                                                <td style="text-align: left;">{b.security}</td>
+                                                                <td>{b.assetClass}</td>
+                                                                <td><span class="reb-buy">{b.amountDisplay}</span></td>
+                                                            </tr>
+                                                        </template>
+                                                    </tbody>
+                                                </table>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </template>
+
+                        <template if:false={orderData.hasOrders}>
+                            <div class="card">
+                                <div class="empty-state">
+                                    <div class="empty-state-icon">📋</div>
+                                    <h4 class="empty-state-title">{orderData.emptyMessage}</h4>
+                                </div>
+                            </div>
+                        </template>
+                    </template>
+
+                    <!-- ═══════════════════════════════════════════ -->
+                    <!-- AI TAB                                      -->
+                    <!-- ═══════════════════════════════════════════ -->
+                    <template if:true={isAiTab}>
+                        <div class="card">
+                            <div class="card-header">
+                                <div>
+                                    <h3 class="card-title">AI Engine</h3>
+                                    <p class="card-subtitle">Portfolio-level AI recommendations</p>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <template if:true={isAiLoading}>
+                                    <div class="flex-center" style="padding: 40px;">
+                                        <div class="loading-spinner"></div>
+                                        <span style="margin-left: 12px;">Generating AI recommendations...</span>
+                                    </div>
+                                </template>
+                                <template if:false={isAiLoading}>
+                                    <template if:true={hasAIRecommendations}>
+                                        <div class="ai-output"><lightning-formatted-rich-text value={aiRecommendationText}></lightning-formatted-rich-text></div>
+                                    </template>
+                                    <template if:false={hasAIRecommendations}>
+                                        <div class="empty-state">
+                                            <div class="empty-state-icon">✨</div>
+                                            <h4 class="empty-state-title">No AI Analysis Yet</h4>
+                                            <p class="empty-state-text">Click "Generate AI" in the header to get portfolio recommendations</p>
+                                        </div>
+                                    </template>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- ═══════════════════════════════════════════ -->
+                    <!-- ANALYTICS TAB                               -->
+                    <!-- ═══════════════════════════════════════════ -->
+                    <template if:true={isAnalyticsTab}>
+                        <div class="card">
+                            <div class="card-header">
+                                <div>
+                                    <h3 class="card-title">Portfolio Analytics</h3>
+                                    <p class="card-subtitle">Visual allocation drift — dashed lines show ±2% boundaries</p>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <template if:true={barChartData.hasData}>
+                                    <!-- Allocation colour strip -->
+                                    <canvas data-id="allocationChart" width="800" height="16" class="allocation-canvas"></canvas>
+
+                                    <!-- Bar chart -->
+                                    <div class="bc-chart">
+                                        <template for:each={barChartData.rows} for:item="row">
+                                            <div key={row.key} class="bc-row">
+                                                <div class="bc-label">{row.label}</div>
+                                                <div class="bc-bars">
+                                                    <!-- Target bar row -->
+                                                    <div class="bc-bar-row">
+                                                        <div class="bc-bar-wrap">
+                                                            <div class="bc-bar bc-target" style={row.targetWidth}></div>
+                                                        </div>
+                                                        <span class="bc-bar-val bc-val-target">{row.targetVal}</span>
+                                                    </div>
+                                                    <!-- Actual bar row -->
+                                                    <div class="bc-bar-row">
+                                                        <div class="bc-bar-wrap" style="position: relative;">
+                                                            <div class={row.actualClass} style={row.actualWidth}></div>
+                                                            <template if:true={row.showBoundaries}>
+                                                                <div class="bc-boundary bc-boundary-low" style={row.bLowStyle}></div>
+                                                                <div class="bc-boundary bc-boundary-high" style={row.bHighStyle}></div>
+                                                            </template>
+                                                        </div>
+                                                        <span class={row.actualValClass}>{row.actualVal}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </template>
+                                        <div class="bc-xaxis">
+                                            <template for:each={barChartData.xAxis} for:item="tick">
+                                                <span key={tick.label} class="bc-xaxis-tick" style={tick.style}>{tick.label}</span>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </template>
+                                <template if:false={barChartData.hasData}>
+                                    <div class="empty-state">
+                                        <div class="empty-state-icon">📈</div>
+                                        <h4 class="empty-state-title">No Analytics Data</h4>
+                                        <p class="empty-state-text">Load holdings to view allocation analytics</p>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- ═══════════════════════════════════════════ -->
+                    <!-- SUMMARY TAB                                 -->
+                    <!-- ═══════════════════════════════════════════ -->
+                    <template if:true={isSummaryTab}>
+                        <!-- Stat cards -->
+                        <template if:true={summaryCards}>
+                            <div class="grid-4" style="margin-bottom: 20px;">
+                                <div class="card sum-stat-card">
+                                    <div class="sum-stat-label">Transactions</div>
+                                    <div class="sum-stat-value">{summaryCards.transactions}</div>
+                                </div>
+                                <div class="card sum-stat-card">
+                                    <div class="sum-stat-label">Total Sold</div>
+                                    <div class="sum-stat-value reb-sell">{summaryCards.totalSold}</div>
+                                </div>
+                                <div class="card sum-stat-card">
+                                    <div class="sum-stat-label">Total Bought</div>
+                                    <div class="sum-stat-value reb-buy">{summaryCards.totalBought}</div>
+                                </div>
+                                <div class="card sum-stat-card">
+                                    <div class="sum-stat-label">
+                                        Residual
+                                        <template if:true={summaryCards.hasResidualDir}>
+                                            <span class="text-muted" style="font-size: 11px;"> {summaryCards.residualDir}</span>
+                                        </template>
+                                    </div>
+                                    <div class="sum-stat-value">{summaryCards.residual}</div>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- Canvas charts -->
+                        <div class="grid-2">
+                            <div class="card">
+                                <div class="card-header" style="margin-bottom: 8px;">
+                                    <div>
+                                        <h3 class="card-title">Before / After</h3>
+                                        <p class="card-subtitle" style="margin: 0;">Grey = current · Colour = post-trade · Dashed = target</p>
+                                    </div>
+                                </div>
+                                <canvas data-id="beforeAfterChart" width="400" height="240" class="sum-canvas"></canvas>
+                            </div>
+                            <div class="card">
+                                <div class="card-header" style="margin-bottom: 8px;">
+                                    <div>
+                                        <h3 class="card-title">Drift from Target</h3>
+                                        <p class="card-subtitle" style="margin: 0;">Post-trade deviation · Dashed = ±2% boundary</p>
+                                    </div>
+                                </div>
+                                <canvas data-id="changeChart" width="400" height="240" class="sum-canvas"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Summary table -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">Allocation Summary</h3>
+                            </div>
+                            <div class="card-body">
+                                <template if:true={hasHoldings}>
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th style="text-align: left;">Asset Class</th>
+                                                <th>Target %</th>
+                                                <th>Current %</th>
+                                                <th>Post-Trade %</th>
+                                                <th>Change</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <template for:each={summaryData} for:item="sd">
+                                                <tr key={sd.key}>
+                                                    <td style="text-align: left;">
+                                                        <div class="flex-center-left">
+                                                            <span style={sd.dotStyle}></span>
+                                                            <span style="margin-left: 8px; font-weight: 500;">{sd.label}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td>{sd.targetPctDisplay}</td>
+                                                    <td>{sd.actualPctDisplay}</td>
+                                                    <td>{sd.postTradePctDisplay}</td>
+                                                    <td><span class={sd.changeClass}>{sd.changeDisplay}</span></td>
+                                                </tr>
+                                            </template>
+                                        </tbody>
+                                    </table>
+                                </template>
+                                <template if:false={hasHoldings}>
+                                    <div class="empty-state">
+                                        <div class="empty-state-icon">📑</div>
+                                        <h4 class="empty-state-title">No Summary Data</h4>
+                                        <p class="empty-state-text">Load holdings to view portfolio summary</p>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- ═══════════════════════════════════════════ -->
+                    <!-- SETTINGS TAB                                -->
+                    <!-- ═══════════════════════════════════════════ -->
+                    <template if:true={isSettingsTab}>
+                        <div class="card">
+                            <div class="card-header">
+                                <div>
+                                    <h3 class="card-title">Settings</h3>
+                                    <p class="card-subtitle">Configure tool preferences</p>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="input-group">
+                                    <label class="input-label">Theme</label>
+                                    <select class="input-field" onchange={handleThemeChange}>
+                                        <option value="light">Light</option>
+                                        <option value="dark">Dark</option>
+                                        <option value="hc">High Contrast</option>
+                                    </select>
+                                </div>
+                                <div class="input-group">
+                                    <label class="input-label">Data Fetch Flow API Name</label>
+                                    <input type="text" class="input-field" value={flowApiName} disabled />
+                                </div>
+                                <div class="input-group">
+                                    <label class="input-label">AI Portfolio Prompt Flow API Name</label>
+                                    <input type="text" class="input-field" value={promptTemplateApiName} disabled />
+                                </div>
+                                <div class="input-group">
+                                    <label class="input-label">AI Product Rationale Flow API Name</label>
+                                    <input type="text" class="input-field" value={aiProductFlowApiName} disabled />
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+
+                </template>
+            </div>
+        </main>
+    </div>
+</template>

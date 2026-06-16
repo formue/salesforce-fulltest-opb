@@ -22,10 +22,6 @@
                 <b>Corporate</b>
             </button>
         </div>
-        <template if:true={isCorporateTheme}>
-            <span slot="title-badge" class="beta-sticker">BETA</span>
-        </template>
-
         <div slot="dashboard-content" class={dashboardWrapperClass}>
             <div class="stats-row">
                 <c-wealth-plan-stat-card label="Total Milestones" value={totalMilestones} variant="highlight"></c-wealth-plan-stat-card>
