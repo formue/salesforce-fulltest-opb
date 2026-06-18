@@ -2337,6 +2337,8 @@ b, strong { font-weight: 800; color: var(--text-main); }
     box-shadow: 0 0 0 3px rgba(184,150,62,0.1);
 }
 .wph-field-textarea { min-height: 80px; resize: vertical; }
+.wph-char-counter { font-size: 0.75rem; color: #706e6b; text-align: right; margin-top: 2px; }
+.wph-char-counter-view { margin-top: 4px; text-align: left; }
 
 /* Select dropdown */
 .wph-field-select {

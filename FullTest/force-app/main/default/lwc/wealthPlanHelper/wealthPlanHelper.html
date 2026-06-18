@@ -2378,13 +2378,19 @@
                                                                                         </label>
                                                                                     </template>
                                                                                     <template lwc:elseif={fld.isTextarea}>
-                                                                                        <textarea class="wph-field-input wph-field-textarea" data-field={fld.api} oninput={handleFieldChange}>{fld.value}</textarea>
+                                                                                        <textarea class="wph-field-input wph-field-textarea" data-field={fld.api} maxlength={fld.maxlength} oninput={handleFieldChange}>{fld.value}</textarea>
+                                                                                        <template lwc:if={fld.maxlength}>
+                                                                                            <div class="wph-char-counter">{fld.currentLength} / {fld.maxlength}</div>
+                                                                                        </template>
                                                                                     </template>
                                                                                     <template lwc:elseif={fld.isNumber}>
                                                                                         <input type="number" class="wph-field-input" value={fld.value} data-field={fld.api} oninput={handleFieldChange}/>
                                                                                     </template>
                                                                                     <template lwc:else>
-                                                                                        <input type="text" class="wph-field-input" value={fld.value} data-field={fld.api} oninput={handleFieldChange}/>
+                                                                                        <input type="text" class="wph-field-input" value={fld.value} data-field={fld.api} maxlength={fld.maxlength} oninput={handleFieldChange}/>
+                                                                                        <template lwc:if={fld.maxlength}>
+                                                                                            <div class="wph-char-counter">{fld.currentLength} / {fld.maxlength}</div>
+                                                                                        </template>
                                                                                     </template>
                                                                                 </div>
                                                                             </template>
@@ -2448,6 +2454,9 @@
                                                                         </div>
                                                                         <template lwc:if={rec._hasDesc}>
                                                                             <p class="wph-row-desc">{rec._descText}</p>
+                                                                            <template lwc:if={rec._descMaxLength}>
+                                                                                <div class="wph-char-counter wph-char-counter-view">{rec._descCharCount} / {rec._descMaxLength} characters</div>
+                                                                            </template>
                                                                         </template>
                                                                         <template lwc:if={rec._hasMeta}>
                                                                             <div class="wph-row-meta">

@@ -76,7 +76,8 @@ const SECTIONS = [
       ]},
     { key: 'assets',         label: 'Assets & Liabilities',     icon: 'assets',      object: 'FinServ__AssetsAndLiabilities__c',
       fields: [
-        { api: 'Name',                                  label: 'Name',            type: 'text', role: 'title' },
+        { api: 'Name',                                  label: 'Name',            type: 'text', role: 'title', maxlength: 80,
+          crossValidate(rec) { return rec.Name && rec.Name.length > 80 ? 'Name must be 80 characters or less' : null; } },
         { api: 'AssetorLiabilityType__c',               label: 'Asset/Liability', type: 'select', selectKey: 'alTypeOptions', role: 'subtitle' },
         { api: 'FinServ__AssetsAndLiabilitiesType__c',  label: 'Type',            type: 'select', selectKey: 'assetTypeOptions', role: 'subtitle' },
         { api: 'FF_Category__c',                        label: 'Category',        type: 'select', selectKey: 'assetCategoryOptions' },
@@ -113,7 +114,7 @@ const SECTIONS = [
     { key: 'greetings',      label: 'Personal Greeting',         icon: 'greetings',   object: 'FF_PersonalGreeting__c',
       fields: [
         { api: 'FF_Subject__c',             label: 'Subject',   type: 'text', role: 'title' },
-        { api: 'FF_personalGreeting__c',    label: 'Greeting',  type: 'textarea', role: 'description' },
+        { api: 'FF_personalGreeting__c',    label: 'Greeting',  type: 'textarea', role: 'description', maxlength: 3000 },
         { api: 'FF_Active__c',              label: 'Active',    type: 'checkbox', role: 'meta' },
       ]},
     { key: 'todos',          label: 'Action Items / To-Dos',     icon: 'todos',       object: 'Task',
@@ -234,6 +235,10 @@ function _htmlToMd(html) {
 function _stripStyleBlocks(html) {
     if (!html) return html;
     return html.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '').trim();
+}
+function _stripHtmlToText(html) {
+    if (!html) return '';
+    return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').trim();
 }
 
 export default class WealthPlanHelper extends NavigationMixin(LightningElement) {
@@ -2865,6 +2870,7 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
                         ?? (isInvalid       ? 'Not in picklist' : null)
                         ?? null;
 
+                    const fldMaxlength = f.maxlength || null;
                     return {
                         api: f.api, label: f.label, type: f.type,
                         role: f.role || '',
@@ -2876,7 +2882,9 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
                         checkboxValue: rec[f.api] === true || rec[f.api] === 'true',
                         selectClass: isInvalid ? 'wph-field-select wph-select-invalid' : 'wph-field-select',
                         valueClass: isInvalid ? 'wph-field-chip-value wph-value-invalid' : 'wph-field-chip-value',
-                        chipClass: isInvalid ? 'wph-field-chip wph-chip-invalid' : 'wph-field-chip'
+                        chipClass: isInvalid ? 'wph-field-chip wph-chip-invalid' : 'wph-field-chip',
+                        maxlength: fldMaxlength,
+                        currentLength: fldMaxlength ? rawValue.length : null
                     };
                 });
 
@@ -2896,8 +2904,14 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
                     .filter(v => v && v.trim().length > 0)
                     .join(' · ');
 
-                // Description text
-                const descText = descField ? (descField.displayValue || descField.value) : '';
+                // Description text — strip HTML for greetings (FF_personalGreeting__c is plain-text-only)
+                const rawDescText = descField ? (descField.displayValue || descField.value) : '';
+                const descText = (s.key === 'greetings' && descField?.api === 'FF_personalGreeting__c')
+                    ? _stripHtmlToText(rawDescText)
+                    : rawDescText;
+                const descFieldDef = s.key === 'greetings' ? SECTIONS.find(d => d.key === 'greetings')?.fields.find(f => f.api === descField?.api) : null;
+                const descMaxLength = descFieldDef?.maxlength || null;
+                const descCharCount = descMaxLength ? descText.length : null;
 
                 // Meta chips — only fields with values OR required-empty
                 const metaChips = metaFields
@@ -2965,6 +2979,8 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
                     _hasSubtitle: !!subtitleText,
                     _descText: descText,
                     _hasDesc: !!descText,
+                    _descMaxLength: descMaxLength,
+                    _descCharCount: descCharCount,
                     _metaChips: metaChips,
                     _hasMeta: metaChips.length > 0,
                     // Feature 2: Diff
@@ -2996,7 +3012,8 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
             const lockedCount    = recordStats.filter(r => r._isLocked).length;
             const lockableCount  = recordStats.filter(r => r._canLock).length;
             const totalInSection = recordStats.length;
-            const progressPct = totalInSection > 0 ? Math.round((lockedCount / totalInSection) * 100) : 0;
+            const completedCount = s.records.filter(r => r._completed).length;
+            const progressPct = totalInSection > 0 ? Math.round(((completedCount + lockedCount) / totalInSection) * 100) : 0;
 
             return {
                 ...s,
@@ -3016,7 +3033,7 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
                 totalInSection,
                 progressPct,
                 progressStyle: `width: ${progressPct}%`,
-                progressLabel: `${lockedCount}/${totalInSection} saved`,
+                progressLabel: (() => { const _p = []; if (completedCount > 0) _p.push(`${completedCount} saved`); if (lockedCount > 0) _p.push(`${lockedCount} selected`); return _p.length > 0 ? _p.join(' · ') : `${totalInSection} total`; })(),
                 hasLockableRows: lockableCount > 0 && !this._lockedSections[s.key],
                 displayRecords
             };
@@ -3033,11 +3050,12 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
 
     // ── Empty-section filtering ──────────────────────────────────────────────
     get filteredReviewSections() {
-        if (this._showEmptySections) return this.reviewSections;
-        return this.reviewSections.filter(s => s.hasRecords);
+        const sections = this.reviewSections.filter(s => s.key !== 'todos');
+        if (this._showEmptySections) return sections;
+        return sections.filter(s => s.hasRecords);
     }
     get emptySectionCount() {
-        return this.reviewSections.filter(s => !s.hasRecords).length;
+        return this.reviewSections.filter(s => s.key !== 'todos' && !s.hasRecords).length;
     }
     get hasEmptySections() { return this.emptySectionCount > 0; }
     get emptySectionToggleLabel() {
@@ -4041,6 +4059,9 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
                 greetings.create.forEach(r => { r.FF_HouseholdId__c = this.recordId; });
                 greetings.update.forEach(r => { r.FF_HouseholdId__c = this.recordId; });
             }
+            [...greetings.create, ...greetings.update].forEach(r => {
+                if (r.FF_personalGreeting__c) r.FF_personalGreeting__c = _stripHtmlToText(r.FF_personalGreeting__c);
+            });
 
             const payload = {
                 goals:          route('goals'),
