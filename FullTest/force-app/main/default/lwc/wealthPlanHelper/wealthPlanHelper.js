@@ -380,73 +380,23 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
 
     }
 
-    _rteResizeObserver = null;
+    _rteCardResizeObserver = null;
 
-    _setupRteResize() {
-        const wrap = this.template.querySelector('.wph-rte-resize-wrap');
-        if (!wrap) return;
-        // Default height: 45% of viewport, floor 350px — substantially larger than SLDS default
-        const targetH = Math.round(Math.max(350, window.innerHeight * 0.45));
-        wrap.style.height = targetH + 'px';
-        this._resizeSummaryEditor();
-        // Retry once after an extra tick in case Quill hasn't fully painted yet
-        // eslint-disable-next-line @lwc/lwc/no-async-operation
-        setTimeout(() => this._resizeSummaryEditor(), 200);
-        if (window.ResizeObserver && !this._rteResizeObserver) {
-            this._rteResizeObserver = new ResizeObserver(() => {
-                this._resizeSummaryEditor();
+    _measureModalRteHeight() {
+        const body = this.template.querySelector('.wph-edit-modal-body');
+        if (!body || body.clientHeight <= 50) {
+            // eslint-disable-next-line @lwc/lwc/no-async-operation
+            setTimeout(() => this._measureModalRteHeight(), 100);
+            return;
+        }
+        this._rteHeightPx = Math.max(250, body.clientHeight);
+        if (window.ResizeObserver && !this._rteCardResizeObserver) {
+            this._rteCardResizeObserver = new ResizeObserver(() => {
+                const b = this.template.querySelector('.wph-edit-modal-body');
+                if (b && b.clientHeight > 50) this._rteHeightPx = b.clientHeight;
             });
-            this._rteResizeObserver.observe(wrap);
+            this._rteCardResizeObserver.observe(body);
         }
-    }
-
-    _resizeSummaryEditor() {
-        const wrap = this.template.querySelector('.wph-rte-resize-wrap');
-        if (!wrap) return;
-        const totalH = wrap.offsetHeight;
-        if (totalH <= 0) return;
-
-        const rte = this.template.querySelector('.wph-rte-resize-wrap lightning-input-rich-text');
-        if (!rte) return;
-        rte.style.height = totalH + 'px';
-        rte.style.display = 'block';
-
-        // Try three traversal strategies — at least one works in every Salesforce shadow mode:
-        // 1. this.template.querySelector  — LWC synthetic-shadow aware
-        // 2. rte.querySelector            — direct query on the host element
-        // 3. wrap.querySelector           — from the plain wrapper div (synthetic shadow)
-        const _q = sel =>
-            this.template.querySelector(sel) ||
-            rte.querySelector(sel) ||
-            wrap.querySelector(sel);
-
-        const toolbar = _q('.slds-rich-text-editor__toolbar');
-        const toolbarH = toolbar ? toolbar.offsetHeight : 44;
-        const contentH = Math.max(80, totalH - toolbarH - 2);
-
-        // Size intermediate SLDS containers so their flex chain propagates height inward
-        ['.slds-form-element', '.slds-form-element__control', '.slds-rich-text-editor'].forEach(sel => {
-            const el = _q(sel);
-            if (el) { el.style.height = totalH + 'px'; el.style.overflow = 'hidden'; }
-        });
-
-        // Size the actual editor content area
-        ['.slds-rich-text-editor__textarea', '.ql-container', '.ql-editor'].forEach(sel => {
-            const el = _q(sel);
-            if (el) {
-                el.style.height    = contentH + 'px';
-                el.style.minHeight = contentH + 'px';
-                el.style.overflowY = 'auto';
-            }
-        });
-    }
-
-    _teardownRteResize() {
-        if (this._rteResizeObserver) {
-            this._rteResizeObserver.disconnect();
-            this._rteResizeObserver = null;
-        }
-        this._isDragging = false;
     }
 
     _on(v, prop) {
@@ -577,10 +527,7 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
     @track _ownerPropagationPrompt = null; // { sectionKey, fieldApi, fieldLabel, value, ownerLabel, count }
     @track _meetingSummaryResult = '';
     @track _summaryTabOpen       = false;
-    @track _rteCollapsed         = false;  // editor body collapsed (header still visible)
-    @track _isDragging           = false;  // drag-resize overlay active
-    _dragStartY = 0;
-    _dragStartH = 0;
+    @track _rteHeightPx          = 400;   // drives reactive style binding on lightning-input-rich-text
 
     // ── Event selection + meeting type modal ─────────────────────────────────
     @track _selectedEventId      = null;   // Id of the selected Salesforce Event
@@ -1340,11 +1287,8 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
     handleEditSummaryDirect() {
         this._summaryEditValue = this.summaryDisplayHtml || '';
         this._summaryEditMode  = true;
-        this._rteCollapsed     = false;
-        // Push the wrapper height into SLDS/Quill internals after init.
-        // CSS gives the wrapper a definite height immediately; 500 ms gives Quill time to mount.
         // eslint-disable-next-line @lwc/lwc/no-async-operation
-        setTimeout(() => this._setupRteResize(), 500);
+        setTimeout(() => this._measureModalRteHeight(), 200);
     }
 
     handleSummaryRichTextChange(event) {
@@ -1352,68 +1296,35 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
     }
 
     handleSaveSummaryEdit() {
-        this._teardownRteResize();
-        this._rteCollapsed       = false;
+        this._teardownModalRteObserver();
         this._noteDeletedLocally = false;
         this._currentNoteHtml    = this._summaryEditValue;
         this.outputMeetingSummary = this._currentNoteHtml;
         this.dispatchEvent(new FlowAttributeChangeEvent('outputMeetingSummary', this._currentNoteHtml));
         this._summaryEditMode = false;
-        this._summarySaved    = false;  // content changed — unsaved again
+        this._summarySaved    = false;
+        this.handleSaveSummary();
+    }
+
+    _teardownModalRteObserver() {
+        if (this._rteCardResizeObserver) {
+            this._rteCardResizeObserver.disconnect();
+            this._rteCardResizeObserver = null;
+        }
     }
 
     handleCancelSummaryEdit() {
-        this._teardownRteResize();
-        this._rteCollapsed     = false;
+        this._teardownModalRteObserver();
         this._summaryEditMode  = false;
         this._summaryEditValue = '';
     }
 
-    handleRteDragStart(event) {
-        event.preventDefault();
-        const wrap = this.template.querySelector('.wph-rte-resize-wrap');
-        if (!wrap) return;
-        this._dragStartY = event.clientY;
-        this._dragStartH = wrap.offsetHeight;
-        this._isDragging = true;
-    }
-
-    handleRteResizeDrag(event) {
-        if (!this._isDragging) return;
-        const wrap = this.template.querySelector('.wph-rte-resize-wrap');
-        if (!wrap) return;
-        const minH = parseInt(getComputedStyle(wrap).minHeight, 10) || 250;
-        const maxH = parseInt(getComputedStyle(wrap).maxHeight, 10) || (window.innerHeight - 160);
-        const newH = Math.min(maxH, Math.max(minH, this._dragStartH + (event.clientY - this._dragStartY)));
-        wrap.style.height = newH + 'px';
-        this._resizeSummaryEditor();
-    }
-
-    handleRteResizeDragEnd() {
-        this._isDragging = false;
-    }
-
-    get rteCollapseHeaderClass() {
-        return this._rteCollapsed
-            ? 'wph-rte-collapse-header wph-rte-collapse-header--collapsed'
-            : 'wph-rte-collapse-header';
-    }
-    get rteCollapseBodyClass() {
-        return this._rteCollapsed
-            ? 'wph-rte-collapse-body wph-rte-collapse-body--hidden'
-            : 'wph-rte-collapse-body';
-    }
-    get rteCollapseChevronClass() {
-        return `wph-chevron${this._rteCollapsed ? '' : ' wph-chevron-up'}`;
-    }
-
-    handleToggleRteCollapse() {
-        this._rteCollapsed = !this._rteCollapsed;
-        if (!this._rteCollapsed) {
-            // Re-expanding: give the DOM one tick to restore, then sync SLDS internals
-            // eslint-disable-next-line @lwc/lwc/no-async-operation
-            setTimeout(() => this._resizeSummaryEditor(), 50);
-        }
+    get _rteStyle() {
+        const h = this._rteHeightPx;
+        const innerH = Math.max(80, h - 44); // 44px ≈ SLDS toolbar
+        return `height:${h}px;display:block;` +
+               `--lwc-richTextEditorTextAreaMinHeight:${innerH}px;` +
+               `--sds-c-textarea-sizing-min-height:${innerH}px;`;
     }
 
     handleRevertSummary() {
@@ -2333,10 +2244,13 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
         this._briefEditValue = event.target.value;
     }
     handleSaveBriefEdit() {
+        this._teardownModalRteObserver();
         this._meetingBrief  = this._briefEditValue;
         this._briefEditMode = false;
+        this.handleSaveSummary();
     }
     handleCancelBriefEdit() {
+        this._teardownModalRteObserver();
         this._briefEditMode  = false;
         this._briefEditValue = '';
     }
@@ -2599,7 +2513,7 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
     }
 
     disconnectedCallback() {
-        this._teardownRteResize();
+        this._teardownModalRteObserver();
         this._stopLoadingCycle();
         this._stopSummaryLoadingCycle();
         if (this._eventsLoadingTimeoutId) {
@@ -3258,7 +3172,9 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
     get msRegenBodyClass()   { return this._msRegenOpen ? 'wph-zone-collapse-body' : 'wph-zone-collapse-body wph-zone-collapse-hidden'; }
     get msTypeChevronClass() { return this._msTypeOpen  ? 'wph-collapse-chevron wph-chevron-open' : 'wph-collapse-chevron'; }
     get msTypeSectionClass() {
-        return 'wph-wp-section-strip wph-ms-section-first';
+        const needsCategory = !!this._selectedEventId && !this._selectedMeetingType;
+        return 'wph-wp-section-strip wph-ms-section-first' +
+               (needsCategory ? ' wph-ms-section--needs-category' : '');
     }
     get msInputChevronClass()     { return this._msInputOpen     ? 'wph-collapse-chevron wph-chevron-open' : 'wph-collapse-chevron'; }
     get msDocUploadBodyClass()    { return this._msDocUploadOpen ? 'wph-zone-collapse-body' : 'wph-zone-collapse-body wph-zone-collapse-hidden'; }

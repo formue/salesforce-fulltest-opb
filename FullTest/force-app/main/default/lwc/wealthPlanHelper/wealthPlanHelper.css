@@ -841,84 +841,6 @@ b, strong { font-weight: 800; color: var(--text-main); }
 
 .wph-summary-html-body { padding: 20px 24px; min-height: 120px; }
 
-.wph-summary-editor-wrap {
-    flex: 1;
-    display: flex; flex-direction: column;
-    padding: 0 20px;
-}
-/* ── Collapse header (click to hide/show the editor body) ── */
-.wph-rte-collapse-header {
-    display: flex; align-items: center; justify-content: space-between;
-    width: 100%; padding: 8px 14px;
-    background: linear-gradient(135deg, #f0f4f9, #f6f8fa);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md) var(--radius-md) 0 0;
-    cursor: pointer; font-family: inherit;
-    font-size: 0.8rem; color: var(--text-secondary);
-    user-select: none; transition: background 0.15s;
-    flex-shrink: 0;
-}
-.wph-rte-collapse-header:hover { background: #e2eaf4; }
-.wph-rte-collapse-header--collapsed { border-radius: var(--radius-md); }
-.wph-rte-collapse-header-left { display: flex; align-items: center; gap: 7px; }
-/* Animated collapsible body wrapping the editor + drag handle */
-.wph-rte-collapse-body {
-    overflow: clip;
-    max-height: 3000px;
-    transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.wph-rte-collapse-body--hidden { max-height: 0; }
-
-/* Height is set entirely by JS (_setupRteResize). Drag bar below handles user resize. */
-.wph-rte-resize-wrap {
-    min-height: 250px;
-    max-height: calc(100vh - 160px);
-    overflow: hidden;
-    width: 100%;
-    border-radius: 0;
-    border: 1px solid var(--border-color);
-    border-top: none;
-    border-bottom: none;
-    box-sizing: border-box;
-}
-/* host must fill the wrapper so SLDS internals have a containing block */
-.wph-rte-resize-wrap lightning-input-rich-text {
-    display: block;
-    width: 100%;
-    height: 100%;
-}
-/* Full-width drag handle between the editor and Apply/Cancel */
-.wph-rte-drag-bar {
-    width: 100%;
-    height: 14px;
-    background: var(--bg-subtle, #f6f8fa);
-    border: 1px solid var(--border-color);
-    border-top: none;
-    border-radius: 0 0 var(--radius-md) var(--radius-md);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: ns-resize;
-    color: #94a3b8;
-    flex-shrink: 0;
-    transition: background 0.15s, color 0.15s;
-    user-select: none;
-}
-.wph-rte-drag-bar:hover {
-    background: #e8eef4;
-    color: #475569;
-}
-.wph-drag-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 9999;
-    cursor: ns-resize;
-    background: transparent;
-    user-select: none;
-}
-.wph-summary-editor-actions {
-    display: flex; gap: 8px; padding: 12px 0; justify-content: flex-end; flex-shrink: 0;
-}
 .wph-summary-save-btn {
     display: inline-flex; align-items: center; gap: 6px; padding: 8px 18px;
     border-radius: var(--radius-md); background: var(--brand-accent); color: #fff;
@@ -2721,6 +2643,49 @@ b, strong { font-weight: 800; color: var(--text-main); }
     box-shadow: 0 20px 60px rgba(0,0,0,0.25), 0 4px 16px rgba(0,0,0,0.1);
     overflow: hidden;
 }
+/* ── Editor modals (summary + brief) ─────────────────────────────────────── */
+.wph-edit-modal-card {
+    position: relative; z-index: 1;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    width: 84vw; height: 82vh;
+    max-width: 1200px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.25), 0 4px 16px rgba(0,0,0,0.1);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+}
+.wph-edit-modal-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border-color);
+    background: linear-gradient(135deg, #f0f4f9, #f6f8fa);
+    flex-shrink: 0;
+}
+.wph-edit-modal-title {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 1rem; font-weight: 600; color: var(--text-main);
+}
+.wph-edit-modal-close {
+    background: none; border: none; cursor: pointer;
+    padding: 4px; color: var(--text-muted);
+    border-radius: var(--radius-sm);
+    display: flex; align-items: center; justify-content: center;
+}
+.wph-edit-modal-close:hover { background: var(--bg-subtle); color: var(--text-main); }
+.wph-edit-modal-body {
+    flex: 1; overflow: hidden; min-height: 0;
+}
+.wph-edit-modal-body lightning-input-rich-text {
+    display: block; width: 100%; height: 100%;
+}
+.wph-edit-modal-footer {
+    display: flex; justify-content: flex-end; gap: 10px;
+    padding: 12px 24px;
+    border-top: 1px solid var(--border-color);
+    background: var(--bg-subtle);
+    flex-shrink: 0;
+}
 .wph-confirm-header {
     display: flex; align-items: center; gap: 12px;
     padding: 20px 24px; border-bottom: 1px solid var(--border-color);
@@ -3069,6 +3034,14 @@ b, strong { font-weight: 800; color: var(--text-main); }
 }
 .wph-body--required .wph-ms-type-group {
     animation: wph-inner-required-pulse 1.5s ease-in-out infinite;
+}
+@keyframes wph-header-needs-category {
+    0%, 100% { background: linear-gradient(135deg, #f0f4f9, #f6f8fa); box-shadow: none; }
+    50%       { background: linear-gradient(135deg, rgba(251,191,36,0.18), rgba(253,230,138,0.22));
+                box-shadow: inset 0 0 0 1px rgba(234,179,8,0.45); }
+}
+.wph-ms-section--needs-category .wph-zone-collapse-header {
+    animation: wph-header-needs-category 1.5s ease-in-out infinite;
 }
 
 /* ── Meeting Summary small accordion variant ───────────────────────────── */
