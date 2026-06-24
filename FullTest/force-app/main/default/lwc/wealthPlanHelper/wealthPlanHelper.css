@@ -2649,8 +2649,8 @@ b, strong { font-weight: 800; color: var(--text-main); }
     background: var(--bg-surface);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-xl);
-    width: 84vw; height: 82vh;
-    max-width: 1200px;
+    width: 84vw; max-width: 1200px;
+    height: 82vh;
     box-shadow: 0 20px 60px rgba(0,0,0,0.25), 0 4px 16px rgba(0,0,0,0.1);
     display: flex; flex-direction: column;
     overflow: hidden;
@@ -2675,16 +2675,42 @@ b, strong { font-weight: 800; color: var(--text-main); }
 .wph-edit-modal-close:hover { background: var(--bg-subtle); color: var(--text-main); }
 .wph-edit-modal-body {
     flex: 1; overflow: hidden; min-height: 0;
+    display: flex; flex-direction: column;
 }
-.wph-edit-modal-body lightning-input-rich-text {
-    display: block; width: 100%; height: 100%;
+.wph-rte-editable {
+    flex: 1; min-height: 0; overflow-y: auto; outline: none;
+    padding: 20px 24px;
+    font-size: 0.92rem; line-height: 1.75; color: var(--text-main);
+    font-family: 'Salesforce Sans', system-ui, sans-serif;
+    word-break: break-word;
 }
+.wph-rte-editable h1 { font-size: 1.6rem; font-weight: 700; margin: 0 0 12px; color: var(--text-main); }
+.wph-rte-editable h2 { font-size: 1.3rem; font-weight: 700; margin: 16px 0 8px; color: var(--text-main); }
+.wph-rte-editable h3 { font-size: 1.1rem; font-weight: 700; margin: 12px 0 6px; color: var(--text-main); }
+.wph-rte-editable p  { margin: 0 0 10px; }
+.wph-rte-editable ul, .wph-rte-editable ol { padding-left: 24px; margin: 8px 0 12px; }
+.wph-rte-editable li { margin-bottom: 4px; }
+.wph-rte-editable strong, .wph-rte-editable b { font-weight: 800; }
 .wph-edit-modal-footer {
     display: flex; justify-content: flex-end; gap: 10px;
     padding: 12px 24px;
     border-top: 1px solid var(--border-color);
     background: var(--bg-subtle);
     flex-shrink: 0;
+}
+.wph-edit-modal-drag-handle {
+    width: 100%; height: 12px;
+    background: var(--bg-subtle);
+    border-top: 1px solid var(--border-color);
+    display: flex; align-items: center; justify-content: center;
+    cursor: ns-resize; color: #94a3b8; flex-shrink: 0;
+    transition: background 0.15s, color 0.15s;
+    user-select: none; border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+}
+.wph-edit-modal-drag-handle:hover { background: #e2eaf4; color: #475569; }
+.wph-drag-overlay {
+    position: fixed; inset: 0; z-index: 99999;
+    cursor: ns-resize; background: transparent; user-select: none;
 }
 .wph-confirm-header {
     display: flex; align-items: center; gap: 12px;
@@ -3467,6 +3493,12 @@ b, strong { font-weight: 800; color: var(--text-main); }
 .wph-tour-next-btn:hover {
     transform: translateY(-1px);
     box-shadow: 0 4px 14px rgba(37,99,235,0.35);
+}
+
+/* ── Focus absorber: invisible cke_editable element that prevents Salesforce's E shortcut ── */
+.wph-focus-absorber {
+    position: absolute; width: 1px; height: 1px; overflow: hidden;
+    opacity: 0; pointer-events: none; top: 0; left: 0;
 }
 
 /* ── Modal Overlay ───────────────────────────────────────── */

@@ -26,6 +26,11 @@
     <!-- Main content: always shown in inline mode; shown in modal mode when open -->
     <template lwc:if={showMainContent}>
         <div class={rootWrapperClass}>
+            <!-- Hidden focus absorber: keeps cke_editable in activeElement so Salesforce's E shortcut is skipped -->
+            <div class="wph-focus-absorber cke_editable"
+                 contenteditable="true"
+                 tabindex="-1"
+                 lwc:ref="focusAbsorber"></div>
             <!-- Backdrop — modal mode only -->
             <template lwc:if={modalMode}>
                 <div class="wph-overlay-backdrop" onclick={handleCloseModal}></div>
@@ -1278,7 +1283,8 @@
                                                             </template>
                                                         </div>
                                                     </template>
-                                                    <div class="wph-summary-selection-zone"
+                                                    <div class="wph-summary-selection-zone cke_editable"
+                                                         tabindex="-1"
                                                          onmouseup={handleSummaryMouseUp}
                                                          onmousedown={handleSelectionZoneMouseDown}>
                                                         <div class="wph-summary-html-body">
@@ -1695,7 +1701,7 @@
                     <template lwc:if={_summaryEditMode}>
                         <div class="wph-modal-root">
                             <div class="wph-modal-backdrop" onclick={handleCancelSummaryEdit}></div>
-                            <div class="wph-edit-modal-card fade-in">
+                            <div class="wph-edit-modal-card fade-in" style={_modalCardStyle}>
                                 <div class="wph-edit-modal-header">
                                     <div class="wph-edit-modal-title">
                                         <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none">
@@ -1711,11 +1717,13 @@
                                     </button>
                                 </div>
                                 <div class="wph-edit-modal-body">
-                                    <lightning-input-rich-text
-                                        style={_rteStyle}
-                                        value={_summaryEditValue}
-                                        onchange={handleSummaryRichTextChange}>
-                                    </lightning-input-rich-text>
+                                    <div class="wph-rte-editable cke_editable"
+                                         contenteditable="true"
+                                         lwc:ref="summaryEditor"
+                                         oninput={handleEditorInput}
+                                         onkeydown={handleEditorKeyDown}
+                                         onpaste={handleEditorPaste}>
+                                    </div>
                                 </div>
                                 <div class="wph-edit-modal-footer">
                                     <button class="wph-summary-cancel-btn" onclick={handleCancelSummaryEdit}>Cancel</button>
@@ -1726,6 +1734,12 @@
                                         <b>Apply &amp; Save</b>
                                     </button>
                                 </div>
+                                <div class="wph-edit-modal-drag-handle" onmousedown={handleModalDragStart}>
+                                    <svg viewBox="0 0 24 6" width="32" height="8" fill="currentColor">
+                                        <rect x="0" y="1" width="24" height="1.5" rx="1"/>
+                                        <rect x="0" y="4" width="24" height="1.5" rx="1"/>
+                                    </svg>
+                                </div>
                             </div>
                         </div>
                     </template>
@@ -1734,7 +1748,7 @@
                     <template lwc:if={_briefEditMode}>
                         <div class="wph-modal-root">
                             <div class="wph-modal-backdrop" onclick={handleCancelBriefEdit}></div>
-                            <div class="wph-edit-modal-card fade-in">
+                            <div class="wph-edit-modal-card fade-in" style={_modalCardStyle}>
                                 <div class="wph-edit-modal-header">
                                     <div class="wph-edit-modal-title">
                                         <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="currentColor">
@@ -1749,11 +1763,13 @@
                                     </button>
                                 </div>
                                 <div class="wph-edit-modal-body">
-                                    <lightning-input-rich-text
-                                        style={_rteStyle}
-                                        value={_briefEditValue}
-                                        onchange={handleBriefRichTextChange}>
-                                    </lightning-input-rich-text>
+                                    <div class="wph-rte-editable cke_editable"
+                                         contenteditable="true"
+                                         lwc:ref="briefEditor"
+                                         oninput={handleBriefEditorInput}
+                                         onkeydown={handleEditorKeyDown}
+                                         onpaste={handleEditorPaste}>
+                                    </div>
                                 </div>
                                 <div class="wph-edit-modal-footer">
                                     <button class="wph-summary-cancel-btn" onclick={handleCancelBriefEdit}>Cancel</button>
@@ -1763,6 +1779,12 @@
                                         </svg>
                                         <b>Apply &amp; Save</b>
                                     </button>
+                                </div>
+                                <div class="wph-edit-modal-drag-handle" onmousedown={handleModalDragStart}>
+                                    <svg viewBox="0 0 24 6" width="32" height="8" fill="currentColor">
+                                        <rect x="0" y="1" width="24" height="1.5" rx="1"/>
+                                        <rect x="0" y="4" width="24" height="1.5" rx="1"/>
+                                    </svg>
                                 </div>
                             </div>
                         </div>
@@ -2827,4 +2849,12 @@
             </div><!-- /panel-wrap -->
         </div><!-- /rootWrapperClass -->
     </template><!-- /showMainContent -->
+    <!-- Global drag overlay — captures mousemove/mouseup during modal resize drag -->
+    <template lwc:if={_modalDragging}>
+        <div class="wph-drag-overlay"
+             onmousemove={handleModalResizeDrag}
+             onmouseup={handleModalResizeDragEnd}
+             onmouseleave={handleModalResizeDragEnd}>
+        </div>
+    </template>
 </template>

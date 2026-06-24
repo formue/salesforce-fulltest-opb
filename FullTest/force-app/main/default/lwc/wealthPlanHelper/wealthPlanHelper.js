@@ -380,22 +380,30 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
 
     }
 
-    _rteCardResizeObserver = null;
-
-    _measureModalRteHeight() {
-        const body = this.template.querySelector('.wph-edit-modal-body');
-        if (!body || body.clientHeight <= 50) {
+    renderedCallback() {
+        // Focus the absorber when the component overlay first opens
+        if (this._modalOpen && !this._prevModalOpen) {
+            this._prevModalOpen = true;
             // eslint-disable-next-line @lwc/lwc/no-async-operation
-            setTimeout(() => this._measureModalRteHeight(), 100);
-            return;
+            setTimeout(() => { this.refs.focusAbsorber?.focus(); }, 0);
+        } else if (!this._modalOpen) {
+            this._prevModalOpen = false;
         }
-        this._rteHeightPx = Math.max(250, body.clientHeight);
-        if (window.ResizeObserver && !this._rteCardResizeObserver) {
-            this._rteCardResizeObserver = new ResizeObserver(() => {
-                const b = this.template.querySelector('.wph-edit-modal-body');
-                if (b && b.clientHeight > 50) this._rteHeightPx = b.clientHeight;
-            });
-            this._rteCardResizeObserver.observe(body);
+        if (this._editorNeedsInit && this._summaryEditMode) {
+            const el = this.refs.summaryEditor;
+            if (el) {
+                el.innerHTML = this._summaryEditValue || '';
+                this._editorNeedsInit = false;
+                el.focus();
+            }
+        }
+        if (this._briefEditorNeedsInit && this._briefEditMode) {
+            const el = this.refs.briefEditor;
+            if (el) {
+                el.innerHTML = this._briefEditValue || '';
+                this._briefEditorNeedsInit = false;
+                el.focus();
+            }
         }
     }
 
@@ -527,7 +535,13 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
     @track _ownerPropagationPrompt = null; // { sectionKey, fieldApi, fieldLabel, value, ownerLabel, count }
     @track _meetingSummaryResult = '';
     @track _summaryTabOpen       = false;
-    @track _rteHeightPx          = 400;   // drives reactive style binding on lightning-input-rich-text
+    @track _modalDragging        = false; // true while user drags the modal resize handle
+    @track _modalHeightPx        = null;  // null = CSS default (82vh); set by user drag
+    _modalDragStartY      = 0;
+    _modalDragStartH      = 0;
+    _editorNeedsInit      = false;  // set true when summary modal opens; cleared after innerHTML is set
+    _briefEditorNeedsInit = false;  // same for brief modal
+    _prevModalOpen        = false;  // tracks previous _modalOpen to detect transitions
 
     // ── Event selection + meeting type modal ─────────────────────────────────
     @track _selectedEventId      = null;   // Id of the selected Salesforce Event
@@ -1287,16 +1301,30 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
     handleEditSummaryDirect() {
         this._summaryEditValue = this.summaryDisplayHtml || '';
         this._summaryEditMode  = true;
-        // eslint-disable-next-line @lwc/lwc/no-async-operation
-        setTimeout(() => this._measureModalRteHeight(), 200);
+        this._editorNeedsInit  = true;
     }
 
-    handleSummaryRichTextChange(event) {
-        this._summaryEditValue = event.target.value;
+    handleEditorInput(event) {
+        this._summaryEditValue = event.currentTarget.innerHTML;
+    }
+
+    handleBriefEditorInput(event) {
+        this._briefEditValue = event.currentTarget.innerHTML;
+    }
+
+    handleEditorKeyDown(event) {
+        event.stopPropagation();
+    }
+
+    handleEditorPaste(event) {
+        event.preventDefault();
+        const html = (event.clipboardData || window.clipboardData).getData('text/html');
+        const text = (event.clipboardData || window.clipboardData).getData('text/plain');
+        document.execCommand('insertHTML', false, html || text);
     }
 
     handleSaveSummaryEdit() {
-        this._teardownModalRteObserver();
+        this._modalHeightPx      = null;
         this._noteDeletedLocally = false;
         this._currentNoteHtml    = this._summaryEditValue;
         this.outputMeetingSummary = this._currentNoteHtml;
@@ -1306,25 +1334,35 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
         this.handleSaveSummary();
     }
 
-    _teardownModalRteObserver() {
-        if (this._rteCardResizeObserver) {
-            this._rteCardResizeObserver.disconnect();
-            this._rteCardResizeObserver = null;
-        }
-    }
-
     handleCancelSummaryEdit() {
-        this._teardownModalRteObserver();
+        this._modalHeightPx    = null;
         this._summaryEditMode  = false;
         this._summaryEditValue = '';
+        this._editorNeedsInit  = false;
     }
 
-    get _rteStyle() {
-        const h = this._rteHeightPx;
-        const innerH = Math.max(80, h - 44); // 44px ≈ SLDS toolbar
-        return `height:${h}px;display:block;` +
-               `--lwc-richTextEditorTextAreaMinHeight:${innerH}px;` +
-               `--sds-c-textarea-sizing-min-height:${innerH}px;`;
+    get _modalCardStyle() {
+        return this._modalHeightPx ? `height:${this._modalHeightPx}px;` : '';
+    }
+
+    handleModalDragStart(event) {
+        event.preventDefault();
+        const card = this.template.querySelector('.wph-edit-modal-card');
+        this._modalDragStartH = card ? card.offsetHeight : Math.round(window.innerHeight * 0.82);
+        this._modalDragStartY = event.clientY;
+        this._modalDragging   = true;
+    }
+
+    handleModalResizeDrag(event) {
+        if (!this._modalDragging) return;
+        const delta = event.clientY - this._modalDragStartY;
+        const minH  = 300;
+        const maxH  = window.innerHeight - 60;
+        this._modalHeightPx = Math.min(maxH, Math.max(minH, this._modalDragStartH + delta));
+    }
+
+    handleModalResizeDragEnd() {
+        this._modalDragging = false;
     }
 
     handleRevertSummary() {
@@ -2237,22 +2275,21 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
     get briefChevronClass() { return `wph-chevron${this._briefExpanded ? ' wph-chevron-up' : ''}`; }
     handleToggleBrief()     { this._briefExpanded = !this._briefExpanded; }
     handleEditBrief() {
-        this._briefEditValue = this._meetingBrief || '';
-        this._briefEditMode  = true;
-    }
-    handleBriefRichTextChange(event) {
-        this._briefEditValue = event.target.value;
+        this._briefEditValue       = this._meetingBrief || '';
+        this._briefEditMode        = true;
+        this._briefEditorNeedsInit = true;
     }
     handleSaveBriefEdit() {
-        this._teardownModalRteObserver();
+        this._modalHeightPx = null;
         this._meetingBrief  = this._briefEditValue;
         this._briefEditMode = false;
         this.handleSaveSummary();
     }
     handleCancelBriefEdit() {
-        this._teardownModalRteObserver();
-        this._briefEditMode  = false;
-        this._briefEditValue = '';
+        this._modalHeightPx        = null;
+        this._briefEditMode        = false;
+        this._briefEditValue       = '';
+        this._briefEditorNeedsInit = false;
     }
     // ── Two-column layout collapse / ratio ──────────────────────────────────
     @track _theme               = 'corporate'; // 'classic' | 'corporate'
@@ -2513,7 +2550,6 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
     }
 
     disconnectedCallback() {
-        this._teardownModalRteObserver();
         this._stopLoadingCycle();
         this._stopSummaryLoadingCycle();
         if (this._eventsLoadingTimeoutId) {
@@ -4431,10 +4467,10 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
     _handleKeyDown(event) {
         if (this._step !== 'review') return;
         const tag = event.target.tagName;
-        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || event.target.isContentEditable) return;
 
         const key = event.key;
-        if (['ArrowDown', 'ArrowUp', 'e', 'E', 'Enter', 'd', 'D', 'Delete', 'Escape'].indexOf(key) === -1) return;
+        if (['ArrowDown', 'ArrowUp', 'Enter', 'd', 'D', 'Delete', 'Escape'].indexOf(key) === -1) return;
 
         const rows = this._getNavigableRows();
         if (!rows.length) return;
@@ -4470,13 +4506,6 @@ export default class WealthPlanHelper extends NavigationMixin(LightningElement) 
             this._focusedRowId = rows[prev]._id;
             this._focusedSectionKey = rows[prev].sectionKey;
             this._scrollFocusedRowIntoView();
-        } else if (key === 'e' || key === 'E') {
-            if (!this._editingRow) {
-                const row = rows[currentIdx];
-                if (row && !this._lockedRows[row._id] && !this._lockedSections[row.sectionKey]) {
-                    this._editingRow = { recId: row._id, sectionKey: row.sectionKey };
-                }
-            }
         } else if (key === 'Enter') {
             event.preventDefault();
             if (this._editingRow) {
