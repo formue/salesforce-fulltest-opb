@@ -1,0 +1,721 @@
+<template>
+    <!-- Launcher card: shown when modalMode=true and overlay is closed -->
+    <template lwc:if={showLauncher}>
+        <div class="wph-launcher-card">
+            <div class="wph-launcher-left">
+                <div class="wph-launcher-icon">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                        <path d="M10 2L12.5 8.5L19 11L12.5 13.5L10 20L7.5 13.5L1 11L7.5 8.5Z"/>
+                        <path d="M20 1.5L20.9 4.1L23.5 5L20.9 5.9L20 8.5L19.1 5.9L16.5 5L19.1 4.1Z"/>
+                        <path d="M20 16L20.5 17.5L22 18L20.5 18.5L20 20L19.5 18.5L18 18L19.5 17.5Z"/>
+                    </svg>
+                </div>
+                <div>
+                    <span class="wph-launcher-name">Advisor Assistant</span>
+                </div>
+            </div>
+            <button class="wph-launcher-open-btn" onclick={handleOpenModal}>
+                Open
+                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none">
+                    <polyline points="9 18 15 12 9 6"/>
+                </svg>
+            </button>
+        </div>
+    </template>
+
+    <!-- Main content: always shown in inline mode; shown in modal mode when open -->
+    <template lwc:if={showMainContent}>
+        <div class={rootWrapperClass}>
+            <!-- Hidden focus absorber: keeps cke_editable in activeElement so Salesforce's E shortcut is skipped -->
+            <div class="wph-focus-absorber cke_editable"
+                 contenteditable="true"
+                 tabindex="-1"
+                 lwc:ref="focusAbsorber"></div>
+            <!-- Backdrop — modal mode only -->
+            <template lwc:if={modalMode}>
+                <div class="wph-overlay-backdrop" onclick={handleCloseModal}></div>
+            </template>
+            <!-- Panel + close button wrapped together so the button is positioned relative to the panel -->
+            <div class="wph-overlay-panel-wrap">
+                <template lwc:if={modalMode}>
+                    <button class="wph-overlay-close" onclick={handleCloseModal} title="Close">
+                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2.5" fill="none">
+                            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                    </button>
+                </template>
+                <div class={containerClass} style={dynamicBgStyle}>
+                <div class="wph-bg-pattern"></div>
+                <div class="wph-accent-bar"></div>
+
+        <!-- ═══════════════════════════════════════════
+             HEADER
+             ═══════════════════════════════════════════ -->
+        <header class="wph-header">
+            <div class="wph-header-left">
+                <div class="wph-header-icon">
+                    <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                        <path d="M10 2L12.5 8.5L19 11L12.5 13.5L10 20L7.5 13.5L1 11L7.5 8.5Z"/>
+                        <path d="M20 1.5L20.9 4.1L23.5 5L20.9 5.9L20 8.5L19.1 5.9L16.5 5L19.1 4.1Z"/>
+                        <path d="M20 16L20.5 17.5L22 18L20.5 18.5L20 20L19.5 18.5L18 18L19.5 17.5Z"/>
+                    </svg>
+                </div>
+                <div>
+                    <div class="wph-title-row">
+                        <h1 class="wph-title"><b>Advisor Assistant</b></h1>
+                        <template lwc:if={showBetaBadge}>
+                            <span class="wph-beta-badge">BETA</span>
+                        </template>
+                        <button class="wph-guide-trigger" onclick={handleToggleGuide} aria-label="Toggle user guide" title="User Guide">?</button>
+                    </div>
+                    <p class="wph-subtitle">AI-powered assistant for meeting summaries and wealth plan structuring.</p>
+                </div>
+            </div>
+            <div class="wph-header-right">
+                <!-- Classic / Corporate theme toggle -->
+                <div class={themeToggleClass}>
+                    <button class={classicBtnClass} data-theme="classic" onclick={handleThemeSwitch}>
+                        <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                        <b>Classic</b>
+                    </button>
+                    <button class={corporateBtnClass} data-theme="corporate" onclick={handleThemeSwitch}>
+                        <b>Corporate</b>
+                    </button>
+                </div>
+                <!-- Review step controls -->
+                <template lwc:if={isReviewStep}>
+                    <template lwc:if={isExpandCollapseAllOn}>
+                        <button class="wph-expand-btn" onclick={handleExpandAll} aria-label="Expand all">
+                            <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
+                        </button>
+                        <button class="wph-expand-btn" onclick={handleCollapseAll} aria-label="Collapse all">
+                            <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><polyline points="4 14 10 14 10 20"></polyline><polyline points="20 10 14 10 14 4"></polyline><line x1="14" y1="10" x2="21" y2="3"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
+                        </button>
+                    </template>
+                    <div class="wph-undo-redo">
+                        <button class="wph-undo-btn" disabled={cantUndo} onclick={handleUndo} aria-label="Undo" title="Undo">
+                            <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
+                        </button>
+                        <button class="wph-redo-btn" disabled={cantRedo} onclick={handleRedo} aria-label="Redo" title="Redo">
+                            <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.13-9.36L23 10"></path></svg>
+                        </button>
+                    </div>
+                </template>
+            </div>
+            <!-- guide trigger is in title-row; panel rendered inline below header -->
+        </header>
+
+        <!-- USER GUIDE — inline panel, appears between header and content -->
+        <template lwc:if={_guideOpen}>
+        <div class="wph-guide-panel">
+            <div class="wph-guide-floating-header">
+                <span><b>User Guide</b></span>
+                <span class="wph-guide-sub">Features &amp; how to use</span>
+                <button class="wph-guide-floating-close" onclick={handleToggleGuide} aria-label="Close guide">
+                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <div class="wph-guide-body">
+                <!-- Guide tabs -->
+                <div class="wph-guide-tabs">
+                    <button class={guideRefTabClass} data-tab="reference" onclick={handleGuideTabSwitch}>
+                        <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                        Quick Reference
+                    </button>
+                    <button class={guideFeatTabClass} data-tab="features" onclick={handleGuideTabSwitch}>
+                        <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z"></path></svg>
+                        All Features
+                    </button>
+                    <button class={guideWhatsNewTabClass} data-tab="whatsnew" onclick={handleGuideTabSwitch}>
+                        <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                        What's New
+                    </button>
+                </div>
+
+                <!-- TAB 1: Quick Reference (existing content) -->
+                <template lwc:if={isGuideRefTab}>
+                <div class="wph-guide-grid">
+                    <!-- Color codes -->
+                    <div class="wph-guide-section">
+                        <h4 class="wph-guide-section-title">Row Colors</h4>
+                        <div class="wph-guide-list">
+                            <div class="wph-guide-item">
+                                <span class="wph-guide-swatch wph-gs-green"></span>
+                                <div>
+                                    <span class="wph-guide-label"><b>Green — Locked</b></span>
+                                    <span class="wph-guide-desc">Saved and ready to send to Salesforce</span>
+                                </div>
+                            </div>
+                            <div class="wph-guide-item">
+                                <span class="wph-guide-swatch wph-gs-yellow"></span>
+                                <div>
+                                    <span class="wph-guide-label"><b>Yellow — Edited</b></span>
+                                    <span class="wph-guide-desc">Changes made but not yet locked</span>
+                                </div>
+                            </div>
+                            <div class="wph-guide-item">
+                                <span class="wph-guide-swatch wph-gs-red"></span>
+                                <div>
+                                    <span class="wph-guide-label"><b>Red — Error or Deleted</b></span>
+                                    <span class="wph-guide-desc">Has invalid value or marked for deletion</span>
+                                </div>
+                            </div>
+                            <div class="wph-guide-item">
+                                <span class="wph-guide-swatch wph-gs-grey"></span>
+                                <div>
+                                    <span class="wph-guide-label"><b>Grey — Existing</b></span>
+                                    <span class="wph-guide-desc">Loaded from Salesforce, unchanged</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Source badges -->
+                    <div class="wph-guide-section">
+                        <h4 class="wph-guide-section-title">Record Source</h4>
+                        <div class="wph-guide-list">
+                            <div class="wph-guide-item">
+                                <span class="wph-source-badge wph-src-ai">AI Generated</span>
+                                <span class="wph-guide-desc">Created by AI from your input</span>
+                            </div>
+                            <div class="wph-guide-item">
+                                <span class="wph-source-badge wph-src-manual">Manual</span>
+                                <span class="wph-guide-desc">Added manually using the Add button</span>
+                            </div>
+                            <div class="wph-guide-item">
+                                <span class="wph-source-badge wph-src-existing">Existing</span>
+                                <span class="wph-guide-desc">Loaded from current Wealth Plan</span>
+                            </div>
+                            <div class="wph-guide-item">
+                                <span class="wph-source-badge wph-src-edited">Modified / AI Edited</span>
+                                <span class="wph-guide-desc">Changed since loaded or generated</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="wph-guide-section">
+                        <h4 class="wph-guide-section-title">How to Use</h4>
+                        <div class="wph-guide-list">
+                            <div class="wph-guide-item">
+                                <span class="wph-guide-num">1</span>
+                                <span class="wph-guide-desc"><b>Edit</b> a row to make changes — pencil icon</span>
+                            </div>
+                            <div class="wph-guide-item">
+                                <span class="wph-guide-num">2</span>
+                                <span class="wph-guide-desc"><b>Lock</b> a row with the green checkmark to confirm it for save</span>
+                            </div>
+                            <div class="wph-guide-item">
+                                <span class="wph-guide-num">3</span>
+                                <span class="wph-guide-desc">Use <b>Lock All Valid</b> or <b>Lock Section</b> to lock multiple at once</span>
+                            </div>
+                            <div class="wph-guide-item">
+                                <span class="wph-guide-num">4</span>
+                                <span class="wph-guide-desc">Click <b>Save to Wealth Plan</b> — only locked records are saved</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                </template>
+
+                <!-- TAB 2: All Features -->
+                <template lwc:if={isGuideFeatTab}>
+                <div class="wph-guide-features">
+                    <div class="wph-feat-group">
+                        <h4 class="wph-guide-section-title">AI Analysis</h4>
+                        <div class="wph-feat-list">
+                            <div class="wph-feat-item">
+                                <div class="wph-feat-icon wph-fi-blue">
+                                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z"></path></svg>
+                                </div>
+                                <div>
+                                    <span class="wph-feat-title"><b>Wealth Plan Structuring</b></span>
+                                    <span class="wph-guide-desc">Paste meeting notes, upload documents, or select artifacts — AI extracts and structures data into goals, income, assets, milestones, and more.</span>
+                                </div>
+                            </div>
+                            <div class="wph-feat-item">
+                                <div class="wph-feat-icon wph-fi-purple">
+                                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                                </div>
+                                <div>
+                                    <span class="wph-feat-title"><b>Meeting Summary</b></span>
+                                    <span class="wph-guide-desc">The <b>Meeting Summary</b> tab has two sub-sections: <b>Meeting</b> (view, edit, regenerate the AI note) and <b>To-do's</b> (generate and accept action items). Choose <b>Save &amp; Review</b> to keep editing, or <b>Save &amp; Publish</b> to lock and share the summary permanently.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="wph-feat-group">
+                        <h4 class="wph-guide-section-title">Review &amp; Editing</h4>
+                        <div class="wph-feat-list">
+                            <div class="wph-feat-item">
+                                <div class="wph-feat-icon wph-fi-blue">
+                                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                </div>
+                                <div>
+                                    <span class="wph-feat-title"><b>Inline Editing</b></span>
+                                    <span class="wph-guide-desc">Click the pencil icon to edit any record. Fields are validated against Salesforce picklists in real-time.</span>
+                                </div>
+                            </div>
+                            <div class="wph-feat-item">
+                                <div class="wph-feat-icon wph-fi-amber">
+                                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
+                                </div>
+                                <div>
+                                    <span class="wph-feat-title"><b>Undo / Redo</b></span>
+                                    <span class="wph-guide-desc">Use the undo and redo buttons in the header to reverse any action.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                </template>
+
+                <!-- TAB 3: What's New -->
+                <template lwc:if={isGuideWhatsNewTab}>
+                <div class="wph-guide-whatsnew">
+                    <div class="wph-whatsnew-release">
+                        <span class="wph-whatsnew-version">v2026.05 · Latest</span>
+                        <span class="wph-whatsnew-label">Save to WP, Meeting Type Persistence &amp; Smarter Generation</span>
+                    </div>
+                    <div class="wph-whatsnew-list">
+                        <div class="wph-feat-item">
+                            <div class="wph-feat-icon wph-fi-blue">
+                                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                            </div>
+                            <div>
+                                <span class="wph-feat-title"><b>Save to Wealth Plan — floating action button</b></span>
+                                <span class="wph-guide-desc">After generating a Wealth Plan the bottom action bar switches to a blue <b>Save to Wealth Plan</b> button.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                </template>
+
+            </div>
+        </div>
+        </template>
+
+        <!-- ═══════════════════════════════════════════
+             STEP 0: SUMMARY — tabbed hub (Meeting Summary | Wealth Plan | Show Existing)
+             ═══════════════════════════════════════════ -->
+
+
+        <!-- STEP 2: LOADING — inline below tab bar so event picker stays visible -->
+        <template lwc:if={isLoadingStep}>
+            <div class="wph-loading-card fade-in">
+                <div class="wph-loading-header">
+                    <span class="wph-loading-title"><b>{loadingTitle}</b></span>
+                    <span class="wph-loading-pct"><b>{formattedProgress}</b></span>
+                </div>
+                <div class="wph-progress-track">
+                    <div class="wph-progress-fill" style={progressBarStyle}></div>
+                </div>
+                <div class="wph-loading-body">
+                    <div class="wph-orb-wrap">
+                        <div class="wph-orb-core"></div>
+                        <div class="wph-orb-ring wph-ring-1"></div>
+                        <div class="wph-orb-ring wph-ring-2"></div>
+                    </div>
+                    <div class="wph-loading-status">
+                        <span class="wph-phase-dot"></span>
+                        <span class="wph-phase-text">{_loadingMessage}</span>
+                    </div>
+                </div>
+                <div class="wph-loading-cancel-bar">
+                    <button class="wph-cancel-gen-btn" onclick={handleCancelGeneration} aria-label="Cancel analysis">
+                        <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </template>
+
+        <template lwc:if={isSummaryStep}>
+            <div class="wph-summary-step fade-in">
+
+                <!-- ── Event selector — shared across Meeting Summary and Wealth Plan tabs ── -->
+                <div class="wph-event-selector-bar">
+                        <template lwc:if={selectedEventSubject}>
+                            <!-- ── SELECTED: two-line event card on left, change + count right ── -->
+                            <div class="wph-esb-event-card">
+                                <div class="wph-esb-cal-icon">
+                                    <svg viewBox="0 0 24 24" width="19" height="19" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                                </div>
+                                <div class="wph-esb-event-info">
+                                    <div class="wph-esb-subject-row">
+                                        <span class="wph-esb-event-subject">{selectedEventSubject}</span>
+                                        <template lwc:if={meetingTypeLabel}>
+                                            <span class="wph-esb-type-badge">{meetingTypeLabel}</span>
+                                        </template>
+                                    </div>
+                                    <template lwc:if={selectedEventMeta}>
+                                        <span class="wph-esb-event-meta">{selectedEventMeta}</span>
+                                    </template>
+                                </div>
+                            </div>
+                            <div class="wph-esb-right-group">
+                                <button class="wph-esb-change-btn" onclick={handleToggleEventDropdown}>
+                                    <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                    Change event
+                                </button>
+                                <span class="wph-esb-count">{eventsCountLabel}</span>
+                            </div>
+                        </template>
+                        <template lwc:else>
+                            <!-- ── UNSELECTED: compact label + trigger ── -->
+                            <div class="wph-esb-left">
+                                <svg viewBox="0 0 24 24" width="17" height="17" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                                <span class="wph-esb-title">Select event</span>
+                            </div>
+                            <button class="wph-esb-trigger" onclick={handleToggleEventDropdown}>
+                                <span class="wph-esb-trigger-text wph-esb-trigger-text--muted">Choose a meeting event…</span>
+                                <svg class="wph-esb-chevron" viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2.5" fill="none"><polyline points="6 9 12 15 18 9"/></svg>
+                            </button>
+                            <span class="wph-esb-count">{eventsCountLabel}</span>
+                        </template>
+                        <!-- Dropdown — positioned absolute to bar -->
+                        <template lwc:if={_eventDropdownOpen}>
+                            <div class="wph-event-dropdown-list fade-in">
+                                <div class="wph-event-drop-header">Meeting Events</div>
+                                <template lwc:if={isEventsLoading}>
+                                    <div class="wph-event-drop-loading">Loading events…</div>
+                                </template>
+                                <template lwc:elseif={hasNoEvents}>
+                                    <div class="wph-event-drop-empty">No meeting events found.</div>
+                                </template>
+                                <template lwc:else>
+                                    <template for:each={eventItems} for:item="ev">
+                                        <button key={ev.id} class={ev.cardClass} data-id={ev.id} onclick={handleEventSelect}>
+                                            <template lwc:if={ev.isSelected}>
+                                                <div class="wph-edr-cal wph-edr-cal--active">
+                                                    <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                                </div>
+                                            </template>
+                                            <template lwc:else>
+                                                <div class="wph-edr-cal">
+                                                    <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                                </div>
+                                            </template>
+                                            <div class="wph-event-drop-info">
+                                                <span class="wph-event-drop-subject">{ev.subject}</span>
+                                                <template lwc:if={ev.location}>
+                                                    <span class="wph-event-drop-location">{ev.location}</span>
+                                                </template>
+                                                <template lwc:if={ev.date}>
+                                                    <span class="wph-event-drop-date">{ev.date}<template lwc:if={ev.time}> · {ev.time}</template></span>
+                                                </template>
+                                            </div>
+                                            <template lwc:if={ev.isSelected}>
+                                                <svg class="wph-edr-check" viewBox="0 0 24 24" width="13" height="13" stroke="#1e3a5f" stroke-width="3" fill="none"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                            </template>
+                                        </button>
+                                    </template>
+                                </template>
+                            </div>
+                        </template>
+                </div>
+
+                <!-- Tour prompt banner — visible when no user actions taken yet -->
+                <template lwc:if={showTourPrompt}>
+                    <div class="wph-tour-prompt">
+                        <div class="wph-tour-prompt-icon">
+                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+                        </div>
+                        <span class="wph-tour-prompt-text">First time here? Take the <b>guided tour</b> to get started in under a minute.</span>
+                        <button class="wph-tour-prompt-btn" onclick={handleStartTour}>Start Tour →</button>
+                    </div>
+                </template>
+
+                <!-- ── TAB: Meeting Summary — delegated to child component ── -->
+                <template lwc:if={isSummaryTab}>
+                    <c-advisor-meeting-summary
+                        record-id={recordId}
+                        selected-event-id={_selectedEventId}
+                        selected-event-note={selectedEventNote}
+                        input-meeting-notes={inputMeetingNotes}
+                        input-events={inputEvents}
+                        input-artifacts={inputArtifacts}
+                        input-content-document-links={inputContentDocumentLinks}
+                        input-content-documents={inputContentDocuments}
+                        input-tasks={inputTasks}
+                        input-household-members={inputHouseholdMembers}
+                        shared-files={_sharedFiles}
+                        artifact-file-ids={_selectedArtifactFileIds}
+                        meeting-summary-flow-api-name={meetingSummaryFlowApiName}
+                        regenerate-summary-flow-api-name={regenerateSummaryFlowApiName}
+                        save-summary-flow-api-name={saveSummaryFlowApiName}
+                        version-history-flow-api-name={versionHistoryFlowApiName}
+                        create-version-flow-api-name={createVersionFlowApiName}
+                        save-todos-flow-api-name={saveTodosFlowApiName}
+                        save-file-to-event-flow-api-name={saveFileToEventFlowApiName}
+                        input-who-id={inputWhoId}
+                        brief-enabled={briefEnabled}
+                        brief-open-by-default={briefOpenByDefault}
+                        show-edit-tracking={showEditTracking}
+                        show-discard-section={showDiscardSection}
+                        show-regenerate-section={showRegenerateSection}
+                        show-scroll-to-error={showScrollToError}
+                        active-ms-section={_activeMsSection}
+                        onsummarychange={handleSummaryChange}
+                        onnotesave={handleNoteSave}
+                        onnotepublish={handleNotePublish}
+                        ontodoschange={handleTodosChange}
+                        ontabswitch={handleTabSwitch}
+                        onsharedfileschange={handleSharedFilesChange}
+                        onartifactfileidschange={handleArtifactFileIdsChange}
+                    ></c-advisor-meeting-summary>
+                </template>
+
+                <!-- ── TAB: Wealth Plan — delegated to child component ── -->
+                <template lwc:if={isWealthPlanTab}>
+                    <c-advisor-wealth-plan
+                        record-id={recordId}
+                        selected-event-id={_selectedEventId}
+                        shared-files={_sharedFiles}
+                        artifact-file-ids={_selectedArtifactFileIds}
+                        flow-api-name={flowApiName}
+                        wealth-plan-save-flow-api-name={wealthPlanSaveFlowApiName}
+                        save-todos-flow-api-name={saveTodosFlowApiName}
+                        save-file-to-event-flow-api-name={saveFileToEventFlowApiName}
+                        input-who-id={inputWhoId}
+                        input-household-members={inputHouseholdMembers}
+                        input-primary-member={inputPrimaryMember}
+                        input-primary-member-id={inputPrimaryMemberId}
+                        input-companies={inputCompanies}
+                        input-persons={inputPersons}
+                        input-existing-goals={inputExistingGoals}
+                        input-existing-incomes={inputExistingIncomes}
+                        input-existing-assets={inputExistingAssets}
+                        input-existing-milestones={inputExistingMilestones}
+                        input-existing-ownerships={inputExistingOwnerships}
+                        input-existing-sustainability={inputExistingSustainability}
+                        input-existing-greetings={inputExistingGreetings}
+                        include-meeting-summary={_includeMeetingSummary}
+                        current-note-html={_currentNoteHtml}
+                        show-edit-tracking={showEditTracking}
+                        show-expand-collapse-all={showExpandCollapseAll}
+                        show-detailed-stats={showDetailedStats}
+                        show-discard-section={showDiscardSection}
+                        show-regenerate-section={showRegenerateSection}
+                        show-scroll-to-error={showScrollToError}
+                        onsectionsave={handleSectionSave}
+                        onwpgenerated={handleWpGenerated}
+                        ontabswitch={handleTabSwitch}
+                        onsharedfileschange={handleSharedFilesChange}
+                        onartifactfileidschange={handleArtifactFileIdsChange}
+                    ></c-advisor-wealth-plan>
+                </template>
+
+                <!-- ── TAB: Show Existing — auto-navigates on click, no content needed ── -->
+                <template lwc:if={isExistingTab}>
+                </template>
+
+            </div><!-- end wph-summary-step -->
+        </template>
+
+
+    </div>
+
+    <!-- Save file to event confirmation modal -->
+    <template lwc:if={_saveFileModal}>
+        <section class="wph-modal-root" role="dialog" aria-modal="true">
+            <div class="wph-modal-backdrop" onclick={handleCancelSaveToEvent}></div>
+            <div class="wph-modal-card fade-in-up">
+                <div class="wph-confirm-header">Save file to event</div>
+                <div class="wph-confirm-body">
+                    Save <b>{_saveFileModal.name}</b> as a meeting file on this event?
+                    It will appear in <b>Meeting Files</b> and cannot be un-saved.
+                </div>
+                <div class="wph-confirm-actions">
+                    <button class="wph-confirm-cancel" onclick={handleCancelSaveToEvent}>Cancel</button>
+                    <button class="wph-confirm-go" onclick={handleConfirmSaveToEvent}>
+                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                        <b>Save to Event</b>
+                    </button>
+                </div>
+            </div>
+        </section>
+    </template>
+
+    <!-- Save confirmation modal — sibling of .wph-container so it escapes container context -->
+    <template lwc:if={_showSaveConfirm}>
+        <section class="wph-modal-root" role="dialog" aria-modal="true">
+            <div class="wph-modal-backdrop" onclick={handleCancelSave}></div>
+            <div class="wph-modal-card fade-in-up">
+                <div class="wph-confirm-header">
+                    <svg viewBox="0 0 24 24" width="24" height="24" stroke="#10b981" stroke-width="2" fill="none"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                    <h3><b>Confirm Save to Wealth Plan</b></h3>
+                </div>
+                <div class="wph-confirm-body">
+                    <div class="wph-confirm-stats">
+                        <div class="wph-confirm-stat wph-cs-create">
+                            <span class="wph-cs-num"><b>{_savePreview.create}</b></span>
+                            <span class="wph-cs-label">New Records</span>
+                        </div>
+                        <div class="wph-confirm-stat wph-cs-update">
+                            <span class="wph-cs-num"><b>{_savePreview.update}</b></span>
+                            <span class="wph-cs-label">Updates</span>
+                        </div>
+                        <div class="wph-confirm-stat wph-cs-delete">
+                            <span class="wph-cs-num"><b>{_savePreview.delete}</b></span>
+                            <span class="wph-cs-label">Deletions</span>
+                        </div>
+                    </div>
+                    <div class="wph-confirm-sections">
+                        <template for:each={_savePreview.sections} for:item="sp">
+                            <div key={sp.key} class="wph-confirm-section-row">
+                                <span class="wph-cs-name"><b>{sp.label}</b></span>
+                                <div class="wph-cs-badges">
+                                    <template lwc:if={sp.create}><span class="wph-cs-badge wph-csb-green">{sp.create} new</span></template>
+                                    <template lwc:if={sp.update}><span class="wph-cs-badge wph-csb-amber">{sp.update} update</span></template>
+                                    <template lwc:if={sp.del}><span class="wph-cs-badge wph-csb-red">{sp.del} delete</span></template>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                    <!-- Financial Impact delta -->
+                    <template lwc:if={_savePreview.delta.hasChange}>
+                        <div class="wph-delta-section">
+                            <div class="wph-delta-label">Financial Impact</div>
+                            <div class="wph-delta-chips">
+                                <template lwc:if={_savePreview.delta.assetLabel}>
+                                    <span class={_savePreview.delta.assetClass}>{_savePreview.delta.assetLabel}</span>
+                                </template>
+                                <template lwc:if={_savePreview.delta.goalZero}></template>
+                                <template lwc:else>
+                                    <span class={_savePreview.delta.goalClass}>{_savePreview.delta.goalLabel}</span>
+                                </template>
+                                <template lwc:if={_savePreview.delta.incomeZero}></template>
+                                <template lwc:else>
+                                    <span class={_savePreview.delta.incomeClass}>{_savePreview.delta.incomeLabel}</span>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+                <div class="wph-confirm-actions">
+                    <button class="wph-confirm-cancel" onclick={handleCancelSave}>Cancel</button>
+                    <button class="wph-confirm-go" onclick={handleConfirmSave}>
+                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        <b>Confirm &amp; Save</b>
+                    </button>
+                </div>
+            </div>
+        </section>
+    </template>
+
+    <!-- Feature 9: Bulk lock confirmation modal -->
+    <template lwc:if={_showBulkLockConfirm}>
+        <section class="wph-modal-root" role="dialog" aria-modal="true">
+            <div class="wph-modal-backdrop" onclick={handleCancelBulkLock}></div>
+            <div class="wph-modal-card fade-in-up">
+                <div class="wph-confirm-header">
+                    <svg viewBox="0 0 24 24" width="24" height="24" stroke="#10b981" stroke-width="2" fill="none"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    <h3><b>Lock All Valid — {_bulkLockPreview.sectionLabel}</b></h3>
+                </div>
+                <div class="wph-confirm-body">
+                    <div class="wph-confirm-stats">
+                        <div class="wph-confirm-stat wph-cs-create">
+                            <span class="wph-cs-num"><b>{_bulkLockPreview.toLock}</b></span>
+                            <span class="wph-cs-label">To Lock</span>
+                        </div>
+                        <div class="wph-confirm-stat wph-cs-skip">
+                            <span class="wph-cs-num"><b>{_bulkLockPreview.toSkipErrors}</b></span>
+                            <span class="wph-cs-label">Skipped (errors)</span>
+                        </div>
+                        <div class="wph-confirm-stat wph-cs-skip">
+                            <span class="wph-cs-num"><b>{_bulkLockPreview.alreadyLocked}</b></span>
+                            <span class="wph-cs-label">Already Locked</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="wph-confirm-actions">
+                    <button class="wph-confirm-cancel" onclick={handleCancelBulkLock}>Cancel</button>
+                    <button class="wph-confirm-go" onclick={handleConfirmBulkLock}>
+                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        <b>Lock Suggestions</b>
+                    </button>
+                </div>
+            </div>
+        </section>
+    </template>
+
+    <!-- Meeting type modal — shown when Meeting Summary is triggered without a type selected -->
+    <template lwc:if={_showMeetingTypeModal}>
+        <section class="wph-modal-root" role="dialog" aria-modal="true">
+            <div class="wph-modal-backdrop" onclick={handleCloseMeetingTypeModal}></div>
+            <div class="wph-modal-card wph-meetingtype-card fade-in-up">
+                <div class="wph-meetingtype-header">
+                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                    </svg>
+                    <h3>Select Meeting Category</h3>
+                    <button class="wph-meetingtype-close" onclick={handleCloseMeetingTypeModal} title="Close">
+                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </div>
+                <div class="wph-meetingtype-body">
+                    <p class="wph-meetingtype-sub">Choose the meeting type and any additional formats.</p>
+
+                    <div class="wph-meetingtype-group">
+                        <p class="wph-meetingtype-group-label">Meeting type</p>
+                        <div class="wph-meetingtype-radio-row">
+                            <label class="wph-meetingtype-radio">
+                                <input type="radio" name="meetingType" data-type="whiteboard"
+                                       checked={isWhiteboardSelected} onchange={handleMeetingTypeChange} />
+                                <span>Whiteboard Meeting</span>
+                            </label>
+                            <label class="wph-meetingtype-radio">
+                                <input type="radio" name="meetingType" data-type="status"
+                                       checked={isStatusSelected} onchange={handleMeetingTypeChange} />
+                                <span>Status Meeting</span>
+                            </label>
+                            <label class="wph-meetingtype-radio">
+                                <input type="radio" name="meetingType" data-type="annual"
+                                       checked={isAnnualSelected} onchange={handleMeetingTypeChange} />
+                                <span>Annual Review</span>
+                            </label>
+                        </div>
+                    </div>
+
+                </div>
+                <div class="wph-meetingtype-footer">
+                    <button class="wph-meetingtype-done-btn" onclick={handleCloseMeetingTypeModal}>Done</button>
+                </div>
+            </div>
+        </section>
+    </template>
+        <!-- ═══════════════════════════════════════════
+             TOUR GUIDE OVERLAY
+             ═══════════════════════════════════════════ -->
+        <template lwc:if={_tourActive}>
+            <div class="wph-tour-highlight" style={_tourHighlightStyle}></div>
+            <div class={tourBubbleClass} style={_tourBubbleStyle}>
+                <div class="wph-tour-arrow" style={_tourArrowStyle}></div>
+                <div class="wph-tour-header">
+                    <span class="wph-tour-badge">{tourStepNum} / {tourStepTotal}</span>
+                    <button class="wph-tour-close" onclick={handleTourSkip} title="Skip tour">&#x2715;</button>
+                </div>
+                <p class="wph-tour-title">{tourTitle}</p>
+                <p class="wph-tour-text">{tourText}</p>
+                <div class="wph-tour-footer">
+                    <button class="wph-tour-skip-btn" onclick={handleTourSkip}>Skip tour</button>
+                    <button class="wph-tour-next-btn" onclick={handleTourNext}>{tourNextLabel}</button>
+                </div>
+            </div>
+        </template>
+
+            </div><!-- /containerClass -->
+            </div><!-- /panel-wrap -->
+        </div><!-- /rootWrapperClass -->
+    </template><!-- /showMainContent -->
+    <!-- Global drag overlay — captures mousemove/mouseup during modal resize drag -->
+    <template lwc:if={_modalDragging}>
+        <div class="wph-drag-overlay"
+             onmousemove={handleModalResizeDrag}
+             onmouseup={handleModalResizeDragEnd}
+             onmouseleave={handleModalResizeDragEnd}>
+        </div>
+    </template>
+</template>

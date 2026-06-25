@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>66.0</apiVersion>
+    <isExposed>true</isExposed>
+    <masterLabel>Advisor Assistant</masterLabel>
+    <description>AI-powered assistant for meeting summaries and wealth plan structuring.</description>
+    <targets>
+        <target>lightning__FlowScreen</target>
+        <target>lightning__RecordPage</target>
+        <target>lightning__AppPage</target>
+    </targets>
+    <targetConfigs>
+        <!-- RECORD / APP PAGES -->
+        <targetConfig targets="lightning__RecordPage,lightning__AppPage">
+            <property name="flowApiName"               type="String"  label="Wealth Plan Flow API Name" description="Autolaunched Flow that returns structured JSON." required="true"/>
+            <property name="meetingSummaryFlowApiName" type="String"  label="Meeting Summary Flow API Name" description="Autolaunched Flow that returns meeting summary text/HTML."/>
+            <property name="regenerateSummaryFlowApiName" type="String" label="Regenerate Summary Flow API Name" description="Autolaunched Flow for regenerating meeting summaries. Accepts inputs: currentSummary (String), instructions (String). Returns: generatedResponse (String)."/>
+            <property name="saveSummaryFlowApiName" type="String" label="Save Summary Flow API Name" description="Autolaunched Flow that saves a MeetingNote__c in the background (no flow navigation). Inputs: noteId (Text), noteHtml (Text), eventId (Text), published (Boolean). Output: savedNoteId (Text)."/>
+            <property name="versionHistoryFlowApiName" type="String" label="Version History Flow API Name" description="Autolaunched Flow fired when an event is selected. Input: EventId (Text). Output: MeetingNoteVersions (Collection of MeetingNoteVersion__c). Returns version history for the selected event."/>
+            <property name="createVersionFlowApiName" type="String" label="Create Version Flow API Name" description="Autolaunched Flow fired when saving or publishing a new version of a published note. Creates a MeetingNoteVersion__c record and updates the parent MeetingNote__c. Same inputs as Save Summary Flow. Output: savedNoteId (Text)."/>
+            <property name="saveTodosFlowApiName"      type="String" label="Save To-dos Flow API Name"         description="Autolaunched Flow that creates Task records from accepted action items. Inputs: TodosJson (Text), EventId (Text), WhoId (Text). Output: SaveResult (Text, optional)."/>
+            <property name="saveFileToEventFlowApiName" type="String" label="Save File to Event Flow API Name" description="Autolaunched Flow invoked when an advisor saves an uploaded file to the event record. Inputs: ContentDocumentId (Text), EventId (Text)."/>
+            <property name="wealthPlanSaveFlowApiName" type="String" label="Wealth Plan Save Flow API Name" description="Autolaunched flow that receives typed SObject record collections (GoalsToCreate, AssetsToCreate, etc.) and handles all Wealth Plan DML. When set, save is delegated to this subflow instead of the parent screen flow."/>
+            <property name="inputWhoId"             type="String" label="Who ID (Contact / Lead)"       description="WhoId of the Contact or Lead to link to saved Task records. Pass the Event's WhoId from the parent Flow."/>
+            <property name="backgroundColor"  type="String"  label="Background Color" default="#f0f9ff"/>
+            <property name="modalMode"              type="Boolean" label="Open as Modal Overlay"      default="false" description="When enabled, the component shows as a compact launcher card that opens in a full-screen overlay."/>
+            <property name="hideBetaBadge"          type="Boolean" label="Hide Beta Badge"            default="false"/>
+            <property name="showEditTracking"       type="Boolean" label="Show AI Edited Badge"       default="true"/>
+            <property name="showExpandCollapseAll"  type="Boolean" label="Show Expand/Collapse All"   default="true"/>
+            <property name="showDetailedStats"      type="Boolean" label="Show Detailed Stats"        default="true"/>
+            <property name="showDiscardSection"     type="Boolean" label="Show Discard Section"       default="true"/>
+            <property name="showRegenerateSection"  type="Boolean" label="Show Regenerate Section"    default="true"/>
+            <property name="showScrollToError"      type="Boolean" label="Show Scroll to Error"       default="true"/>
+            <property name="briefEnabled"           type="Boolean" label="Show 'At a Glance' Brief"   default="false" description="When enabled, shows a collapsible 'At a Glance' section above the meeting summary if the flow returns a MeetingBrief output variable."/>
+            <property name="briefOpenByDefault"     type="Boolean" label="Brief Open by Default"       default="false" description="When enabled, the 'At a Glance' section starts expanded instead of collapsed."/>
+
+        </targetConfig>
+
+        <!-- SCREEN FLOWS -->
+        <targetConfig targets="lightning__FlowScreen">
+            <!-- Core inputs -->
+            <property name="flowApiName"               type="String"  label="Wealth Plan Flow API Name" description="Autolaunched Flow that returns structured wealth plan JSON." required="true" role="inputOnly"/>
+            <property name="meetingSummaryFlowApiName" type="String"  label="Meeting Summary Flow API Name" description="Autolaunched Flow that returns the meeting summary text/HTML." role="inputOnly"/>
+            <property name="regenerateSummaryFlowApiName" type="String" label="Regenerate Summary Flow API Name" description="Autolaunched Flow for regenerating meeting summaries. Accepts inputs: currentSummary (String), instructions (String). Returns: generatedResponse (String)." role="inputOnly"/>
+            <property name="saveSummaryFlowApiName" type="String" label="Save Summary Flow API Name" description="Autolaunched Flow that saves a MeetingNote__c in the background (no flow navigation). Inputs: noteId (Text), noteHtml (Text), eventId (Text), published (Boolean). Output: savedNoteId (Text)." role="inputOnly"/>
+            <property name="versionHistoryFlowApiName" type="String" label="Version History Flow API Name" description="Autolaunched Flow fired when an event is selected. Input: EventId (Text). Output: MeetingNoteVersions (Collection of MeetingNoteVersion__c). Returns version history for the selected event." role="inputOnly"/>
+            <property name="createVersionFlowApiName" type="String" label="Create Version Flow API Name" description="Autolaunched Flow fired when saving or publishing a new version of a published note. Creates a MeetingNoteVersion__c record and updates the parent MeetingNote__c. Same inputs as Save Summary Flow. Output: savedNoteId (Text)." role="inputOnly"/>
+            <property name="saveTodosFlowApiName"      type="String" label="Save To-dos Flow API Name"         description="Autolaunched Flow that creates Task records from accepted action items. Inputs: TodosJson (Text), EventId (Text), WhoId (Text). Output: SaveResult (Text, optional)." role="inputOnly"/>
+            <property name="saveFileToEventFlowApiName" type="String" label="Save File to Event Flow API Name" description="Autolaunched Flow invoked when an advisor saves an uploaded file to the event record. Inputs: ContentDocumentId (Text), EventId (Text)." role="inputOnly"/>
+            <property name="wealthPlanSaveFlowApiName" type="String" label="Wealth Plan Save Flow API Name" description="Autolaunched flow that receives typed SObject record collections (GoalsToCreate, AssetsToCreate, etc.) and handles all Wealth Plan DML. When set, save is delegated to this subflow instead of the parent screen flow." role="inputOnly"/>
+            <property name="inputWhoId"             type="String" label="Who ID (Contact / Lead)"       description="WhoId of the Contact or Lead to link to saved Task records. Pass the Event's WhoId from the parent Flow." role="inputOnly"/>
+            <property name="recordId"         type="String"  label="Record ID" role="inputOnly"/>
+            <property name="backgroundColor"  type="String"  label="Background Color" default="#f0f9ff" role="inputOnly"/>
+            <property name="inputEvents"       type="@salesforce/schema/Event[]"          label="Meeting Events"  description="Event records to display as selectable meeting context. The component starts loading automatically — no separate loading flag needed." role="inputOnly"/>
+            <property name="inputMeetingNotes" type="@salesforce/schema/MeetingNote__c[]" label="Meeting Notes"   description="MeetingNote__c records matched to events via Event.MeetingNote__c lookup (fields: Id, Note__c)." role="inputOnly"/>
+            <property name="inputTasks"              type="@salesforce/schema/Task[]"    label="Task Collection (for context selection)" role="inputOnly"/>
+            <property name="inputArtifacts"           type="@salesforce/schema/Meeting_Artifact__c[]"  label="Meeting Artifacts"          description="Meeting_Artifact__c records linked to events via Event.MeetingArtifacts__c." role="inputOnly"/>
+            <property name="inputContentDocumentLinks" type="@salesforce/schema/ContentDocumentLink[]" label="Content Document Links"     description="CDL records for artifact files. Fields needed: ContentDocumentId, LinkedEntityId." role="inputOnly"/>
+            <property name="inputContentDocuments"     type="@salesforce/schema/ContentDocument[]"     label="Content Documents"          description="ContentDocument records for display metadata. Fields needed: Id, Title, FileType." role="inputOnly"/>
+            <property name="inputHouseholdMembers"  type="@salesforce/schema/Account[]" label="Household Members (for owner dropdowns)" role="inputOnly"/>
+            <property name="inputPrimaryMember"     type="@salesforce/schema/Account"   label="Primary Member (single record)" role="inputOnly"/>
+            <property name="inputPrimaryMemberId"   type="String"                       label="Primary Member ID (legacy)" role="inputOnly"/>
+            <property name="inputCompanies"         type="@salesforce/schema/Account[]" label="Company Accounts (for Company Owned dropdown)" role="inputOnly"/>
+            <property name="inputPersons"           type="@salesforce/schema/Account[]" label="Person Accounts (for Company Owner dropdown)" role="inputOnly"/>
+
+            <!-- Existing data inputs (from Salesforce) -->
+            <property name="inputExistingGoals"          type="@salesforce/schema/FinServ__FinancialGoal__c[]"        label="Existing Goals" role="inputOnly"/>
+            <property name="inputExistingIncomes"        type="@salesforce/schema/FF_Income__c[]"                     label="Existing Incomes" role="inputOnly"/>
+            <property name="inputExistingAssets"         type="@salesforce/schema/FinServ__AssetsAndLiabilities__c[]"  label="Existing Assets" role="inputOnly"/>
+            <property name="inputExistingMilestones"     type="@salesforce/schema/Household_Milestones__c[]"          label="Existing Milestones" role="inputOnly"/>
+            <property name="inputExistingOwnerships"     type="@salesforce/schema/Company_Ownership__c[]"             label="Existing Ownerships" role="inputOnly"/>
+            <property name="inputExistingSustainability" type="@salesforce/schema/SustainabilityPreferences__c[]"     label="Existing Sustainability" role="inputOnly"/>
+            <property name="inputExistingGreetings"      type="@salesforce/schema/FF_PersonalGreeting__c[]"           label="Existing Greetings" role="inputOnly"/>
+
+            <!-- Feature toggles -->
+            <property name="modalMode"              type="Boolean" label="Open as Modal Overlay"      default="false" role="inputOnly" description="When enabled, the component shows as a compact launcher card that opens in a full-screen overlay."/>
+            <property name="hideBetaBadge"          type="Boolean" label="Hide Beta Badge"            default="false" role="inputOnly"/>
+            <property name="showEditTracking"       type="Boolean" label="Show AI Edited Badge"       default="true" role="inputOnly"/>
+            <property name="showExpandCollapseAll"  type="Boolean" label="Show Expand/Collapse All"   default="true" role="inputOnly"/>
+            <property name="showDetailedStats"      type="Boolean" label="Show Detailed Stats"        default="true" role="inputOnly"/>
+            <property name="showDiscardSection"     type="Boolean" label="Show Discard Section"       default="true" role="inputOnly"/>
+            <property name="showRegenerateSection"  type="Boolean" label="Show Regenerate Section"    default="true" role="inputOnly"/>
+            <property name="showScrollToError"      type="Boolean" label="Show Scroll to Error"       default="true" role="inputOnly"/>
+            <property name="briefEnabled"           type="Boolean" label="Show 'At a Glance' Brief"   default="false" role="inputOnly" description="When enabled, shows a collapsible 'At a Glance' section above the meeting summary if the flow returns a MeetingBrief output variable."/>
+            <property name="briefOpenByDefault"     type="Boolean" label="Brief Open by Default"       default="false" role="inputOnly" description="When enabled, the 'At a Glance' section starts expanded instead of collapsed."/>
+
+            <!-- Outputs — New records (create) -->
+            <property name="outputSummary"        type="String"                                        label="Wealth Plan Summary (HTML)" role="outputOnly"/>
+            <property name="outputMeetingSummary" type="String"                                        label="Meeting Summary Output (HTML)" role="outputOnly"/>
+            <property name="outputMeetingNote"          type="@salesforce/schema/MeetingNote__c" label="Meeting Note (for Update)"  description="Populated when saving a summary for an event with an existing MeetingNote__c. Contains Id + Note__c (+ Published__c). Use in a flow Update Records element. Mutually exclusive with outputMeetingNoteToCreate." role="outputOnly"/>
+            <property name="outputMeetingNoteToCreate" type="@salesforce/schema/MeetingNote__c" label="New Meeting Note (for Create)" description="Populated when saving a summary for an event with NO existing MeetingNote__c. Contains Note__c only (no Id). Use in a flow Create Records element, then update Event.MeetingNote__c using outputSelectedEventId. Mutually exclusive with outputMeetingNote." role="outputOnly"/>
+            <property name="outputSelectedEventId"     type="String"                            label="Selected Event ID"            description="Id of the currently selected event. Use after Create Records (outputMeetingNoteToCreate) to update Event.MeetingNote__c with the newly created note Id." role="outputOnly"/>
+            <property name="outputNoteIdToDelete"      type="String"                            label="Output: Meeting Note Id to Delete" description="Deprecated — retained for backwards compatibility with existing flow versions. Deletion is now handled via the Save Summary Flow (deleteNote flag)." role="outputOnly"/>
+            <property name="outputGoals"          type="@salesforce/schema/FinServ__FinancialGoal__c[]"        label="New Goals (Create)" role="outputOnly"/>
+            <property name="outputIncomes"        type="@salesforce/schema/FF_Income__c[]"                     label="New Incomes (Create)" role="outputOnly"/>
+            <property name="outputAssets"         type="@salesforce/schema/FinServ__AssetsAndLiabilities__c[]"  label="New Assets (Create)" role="outputOnly"/>
+            <property name="outputMilestones"     type="@salesforce/schema/Household_Milestones__c[]"          label="New Milestones (Create)" role="outputOnly"/>
+            <property name="outputOwnerships"     type="@salesforce/schema/Company_Ownership__c[]"             label="New Ownerships (Create)" role="outputOnly"/>
+            <property name="outputSustainability" type="@salesforce/schema/SustainabilityPreferences__c[]"     label="New Sustainability (Create)" role="outputOnly"/>
+            <property name="outputGreetings"      type="@salesforce/schema/FF_PersonalGreeting__c[]"           label="New Greetings (Create)" role="outputOnly"/>
+            <property name="outputTodos"          type="@salesforce/schema/Task[]"                             label="New Action Items (Create)" role="outputOnly"/>
+
+            <!-- Outputs — Modified existing records (update) -->
+            <property name="outputGoalsToUpdate"          type="@salesforce/schema/FinServ__FinancialGoal__c[]"        label="Modified Goals (Update)" role="outputOnly"/>
+            <property name="outputIncomesToUpdate"        type="@salesforce/schema/FF_Income__c[]"                     label="Modified Incomes (Update)" role="outputOnly"/>
+            <property name="outputAssetsToUpdate"         type="@salesforce/schema/FinServ__AssetsAndLiabilities__c[]"  label="Modified Assets (Update)" role="outputOnly"/>
+            <property name="outputMilestonesToUpdate"     type="@salesforce/schema/Household_Milestones__c[]"          label="Modified Milestones (Update)" role="outputOnly"/>
+            <property name="outputOwnershipsToUpdate"     type="@salesforce/schema/Company_Ownership__c[]"             label="Modified Ownerships (Update)" role="outputOnly"/>
+            <property name="outputSustainabilityToUpdate" type="@salesforce/schema/SustainabilityPreferences__c[]"     label="Modified Sustainability (Update)" role="outputOnly"/>
+            <property name="outputGreetingsToUpdate"      type="@salesforce/schema/FF_PersonalGreeting__c[]"           label="Modified Greetings (Update)" role="outputOnly"/>
+
+            <!-- Outputs — Existing records marked for deletion -->
+            <property name="outputGoalsToDelete"          type="@salesforce/schema/FinServ__FinancialGoal__c[]"        label="Goals to Delete" role="outputOnly"/>
+            <property name="outputIncomesToDelete"        type="@salesforce/schema/FF_Income__c[]"                     label="Incomes to Delete" role="outputOnly"/>
+            <property name="outputAssetsToDelete"         type="@salesforce/schema/FinServ__AssetsAndLiabilities__c[]"  label="Assets to Delete" role="outputOnly"/>
+            <property name="outputMilestonesToDelete"     type="@salesforce/schema/Household_Milestones__c[]"          label="Milestones to Delete" role="outputOnly"/>
+            <property name="outputOwnershipsToDelete"     type="@salesforce/schema/Company_Ownership__c[]"             label="Ownerships to Delete" role="outputOnly"/>
+            <property name="outputSustainabilityToDelete" type="@salesforce/schema/SustainabilityPreferences__c[]"     label="Sustainability to Delete" role="outputOnly"/>
+            <property name="outputGreetingsToDelete"      type="@salesforce/schema/FF_PersonalGreeting__c[]"           label="Greetings to Delete" role="outputOnly"/>
+        </targetConfig>
+    </targetConfigs>
+</LightningComponentBundle>
