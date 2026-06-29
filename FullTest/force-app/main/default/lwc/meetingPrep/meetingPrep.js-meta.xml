@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>66.0</apiVersion>
+    <isExposed>true</isExposed>
+    <masterLabel>Meeting Prep</masterLabel>
+    <description>Advisor briefing screen — household-aware strategy vs portfolio, tasks, events, last meeting, AI topic suggestions.</description>
+    <targets>
+        <target>lightning__FlowScreen</target>
+    </targets>
+    <targetConfigs>
+        <targetConfig targets="lightning__FlowScreen">
+            <property name="recordId" type="String" label="0. Input: Record ID (Household Account)" role="inputOnly"/>
+            <property name="inputPrimaryMember" type="@salesforce/schema/Account" label="1. Input: Primary Household Member" role="inputOnly" description="The household's primary member Account. Always pre-selected and locked."/>
+            <property name="inputHouseholdMembers" type="@salesforce/schema/Account[]" label="2. Input: Household Members (Person Accounts)" role="inputOnly" description="All person accounts in the household. The user can toggle which to include."/>
+            <property name="inputBusinessAccounts" type="@salesforce/schema/Account[]" label="3. Input: Business Accounts" role="inputOnly" description="Business accounts linked to the household via AccountContactRelation."/>
+            <property name="portfolioFlowApiName" type="String" label="4. Data Fetch Flow API Name" default="Portfolio_Level_AI_Generation" role="inputOnly" description="Autolaunched flow that outputs HoldingsCollection, StrategyCollection, and StrategyProductCollection per Account (same contract as portfolioRebalancingTool2)."/>
+            <property name="taskFlowApiName" type="String" label="5. Tasks Subflow API Name" default="MeetingPrep_SUB_GetTasks" role="inputOnly" description="Autolaunched flow that accepts a 'recordIds' String collection and outputs 'outputTasks' (Task collection)."/>
+            <property name="eventFlowApiName" type="String" label="6. Events Subflow API Name" default="MeetingPrep_SUB_GetEvents" role="inputOnly" description="Autolaunched flow that accepts a 'recordIds' String collection and outputs 'outputEvents' (Event collection)."/>
+            <property name="milestoneFlowApiName" type="String" label="6b. Milestones Subflow API Name" default="MeetingPrep_SUB_GetMilestones" role="inputOnly" description="Autolaunched flow that accepts a 'recordIds' String collection (household Account Ids) and outputs 'outputMilestones' (Household_Milestones__c collection)."/>
+            <property name="topicSuggestionFlowApiName" type="String" label="7. AI: Topic Suggestion Flow API Name" role="inputOnly" description="Autolaunched flow that returns a JSON array of {title, rationale} suggestions via output variable 'GeneratedTopics'."/>
+            <property name="customerName" type="String" label="8. Display: Customer name (subtitle)" role="inputOnly"/>
+            <property name="backgroundColor" type="String" label="9. Style: Background color (Classic theme)" default="#f0f9ff" role="inputOnly"/>
+            <!-- Deprecated: retained so older deployed flow versions referencing these inputs still validate. Safe to remove once no flow version references them. -->
+            <property name="inputStrategy" type="@salesforce/schema/InvestmentStrategy__c[]" label="Deprecated: inputStrategy" role="inputOnly"/>
+            <property name="inputPortfolio" type="@salesforce/schema/InvestmentStrategy__c[]" label="Deprecated: inputPortfolio" role="inputOnly"/>
+            <property name="inputTasks" type="@salesforce/schema/Task[]" label="Deprecated: inputTasks" role="inputOnly"/>
+            <property name="inputEvents" type="@salesforce/schema/Event[]" label="Deprecated: inputEvents" role="inputOnly"/>
+        </targetConfig>
+    </targetConfigs>
+</LightningComponentBundle>

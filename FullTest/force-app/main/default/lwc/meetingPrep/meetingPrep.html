@@ -1,0 +1,404 @@
+<template>
+    <div class={containerClass} style={dynamicBgStyle}>
+        <div class="mp-bg-pattern"></div>
+        <div class="mp-accent-bar"></div>
+
+        <!-- ═══════════ HEADER ═══════════ -->
+        <header class="mp-header">
+            <div class="mp-header-left">
+                <div class="mp-header-icon">
+                    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                        <polyline points="8 14 11 17 16 12"></polyline>
+                    </svg>
+                </div>
+                <div>
+                    <div class="mp-title-row">
+                        <h1 class="mp-title"><b>Meeting Prep</b></h1>
+                    </div>
+                    <p class="mp-subtitle">{headerSubtitle}</p>
+                </div>
+            </div>
+            <div class="mp-header-right">
+                <div class={themePillWrapClass}>
+                    <button class={classicSegmentClass} onclick={handleSetClassic} aria-label="Switch to Classic theme">
+                        <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line></svg>
+                        <b>Classic</b>
+                    </button>
+                    <button class={corporateSegmentClass} onclick={handleSetCorporate} aria-label="Switch to Corporate theme">
+                        <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M3 9h18M9 21V9"></path></svg>
+                        <b>Corporate</b>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- ═══════════ SOURCES (account selection) ═══════════ -->
+        <section class="mp-card sources-card">
+            <div class="mp-card-header">
+                <span class="mp-card-title"><b>Sources</b></span>
+                <span class="mp-card-sub">Pick which accounts to include, then hit Update</span>
+            </div>
+            <div class="sources-body">
+                <div class="sources-row">
+                    <span class="sources-label">Primary</span>
+                    <div class="sources-chips">
+                        <span class="source-chip source-chip-primary source-chip-locked" title="Primary household member — always included">
+                            <svg viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                            <b>{primaryMemberName}</b>
+                        </span>
+                    </div>
+                </div>
+                <template lwc:if={hasOtherPersonAccounts}>
+                    <div class="sources-row">
+                        <span class="sources-label">Members</span>
+                        <div class="sources-chips">
+                            <template for:each={personAccountChips} for:item="chip">
+                                <button class={chip.chipClass} key={chip.id} data-id={chip.id} onclick={handleTogglePerson} aria-pressed={chip.selected}>
+                                    <span class="source-chip-mark"></span>
+                                    <span><b>{chip.name}</b></span>
+                                </button>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+                <template lwc:if={hasBusinessAccounts}>
+                    <div class="sources-row">
+                        <span class="sources-label">Businesses</span>
+                        <div class="sources-chips">
+                            <template for:each={businessAccountChips} for:item="chip">
+                                <button class={chip.chipClass} key={chip.id} data-id={chip.id} onclick={handleToggleBusiness} aria-pressed={chip.selected}>
+                                    <span class="source-chip-mark"></span>
+                                    <span><b>{chip.name}</b></span>
+                                </button>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+                <div class="sources-footer">
+                    <button class="btn-update" disabled={updateBtnDisabled} onclick={handleUpdateData}>
+                        <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.13-9.36L23 10"></path></svg>
+                        <b>{updateBtnLabel}</b>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══════════ UPCOMING LIFE EVENTS ═══════════ -->
+        <template lwc:if={hasLifeEvents}>
+            <section class="mp-card life-events-card">
+                <div class="mp-card-header">
+                    <span class="mp-card-title"><b>Upcoming</b></span>
+                    <span class="mp-card-sub">Birthdays &amp; milestones in the next 12 months</span>
+                </div>
+                <div class="life-events-row">
+                    <template for:each={lifeEvents} for:item="ev">
+                        <span class={ev.chipClass} key={ev.key}>
+                            <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none">
+                                <path d={ev.iconPath}></path>
+                            </svg>
+                            <span class="life-event-label"><b>{ev.label}</b></span>
+                            <span class="life-event-days">{ev.daysDisplay}</span>
+                            <template lwc:if={ev.hasOwner}>
+                                <span class={ev.ownerBadgeClass}>{ev.ownerName}</span>
+                            </template>
+                        </span>
+                    </template>
+                </div>
+            </section>
+        </template>
+
+        <!-- ═══════════ STATS ROW ═══════════ -->
+        <div class="stats-row">
+            <c-wealth-plan-stat-card label="Touchpoints (12 mo)" value={touchpointCount12mo} variant="blue"></c-wealth-plan-stat-card>
+            <c-wealth-plan-stat-card label="Tasks completed" value={tasksCompletedCount} variant="green"></c-wealth-plan-stat-card>
+            <c-wealth-plan-stat-card label="Tasks open" value={tasksOpenCount} variant={tasksOpenVariant}></c-wealth-plan-stat-card>
+            <c-wealth-plan-stat-card label="Days since last meeting" value={daysSinceLastMeeting} variant="highlight"></c-wealth-plan-stat-card>
+        </div>
+
+        <!-- ═══════════ STRATEGY VS PORTFOLIO ═══════════ -->
+        <section class="mp-card">
+            <div class="mp-card-header">
+                <span class="mp-card-title"><b>Strategy vs. current portfolio</b></span>
+                <span class="mp-card-sub">Drift threshold ±2% warn, ±5% alert</span>
+            </div>
+            <template lwc:if={showStrategyTabs}>
+                <div class="strategy-tab-strip">
+                    <template for:each={strategyTabs} for:item="tab">
+                        <button class={tab.tabClass} key={tab.id} data-id={tab.id} onclick={handleSelectStrategyTab}>
+                            <template lwc:if={tab.isPrimary}>
+                                <svg viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" stroke-width="2" fill="none"><polygon points="12 2 15 8.5 22 9.3 17 14 18.2 21 12 17.8 5.8 21 7 14 2 9.3 9 8.5"/></svg>
+                            </template>
+                            <b>{tab.name}</b>
+                        </button>
+                    </template>
+                </div>
+            </template>
+            <template lwc:if={holdingsLoading}>
+                <div class="topics-loading">
+                    <div class="topics-spinner"></div>
+                    <span>Loading portfolio data…</span>
+                </div>
+            </template>
+            <template lwc:elseif={hasActiveStrategyError}>
+                <p class="topics-error">{activeStrategyError}</p>
+            </template>
+            <template lwc:elseif={hasActiveStrategyData}>
+                <div class="strategy-table">
+                    <div class="strategy-head">
+                        <span><b>Asset class</b></span>
+                        <span class="align-right"><b>Strategy</b></span>
+                        <span class="align-right"><b>Current</b></span>
+                        <span class="align-right"><b>Drift</b></span>
+                    </div>
+                    <template for:each={activeStrategyRows} for:item="row">
+                        <div class="strategy-row" key={row.key}>
+                            <div class="asset-cell">
+                                <span class="asset-dot" style={row.strategyBarStyle}></span>
+                                <span class="asset-label">{row.label}</span>
+                            </div>
+                            <div class="bar-cell">
+                                <span class="bar-value">{row.strategyDisplay}</span>
+                                <span class="bar-track"><span class="bar-fill" style={row.strategyBarStyle}></span></span>
+                            </div>
+                            <div class="bar-cell">
+                                <span class="bar-value">{row.portfolioDisplay}</span>
+                                <span class="bar-track"><span class="bar-fill" style={row.portfolioBarStyle}></span></span>
+                            </div>
+                            <div class={row.driftClass}>
+                                <b>{row.driftDisplay}</b>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </template>
+            <template lwc:else>
+                <div class="empty-state">
+                    <div class="icon-circle">
+                        <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-5"/></svg>
+                    </div>
+                    <h2>No strategy data for {activeStrategyAccountName}</h2>
+                    <p>Ensure the account has strategy and holdings data, or pick another tab.</p>
+                </div>
+            </template>
+        </section>
+
+        <!-- ═══════════ LAST MEETING ═══════════ -->
+        <section class="mp-card">
+            <div class="mp-card-header">
+                <span class="mp-card-title"><b>Last meeting</b></span>
+            </div>
+            <template lwc:if={hasLastMeeting}>
+                <div class="last-meeting">
+                    <div class="last-meeting-row">
+                        <span class="last-meeting-date">{lastMeetingDate}</span>
+                        <template lwc:if={lastMeetingLocation}>
+                            <span class="badge-tiny">{lastMeetingLocation}</span>
+                        </template>
+                        <template lwc:if={hasLastMeetingOwner}>
+                            <span class={lastMeetingOwner.badgeClass}>{lastMeetingOwner.name}</span>
+                        </template>
+                    </div>
+                    <div class="last-meeting-subject"><b>{lastMeetingSubject}</b></div>
+                    <template lwc:if={lastMeetingDescription}>
+                        <p class="last-meeting-desc">{lastMeetingDescription}</p>
+                    </template>
+                </div>
+            </template>
+            <template lwc:else>
+                <div class="empty-state">
+                    <div class="icon-circle">
+                        <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    </div>
+                    <h2>No prior meeting found</h2>
+                    <p>This will be the first recorded meeting with the customer.</p>
+                </div>
+            </template>
+        </section>
+
+        <!-- ═══════════ TASKS ACCORDION ═══════════ -->
+        <section class="ai-accordion-panel">
+            <div class="ai-header" onclick={handleToggleTasks}>
+                <div class="ai-header-left">
+                    <span class="ai-badge ai-badge-active"><b>Tasks</b></span>
+                    <span class="ai-title"><b>{tasksOpenCount} open</b> · {tasksCompletedCount} completed</span>
+                </div>
+                <div class="ai-header-right">
+                    <svg class={tasksChevronClass} viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </div>
+            </div>
+            <div class={tasksBodyClass}>
+                <template lwc:if={showActivityTabs}>
+                    <div class="activity-tab-strip">
+                        <template for:each={tasksTabs} for:item="tab">
+                            <button class={tab.tabClass} key={tab.id} data-id={tab.id} onclick={handleSelectTasksTab}>
+                                <template lwc:if={tab.isPrimary}>
+                                    <svg viewBox="0 0 24 24" width="10" height="10" stroke="currentColor" stroke-width="2" fill="none"><polygon points="12 2 15 8.5 22 9.3 17 14 18.2 21 12 17.8 5.8 21 7 14 2 9.3 9 8.5"/></svg>
+                                </template>
+                                <b>{tab.name}</b>
+                                <span class="activity-tab-count">{tab.count}</span>
+                            </button>
+                        </template>
+                    </div>
+                </template>
+                <div class="tasks-split">
+                    <div class="tasks-pane">
+                        <div class="tasks-pane-head">
+                            <span class="badge-tiny badge-success-tiny"><b>Completed</b></span>
+                            <span class="tasks-count">{tasksCompletedCount}</span>
+                        </div>
+                        <template lwc:if={hasCompletedTasks}>
+                            <template for:each={tasksCompletedPreview} for:item="t">
+                                <div class="task-row" key={t.key}>
+                                    <span class="task-subject"><b>{t.subject}</b></span>
+                                    <span class="task-meta">
+                                        {t.dueDisplay} <template lwc:if={t.priority}>· {t.priority}</template>
+                                        <template lwc:if={t.hasOwner}>
+                                            <span class={t.ownerBadgeClass}>{t.ownerName}</span>
+                                        </template>
+                                    </span>
+                                </div>
+                            </template>
+                            <template lwc:if={tasksCompletedMore}>
+                                <div class="tasks-more">{tasksCompletedMore}</div>
+                            </template>
+                        </template>
+                        <template lwc:else>
+                            <p class="tasks-empty">No completed tasks in scope.</p>
+                        </template>
+                    </div>
+                    <div class="tasks-pane">
+                        <div class="tasks-pane-head">
+                            <span class="badge-tiny badge-active-tiny"><b>Open</b></span>
+                            <span class="tasks-count">{tasksOpenCount}</span>
+                        </div>
+                        <template lwc:if={hasOpenTasks}>
+                            <template for:each={tasksOpenPreview} for:item="t">
+                                <div class="task-row" key={t.key}>
+                                    <span class="task-subject"><b>{t.subject}</b></span>
+                                    <span class="task-meta">
+                                        {t.dueDisplay} <template lwc:if={t.priority}>· {t.priority}</template>
+                                        <template lwc:if={t.hasOwner}>
+                                            <span class={t.ownerBadgeClass}>{t.ownerName}</span>
+                                        </template>
+                                    </span>
+                                </div>
+                            </template>
+                            <template lwc:if={tasksOpenMore}>
+                                <div class="tasks-more">{tasksOpenMore}</div>
+                            </template>
+                        </template>
+                        <template lwc:else>
+                            <p class="tasks-empty">No open tasks.</p>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══════════ EVENTS ACCORDION ═══════════ -->
+        <section class="ai-accordion-panel">
+            <div class="ai-header" onclick={handleToggleEvents}>
+                <div class="ai-header-left">
+                    <span class="ai-badge ai-badge-success"><b>Events</b></span>
+                    <span class="ai-title"><b>{eventCount} events</b> · last 12 months</span>
+                </div>
+                <div class="ai-header-right">
+                    <svg class={eventsChevronClass} viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </div>
+            </div>
+            <div class={eventsBodyClass}>
+                <template lwc:if={showActivityTabs}>
+                    <div class="activity-tab-strip">
+                        <template for:each={eventsTabs} for:item="tab">
+                            <button class={tab.tabClass} key={tab.id} data-id={tab.id} onclick={handleSelectEventsTab}>
+                                <template lwc:if={tab.isPrimary}>
+                                    <svg viewBox="0 0 24 24" width="10" height="10" stroke="currentColor" stroke-width="2" fill="none"><polygon points="12 2 15 8.5 22 9.3 17 14 18.2 21 12 17.8 5.8 21 7 14 2 9.3 9 8.5"/></svg>
+                                </template>
+                                <b>{tab.name}</b>
+                                <span class="activity-tab-count">{tab.count}</span>
+                            </button>
+                        </template>
+                    </div>
+                </template>
+                <template lwc:if={hasEvents}>
+                    <div class="events-list">
+                        <template for:each={eventRows} for:item="ev">
+                            <div class="event-row" key={ev.key}>
+                                <div class="event-row-head">
+                                    <span class="event-date">{ev.dateDisplay}</span>
+                                    <template lwc:if={ev.type}>
+                                        <span class="badge-tiny">{ev.type}</span>
+                                    </template>
+                                    <template lwc:if={ev.hasOwner}>
+                                        <span class={ev.ownerBadgeClass}>{ev.ownerName}</span>
+                                    </template>
+                                    <template lwc:if={ev.location}>
+                                        <span class="event-location">· {ev.location}</span>
+                                    </template>
+                                </div>
+                                <div class="event-subject"><b>{ev.subject}</b></div>
+                                <template lwc:if={ev.participants}>
+                                    <div class="event-participants">
+                                        <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                                        <span>{ev.participants}</span>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+                <template lwc:else>
+                    <p class="tasks-empty">No events recorded in the last 12 months.</p>
+                </template>
+            </div>
+        </section>
+
+        <!-- ═══════════ AI TOPIC SUGGESTIONS ═══════════ -->
+        <section class="ai-accordion-panel">
+            <div class="ai-header" onclick={handleToggleTopics}>
+                <div class="ai-header-left">
+                    <span class="ai-badge ai-badge-purple"><b>AI</b></span>
+                    <span class="ai-title"><b>Suggested topics</b> for the upcoming meeting</span>
+                </div>
+                <div class="ai-header-right">
+                    <svg class={topicsChevronClass} viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </div>
+            </div>
+            <div class={topicsBodyClass}>
+                <template lwc:if={topicsLoading}>
+                    <div class="topics-loading">
+                        <div class="topics-spinner"></div>
+                        <span>Generating suggestions…</span>
+                    </div>
+                </template>
+                <template lwc:elseif={topicsError}>
+                    <p class="topics-error">{topicsError}</p>
+                </template>
+                <template lwc:elseif={hasTopics}>
+                    <ul class="topics-list">
+                        <template for:each={topics} for:item="topic">
+                            <li class="topics-item" key={topic.key}>
+                                <span class="topics-icon">
+                                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                                </span>
+                                <div>
+                                    <div class="topics-title"><b>{topic.title}</b></div>
+                                    <template lwc:if={topic.rationale}>
+                                        <div class="topics-rationale">{topic.rationale}</div>
+                                    </template>
+                                </div>
+                            </li>
+                        </template>
+                    </ul>
+                </template>
+                <template lwc:else>
+                    <p class="tasks-empty">{topicsEmptyMessage}</p>
+                </template>
+            </div>
+        </section>
+    </div>
+</template>
