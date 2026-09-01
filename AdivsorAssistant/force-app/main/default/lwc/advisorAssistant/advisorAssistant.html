@@ -1,0 +1,1176 @@
+<template>
+    <!--
+      ═══════════════════════════════════════════════════════════════════════════
+      ADVISOR ASSISTANT — parent shell template
+      ═══════════════════════════════════════════════════════════════════════════
+
+      REGION MAP (top level, in document order)
+        1  Launcher card              lwc:if={showLauncher}      modal mode, closed
+        2  Main content               lwc:if={showMainContent}
+           2a Focus absorber                                     steals Salesforce's "E" shortcut
+           2b Backdrop                lwc:if={modalMode}
+           2c Panel wrap + close button
+              └ containerClass
+                  Header + event pill + guide/tour triggers
+                  Event picker modal  lwc:if={_eventDropdownOpen}
+                  User guide          lwc:if={_guideOpen}        3 tabs
+                  Legacy loading card lwc:if={isLoadingStep}     see note below
+                  Main body           lwc:if={isSummaryStep}
+                     LEFT  "CONFIGURATION" — 5 collapsible aa-cards
+                     RIGHT tab bar + loaders + heroes + 3 child panels
+                     FOOTER primary CTA + contextual save actions
+           2d Save-before-generate modal  lwc:if={_showSaveBeforeGenerate}
+           2e Guided tour overlay         lwc:if={_tourActive}
+        3  Modal drag overlay         lwc:if={_modalDragging}
+
+      HOW THE TABS WORK — the one non-obvious thing in this file.
+      The three child panels are ALWAYS MOUNTED. Switching tabs toggles the CSS
+      class `aa-tab-panel--hidden` instead of using lwc:if, so a generation running
+      in the background is not destroyed when the advisor looks at another tab.
+      <c-advisor-meeting-summary> appears TWICE — data-role="summary" and
+      data-role="todos" — and they are independent instances with independent
+      state. The parent addresses them via `_msChild(role)`, never a bare
+      querySelector.
+
+      NOTE — this template is NOT well-formed: there is one stray </div> near the
+      end (see the marker there). Consequence: regions 2d and 2e render outside
+      containerClass, not inside it. Documented as DEFECTS.md #1, not fixed here.
+
+      Styling: `aa-*` classes are the current design system. `wph-*` classes are
+      inherited from the wealthPlanHelper fork; both are defined in the .css.
+    -->
+
+    <!-- ── 1. Launcher card: modalMode=true and the overlay is closed ────────── -->
+    <template lwc:if={showLauncher}>
+        <div class="wph-launcher-card">
+            <div class="wph-launcher-left">
+                <div class="wph-launcher-icon">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                        <path d="M10 2L12.5 8.5L19 11L12.5 13.5L10 20L7.5 13.5L1 11L7.5 8.5Z"/>
+                        <path d="M20 1.5L20.9 4.1L23.5 5L20.9 5.9L20 8.5L19.1 5.9L16.5 5L19.1 4.1Z"/>
+                        <path d="M20 16L20.5 17.5L22 18L20.5 18.5L20 20L19.5 18.5L18 18L19.5 17.5Z"/>
+                    </svg>
+                </div>
+                <div>
+                    <span class="wph-launcher-name">Advisor Assistant</span>
+                </div>
+            </div>
+            <button class="wph-launcher-open-btn" onclick={handleOpenModal}>
+                Open
+                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none">
+                    <polyline points="9 18 15 12 9 6"/>
+                </svg>
+            </button>
+        </div>
+    </template>
+
+    <!-- Main content: always shown in inline mode; shown in modal mode when open -->
+    <template lwc:if={showMainContent}>
+        <div class={rootWrapperClass}>
+            <!-- Hidden focus absorber: keeps cke_editable in activeElement so Salesforce's E shortcut is skipped -->
+            <div class="wph-focus-absorber cke_editable"
+                 contenteditable="true"
+                 tabindex="-1"
+                 lwc:ref="focusAbsorber"></div>
+            <!-- Backdrop — modal mode only -->
+            <template lwc:if={modalMode}>
+                <div class="wph-overlay-backdrop" onclick={handleCloseModal}></div>
+            </template>
+            <!-- Panel + close button wrapped together so the button is positioned relative to the panel -->
+            <div class="wph-overlay-panel-wrap">
+                <template lwc:if={modalMode}>
+                    <button class="wph-overlay-close" onclick={handleCloseModal} title="Close">
+                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2.5" fill="none">
+                            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                    </button>
+                </template>
+                <div class={containerClass}>
+
+        <!-- ═══════════════════════════════════════════
+             HEADER (dark navy, event embedded)
+             ═══════════════════════════════════════════ -->
+        <header class="aa-header">
+            <div class="aa-header-brand">
+                <div class="aa-header-icon">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                        <path d="M10 2L12.5 8.5L19 11L12.5 13.5L10 20L7.5 13.5L1 11L7.5 8.5Z"/>
+                        <path d="M20 1.5L20.9 4.1L23.5 5L20.9 5.9L20 8.5L19.1 5.9L16.5 5L19.1 4.1Z"/>
+                    </svg>
+                </div>
+                <div>
+                    <div class="aa-header-title-row">
+                        <span class="aa-header-title">Advisor Assistant</span>
+                        <template lwc:if={showBetaBadge}>
+                            <span class="aa-beta-badge">BETA</span>
+                        </template>
+                        <button class="aa-guide-trigger" onclick={handleToggleGuide} aria-label="Toggle user guide" title="User Guide">?</button>
+                    </div>
+                    <span class="aa-header-sub">AI-powered meeting &amp; wealth plan structuring</span>
+                </div>
+            </div>
+
+            <!-- Event zone: shows event info or selector depending on selection state -->
+            <div class="aa-header-event-zone">
+                <template lwc:if={selectedEventSubject}>
+                    <div class="aa-event-pill">
+                        <div class="aa-header-event-selected">
+                            <span class="aa-event-eyebrow">SELECTED EVENT</span>
+                            <div class="aa-event-info-row">
+                                <span class="aa-event-info-item aa-event-info-name">
+                                    <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                                    <span class="aa-event-name">{selectedEventSubject}</span>
+                                </span>
+                                <template lwc:if={selectedEventMeta}>
+                                    <span class="aa-event-info-dot">·</span>
+                                    <span class="aa-event-info-item aa-event-info-meta">{selectedEventMeta}</span>
+                                </template>
+                                <template lwc:if={meetingTypeLabel}>
+                                    <span class="aa-event-info-dot">·</span>
+                                    <span class="aa-event-type-badge">{meetingTypeLabel}</span>
+                                </template>
+                                <template lwc:if={hasSelectedEventParticipants}>
+                                    <span class="aa-event-info-dot">·</span>
+                                    <span class="aa-event-info-item aa-event-info-participants">
+                                        <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                                        <span class="aa-event-participants-text">{selectedEventParticipantLabel}</span>
+                                    </span>
+                                </template>
+                            </div>
+                        </div>
+                        <span class="aa-event-pill-divider"></span>
+                        <button class="aa-change-event-btn" onclick={handleToggleEventDropdown}>
+                            Change Event
+                        </button>
+                    </div>
+                </template>
+                <template lwc:else>
+                    <button class="aa-select-event-btn" onclick={handleToggleEventDropdown}>
+                        <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                        Choose a meeting event…
+                    </button>
+                    <span class="aa-events-count">{eventsCountLabel}</span>
+                </template>
+            </div>
+        </header>
+
+        <!-- Event selection MODAL — centered overlay with backdrop -->
+        <template lwc:if={_eventDropdownOpen}>
+            <section class="aa-event-modal-root" role="dialog" aria-modal="true" aria-labelledby="aaEventModalTitle">
+                <div class="aa-event-modal-backdrop" onclick={handleToggleEventDropdown}></div>
+                <div class="aa-event-modal-card fade-in-up">
+                    <header class="aa-event-modal-header">
+                        <span class="aa-event-modal-icon">
+                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                        </span>
+                        <h3 id="aaEventModalTitle" class="aa-event-modal-title">Select a Meeting Event</h3>
+                        <button class="aa-event-modal-close" onclick={handleToggleEventDropdown} title="Close" aria-label="Close">
+                            <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                        </button>
+                    </header>
+                    <div class="aa-event-modal-body">
+                        <template lwc:if={isEventsLoading}>
+                            <div class="aa-event-empty">Loading events…</div>
+                        </template>
+                        <template lwc:elseif={hasNoEvents}>
+                            <div class="aa-event-empty">No meeting events found for this contact.</div>
+                        </template>
+                        <template lwc:else>
+                            <ul class="aa-event-list">
+                                <template for:each={eventItems} for:item="ev">
+                                    <li key={ev.id} class="aa-event-list-item">
+                                        <button class={ev.aaEventRowClass} data-id={ev.id} onclick={handleEventSelect}>
+                                            <span class="aa-event-row-icon">
+                                                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                                            </span>
+                                            <div class="aa-event-row-info">
+                                                <span class="aa-event-row-subject">{ev.subject}</span>
+                                                <template lwc:if={ev.date}>
+                                                    <span class="aa-event-row-meta">{ev.date}<template lwc:if={ev.time}> · {ev.time}</template><template lwc:if={ev.location}> · {ev.location}</template></span>
+                                                </template>
+                                            </div>
+                                            <template lwc:if={ev.isSelected}>
+                                                <svg class="aa-event-row-check" viewBox="0 0 24 24" width="16" height="16" stroke="#1d4ed8" stroke-width="3" fill="none"><polyline points="20 6 9 17 4 12"/></svg>
+                                            </template>
+                                        </button>
+                                    </li>
+                                </template>
+                            </ul>
+                        </template>
+                    </div>
+                </div>
+            </section>
+        </template>
+
+        <!-- USER GUIDE — inline panel, appears between header and content -->
+        <template lwc:if={_guideOpen}>
+        <div class="wph-guide-panel">
+            <div class="wph-guide-floating-header">
+                <span><b>User Guide</b></span>
+                <span class="wph-guide-sub">Features &amp; how to use</span>
+                <button class="wph-guide-floating-close" onclick={handleToggleGuide} aria-label="Close guide">
+                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <div class="wph-guide-body">
+                <!-- Guide tabs -->
+                <div class="wph-guide-tabs">
+                    <button class={guideRefTabClass} data-tab="reference" onclick={handleGuideTabSwitch}>
+                        <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                        Quick Reference
+                    </button>
+                    <button class={guideFeatTabClass} data-tab="features" onclick={handleGuideTabSwitch}>
+                        <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z"></path></svg>
+                        All Features
+                    </button>
+                    <button class={guideWhatsNewTabClass} data-tab="whatsnew" onclick={handleGuideTabSwitch}>
+                        <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                        What's New
+                    </button>
+                </div>
+
+                <!-- TAB 1: Quick Reference (existing content) -->
+                <template lwc:if={isGuideRefTab}>
+                <div class="wph-guide-grid">
+                    <!-- Color codes -->
+                    <div class="wph-guide-section">
+                        <h4 class="wph-guide-section-title">Row Colors</h4>
+                        <div class="wph-guide-list">
+                            <div class="wph-guide-item">
+                                <span class="wph-guide-swatch wph-gs-green"></span>
+                                <div>
+                                    <span class="wph-guide-label"><b>Green — Locked</b></span>
+                                    <span class="wph-guide-desc">Saved and ready to send to Salesforce</span>
+                                </div>
+                            </div>
+                            <div class="wph-guide-item">
+                                <span class="wph-guide-swatch wph-gs-yellow"></span>
+                                <div>
+                                    <span class="wph-guide-label"><b>Yellow — Edited</b></span>
+                                    <span class="wph-guide-desc">Changes made but not yet locked</span>
+                                </div>
+                            </div>
+                            <div class="wph-guide-item">
+                                <span class="wph-guide-swatch wph-gs-red"></span>
+                                <div>
+                                    <span class="wph-guide-label"><b>Red — Error or Deleted</b></span>
+                                    <span class="wph-guide-desc">Has invalid value or marked for deletion</span>
+                                </div>
+                            </div>
+                            <div class="wph-guide-item">
+                                <span class="wph-guide-swatch wph-gs-grey"></span>
+                                <div>
+                                    <span class="wph-guide-label"><b>Grey — Existing</b></span>
+                                    <span class="wph-guide-desc">Loaded from Salesforce, unchanged</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Source badges -->
+                    <div class="wph-guide-section">
+                        <h4 class="wph-guide-section-title">Record Source</h4>
+                        <div class="wph-guide-list">
+                            <div class="wph-guide-item">
+                                <span class="wph-source-badge wph-src-ai">AI Generated</span>
+                                <span class="wph-guide-desc">Created by AI from your input</span>
+                            </div>
+                            <div class="wph-guide-item">
+                                <span class="wph-source-badge wph-src-manual">Manual</span>
+                                <span class="wph-guide-desc">Added manually using the Add button</span>
+                            </div>
+                            <div class="wph-guide-item">
+                                <span class="wph-source-badge wph-src-existing">Existing</span>
+                                <span class="wph-guide-desc">Loaded from current Wealth Plan</span>
+                            </div>
+                            <div class="wph-guide-item">
+                                <span class="wph-source-badge wph-src-edited">Modified / AI Edited</span>
+                                <span class="wph-guide-desc">Changed since loaded or generated</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="wph-guide-section">
+                        <h4 class="wph-guide-section-title">How to Use</h4>
+                        <div class="wph-guide-list">
+                            <div class="wph-guide-item">
+                                <span class="wph-guide-num">1</span>
+                                <span class="wph-guide-desc"><b>Edit</b> a row to make changes — pencil icon</span>
+                            </div>
+                            <div class="wph-guide-item">
+                                <span class="wph-guide-num">2</span>
+                                <span class="wph-guide-desc"><b>Lock</b> a row with the green checkmark to confirm it for save</span>
+                            </div>
+                            <div class="wph-guide-item">
+                                <span class="wph-guide-num">3</span>
+                                <span class="wph-guide-desc">Use <b>Lock All Valid</b> or <b>Lock Section</b> to lock multiple at once</span>
+                            </div>
+                            <div class="wph-guide-item">
+                                <span class="wph-guide-num">4</span>
+                                <span class="wph-guide-desc">Click <b>Save to Wealth Plan</b> — only locked records are saved</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                </template>
+
+                <!-- TAB 2: All Features -->
+                <template lwc:if={isGuideFeatTab}>
+                <div class="wph-guide-features">
+                    <div class="wph-feat-group">
+                        <h4 class="wph-guide-section-title">AI Analysis</h4>
+                        <div class="wph-feat-list">
+                            <div class="wph-feat-item">
+                                <div class="wph-feat-icon wph-fi-blue">
+                                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z"></path></svg>
+                                </div>
+                                <div>
+                                    <span class="wph-feat-title"><b>Wealth Plan Structuring</b></span>
+                                    <span class="wph-guide-desc">Paste meeting notes, upload documents, or select artifacts — AI extracts and structures data into goals, income, assets, milestones, and more.</span>
+                                </div>
+                            </div>
+                            <div class="wph-feat-item">
+                                <div class="wph-feat-icon wph-fi-purple">
+                                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                                </div>
+                                <div>
+                                    <span class="wph-feat-title"><b>Meeting Summary</b></span>
+                                    <span class="wph-guide-desc">The <b>Meeting Summary</b> tab has two sub-sections: <b>Meeting</b> (view, edit, regenerate the AI note) and <b>To-do's</b> (generate and accept action items). Choose <b>Save &amp; Review</b> to keep editing, or <b>Save &amp; Publish</b> to lock and share the summary permanently.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="wph-feat-group">
+                        <h4 class="wph-guide-section-title">Review &amp; Editing</h4>
+                        <div class="wph-feat-list">
+                            <div class="wph-feat-item">
+                                <div class="wph-feat-icon wph-fi-blue">
+                                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                </div>
+                                <div>
+                                    <span class="wph-feat-title"><b>Inline Editing</b></span>
+                                    <span class="wph-guide-desc">Click the pencil icon to edit any record. Fields are validated against Salesforce picklists in real-time.</span>
+                                </div>
+                            </div>
+                            <div class="wph-feat-item">
+                                <div class="wph-feat-icon wph-fi-amber">
+                                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
+                                </div>
+                                <div>
+                                    <span class="wph-feat-title"><b>Undo / Redo</b></span>
+                                    <span class="wph-guide-desc">Use the undo and redo buttons in the Wealth Plan review toolbar to reverse any action. Expand All and Collapse All sit alongside them.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                </template>
+
+                <!-- TAB 3: What's New -->
+                <template lwc:if={isGuideWhatsNewTab}>
+                <div class="wph-guide-whatsnew">
+                    <div class="wph-whatsnew-release">
+                        <span class="wph-whatsnew-version">v2026.05 · Latest</span>
+                        <span class="wph-whatsnew-label">Save to WP, Meeting Type Persistence &amp; Smarter Generation</span>
+                    </div>
+                    <div class="wph-whatsnew-list">
+                        <div class="wph-feat-item">
+                            <div class="wph-feat-icon wph-fi-blue">
+                                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                            </div>
+                            <div>
+                                <span class="wph-feat-title"><b>Save to Wealth Plan — floating action button</b></span>
+                                <span class="wph-guide-desc">After generating a Wealth Plan the bottom action bar switches to a blue <b>Save to Wealth Plan</b> button.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                </template>
+
+            </div>
+        </div>
+        </template>
+
+        <!-- ═══════════════════════════════════════════
+             STEP 0: SUMMARY — tabbed hub (Meeting Summary | Wealth Plan | Show Existing)
+             ═══════════════════════════════════════════ -->
+
+
+        <!-- LEGACY loading card. `_step` is pinned to 'summary' by connectedCallback,
+             so isLoadingStep is never true and this never renders. The live progress
+             UI is the per-tab loaders inside the summary step below. -->
+        <template lwc:if={isLoadingStep}>
+            <div class="wph-loading-card fade-in">
+                <div class="wph-loading-header">
+                    <span class="wph-loading-title"><b>{loadingTitle}</b></span>
+                    <span class="wph-loading-pct"><b>{formattedProgress}</b></span>
+                </div>
+                <div class="wph-progress-track">
+                    <div class="wph-progress-fill" style={progressBarStyle}></div>
+                </div>
+                <div class="wph-loading-body">
+                    <div class="wph-orb-wrap">
+                        <div class="wph-orb-core"></div>
+                        <div class="wph-orb-ring wph-ring-1"></div>
+                        <div class="wph-orb-ring wph-ring-2"></div>
+                    </div>
+                    <div class="wph-loading-status">
+                        <span class="wph-phase-dot"></span>
+                        <span class="wph-phase-text">{_loadingMessage}</span>
+                    </div>
+                </div>
+                <div class="wph-loading-cancel-bar">
+                    <button class="wph-cancel-gen-btn" onclick={handleCancelGeneration} aria-label="Cancel analysis">
+                        <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </template>
+
+        <!-- ═══════════════════════════════════════════════════════════════════
+             MAIN BODY — the only step that actually renders.
+             SLDS 1/3–2/3 grid: LEFT = Configuration cards, RIGHT = active tab panel.
+             Ends with the fixed footer.
+             ═══════════════════════════════════════════════════════════════════ -->
+        <template lwc:if={isSummaryStep}>
+
+            <!-- Tour prompt banner — full-width above the 1/3-2/3 grid -->
+            <template lwc:if={showTourPrompt}>
+                <div class="aa-tour-prompt">
+                    <span class="aa-tour-icon">
+                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+                    </span>
+                    <span class="aa-tour-text">First time here? Take the <b>guided tour</b> to get started.</span>
+                    <button class="aa-tour-btn" onclick={handleStartTour}>Start Tour →</button>
+                </div>
+            </template>
+
+            <div class={aaBodyClass}>
+
+                <!-- ═══════════════════════════════════════════
+                     LEFT COLUMN (1/3) — shared inputs
+                     ═══════════════════════════════════════════ -->
+                <div class="aa-left-col">
+
+                    <!-- Configuration container.
+                         Five collapsible cards, all driven by the same pair:
+                           data-card="<key>" + onclick={handleCardToggle}
+                           open state    = is<Key>Open  (auto: open if the card has
+                                           data, until the user overrides it)
+                           aria-expanded = <key>Expanded (string mirror of the above)
+                         Cards: category · notes · files · docs · regen.
+                         Everything the advisor sets here becomes input to whichever
+                         generation the footer CTA fires. -->
+                    <section class="aa-config">
+                        <header class="aa-config-eyebrow">
+                            <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                            <span class="aa-config-eyebrow-label">CONFIGURATION</span>
+                            <button class="aa-config-collapse-btn" onclick={handleToggleConfigCollapsed} title="Collapse configuration" aria-label="Toggle configuration">
+                                <svg class={configCollapseIconClass} viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2.5" fill="none"><polyline points="15 18 9 12 15 6"/></svg>
+                            </button>
+                        </header>
+                        <div class="aa-config-body">
+
+                    <!-- Meeting Category card — only relevant to Meeting Summary generation -->
+                    <template lwc:if={showMeetingCategory}>
+                    <section class={categoryCardClass}>
+                        <button type="button" class="aa-card-header" data-card="category" onclick={handleCardToggle} aria-expanded={categoryExpanded}>
+                            <span class="aa-card-icon aa-icon-blue">
+                                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                            </span>
+                            <span class="aa-card-title">Meeting Category</span>
+                            <span class={categoryHeaderChipClass}>{categoryHeaderChipLabel}</span>
+                            <svg class="aa-card-chevron" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6 9 12 15 18 9"/></svg>
+                        </button>
+                        <template lwc:if={isCategoryOpen}>
+                        <div class="aa-card-body aa-radio-body">
+                            <label class={whiteboardRowClass}>
+                                <input type="radio" name="aaMeetingType" data-type="whiteboard" checked={isWhiteboardSelected} onchange={handleMeetingTypeChange} />
+                                <span class="aa-radio-dot"></span>
+                                <span class="aa-radio-label">Whiteboard Meeting</span>
+                            </label>
+                            <label class={statusRowClass}>
+                                <input type="radio" name="aaMeetingType" data-type="status" checked={isStatusSelected} onchange={handleMeetingTypeChange} />
+                                <span class="aa-radio-dot"></span>
+                                <span class="aa-radio-label">Status Meeting</span>
+                            </label>
+                            <label class={annualRowClass}>
+                                <input type="radio" name="aaMeetingType" data-type="annual" checked={isAnnualSelected} onchange={handleMeetingTypeChange} />
+                                <span class="aa-radio-dot"></span>
+                                <span class="aa-radio-label">Annual Review</span>
+                            </label>
+                            <!-- Working Meeting: visible so the category is discoverable, but not
+                                 selectable yet. The input is disabled and handleMeetingTypeChange
+                                 also refuses the value. -->
+                            <label class={workingRowClass}>
+                                <input type="radio" name="aaMeetingType" data-type="working" disabled
+                                       checked={isWorkingMeetingSelected} onchange={handleMeetingTypeChange} />
+                                <span class="aa-radio-dot"></span>
+                                <span class="aa-radio-label">Working Meeting</span>
+                                <span class="aa-wip-pill" title="Not available yet">
+                                    <svg viewBox="0 0 24 24" width="10" height="10" stroke="currentColor" stroke-width="2.5" fill="none"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
+                                    Coming soon
+                                </span>
+                            </label>
+                        </div>
+                        </template>
+                    </section>
+                    </template>
+
+                    <!-- Meeting Notes & Context card -->
+                    <section class={notesCardClass}>
+                        <button type="button" class="aa-card-header" data-card="notes" onclick={handleCardToggle} aria-expanded={notesExpanded}>
+                            <span class="aa-card-icon aa-icon-teal">
+                                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            </span>
+                            <span class="aa-card-title">Meeting Notes &amp; Context</span>
+                            <template lwc:if={hasNotesText}>
+                                <span class="aa-chip aa-chip-success">Has text</span>
+                            </template>
+                            <svg class="aa-card-chevron" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6 9 12 15 18 9"/></svg>
+                        </button>
+                        <template lwc:if={isNotesOpen}>
+                        <div class="aa-card-body">
+                            <!-- FIXME (DEFECTS.md #4): the value is written as textarea
+                                 CHILD TEXT, which LWC applies only on the first render.
+                                 This is an uncontrolled field: setting `_freeText` in JS
+                                 will not update what the user sees. Binding `value=` on
+                                 the element is the controlled form. -->
+                            <textarea
+                                class="aa-textarea"
+                                rows="4"
+                                placeholder="Add meeting notes, key topics or extra context for AI…"
+                                oninput={handleParentNotesTextarea}>{_freeText}</textarea>
+                        </div>
+                        </template>
+                    </section>
+
+                    <!-- Meeting Files card — list of files attached to the meeting event -->
+                    <section class={filesCardClass}>
+                        <button type="button" class="aa-card-header" data-card="files" onclick={handleCardToggle} aria-expanded={filesExpanded}>
+                            <span class="aa-card-icon aa-icon-green">
+                                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                            </span>
+                            <span class="aa-card-title">Meeting Files</span>
+                            <template lwc:if={filesCountBadge}>
+                                <span class="aa-chip aa-chip-neutral">{filesCountBadge}</span>
+                            </template>
+                            <svg class="aa-card-chevron" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6 9 12 15 18 9"/></svg>
+                        </button>
+                        <template lwc:if={isFilesOpen}>
+                        <div class="aa-card-body aa-files-body">
+                            <template lwc:if={hasArtifactFiles}>
+                                <ul class="aa-file-list">
+                                    <template for:each={aaArtifactFiles} for:item="af">
+                                        <li key={af.id} class={af.rowClass} data-id={af.id} onclick={handleArtifactFileSelect}>
+                                            <span class={af.checkClass}>
+                                                <template lwc:if={af.isSelected}>
+                                                    <svg viewBox="0 0 24 24" width="10" height="10" stroke="#fff" stroke-width="3.5" fill="none"><polyline points="20 6 9 17 4 12"/></svg>
+                                                </template>
+                                            </span>
+                                            <span class={af.iconWrapClass}>
+                                                <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                            </span>
+                                            <span class="aa-file-title">{af.title}</span>
+                                        </li>
+                                    </template>
+                                </ul>
+                            </template>
+                            <template lwc:else>
+                                <div class="aa-file-empty">No files attached to this event yet.</div>
+                            </template>
+                        </div>
+                        </template>
+                    </section>
+
+                    <!-- Document Upload card — drag-drop / file picker for adding new files -->
+                    <section class={docsCardClass}>
+                        <button type="button" class="aa-card-header" data-card="docs" onclick={handleCardToggle} aria-expanded={docsExpanded}>
+                            <span class="aa-card-icon aa-icon-purple">
+                                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                            </span>
+                            <span class="aa-card-title">Document Upload</span>
+                            <template lwc:if={uploadedCountBadge}>
+                                <span class="aa-chip aa-chip-neutral">{uploadedCountBadge}</span>
+                            </template>
+                            <svg class="aa-card-chevron" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6 9 12 15 18 9"/></svg>
+                        </button>
+                        <template lwc:if={isDocsOpen}>
+                        <div class="aa-card-body">
+                            <!-- Real Salesforce upload: produces ContentDocumentIds, which are what
+                                 the generation flows need. A plain <input type="file"> only yields
+                                 in-memory File objects with no documentId, so nothing reached the AI. -->
+                            <div class="aa-drop-zone">
+                                <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="1.5" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                <span class="aa-drop-title">Drop files here or browse</span>
+                                <span class="aa-drop-sub">PDF, PNG, JPG or TXT · up to 3 documents</span>
+                                <lightning-file-upload
+                                    label=""
+                                    name="aaDocUpload"
+                                    accept={acceptedFormats}
+                                    record-id={recordId}
+                                    multiple
+                                    disabled={uploadDisabled}
+                                    onuploadfinished={handleSharedFileUpload}>
+                                </lightning-file-upload>
+                            </div>
+                            <template lwc:if={_sharedFiles.length}>
+                                <ul class="aa-uploaded-list">
+                                    <!-- FIXME (DEFECTS.md #5): key={f.name} is not unique —
+                                         uploading two files with the same name produces
+                                         duplicate keys and LWC list corruption.
+                                         `f.documentId` is present on these objects. -->
+                                    <template for:each={_sharedFiles} for:item="f" for:index="idx">
+                                        <li key={f.name} class="aa-uploaded-row">
+                                            <span class="aa-uploaded-name" title={f.name}>{f.name}</span>
+                                            <button class="aa-uploaded-remove" data-index={idx}
+                                                    onclick={handleRemoveSharedFile}
+                                                    title="Remove" aria-label="Remove file">
+                                                <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2.5" fill="none"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                            </button>
+                                        </li>
+                                    </template>
+                                </ul>
+                            </template>
+                        </div>
+                        </template>
+                    </section>
+
+                    <!-- Regenerate with Instructions — only on Meeting Summary tab with an unpublished draft -->
+                    <template lwc:if={showRegenerateInstructions}>
+                    <section class={regenCardClass}>
+                        <button type="button" class="aa-card-header" data-card="regen" onclick={handleCardToggle} aria-expanded={regenExpanded}>
+                            <span class="aa-card-icon aa-icon-amber">
+                                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                            </span>
+                            <span class="aa-card-title">Regenerate with Instructions</span>
+                            <svg class="aa-card-chevron" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6 9 12 15 18 9"/></svg>
+                        </button>
+                        <template lwc:if={isRegenOpen}>
+                        <div class="aa-card-body">
+                            <!-- FIXME (DEFECTS.md #4): uncontrolled, same as the notes
+                                 textarea above. handleRunRegenerateInstructions clears
+                                 `_regenInstructions` after sending, but the text stays
+                                 visible to the user because the DOM is never updated. -->
+                            <textarea class="aa-textarea"
+                                rows="3"
+                                placeholder="Add context or corrections for the next regeneration…"
+                                oninput={handleRegenInstructionsInput}>{_regenInstructions}</textarea>
+                            <button class="aa-primary-cta aa-primary-cta--compact"
+                                    disabled={_bgJobs.summary}
+                                    onclick={handleRunRegenerateInstructions}>
+                                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><polyline points="23 4 23 10 17 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                                <span>Regenerate Summary</span>
+                            </button>
+                        </div>
+                        </template>
+                    </section>
+                    </template>
+
+                        </div><!-- end aa-config-body -->
+                    </section><!-- end aa-config -->
+                </div>
+
+                <!-- ═══════════════════════════════════════════
+                     RIGHT COLUMN (2/3) — tabs + content + footer
+                     ═══════════════════════════════════════════ -->
+                <div class="aa-right-col">
+                    <div class="aa-right-inner">
+                        <!-- Custom tab bar (SLDS-styled, controllable) -->
+                        <ul class="aa-tabs" role="tablist">
+                            <li class={aaTabPreMeetingClass} role="presentation">
+                                <button type="button" role="tab" data-tab="premeeting" onclick={handleAaTabClick} class="aa-tab-btn"
+                                        aria-selected={isPreMeetingTabSelected} aria-controls="aaTabPanel" id="aaTab-premeeting">
+                                    Pre-meeting
+                                    <span class="aa-wip-pill" title="Work in progress"><svg viewBox="0 0 24 24" width="10" height="10" stroke="currentColor" stroke-width="2.5" fill="none"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg></span>
+                                </button>
+                            </li>
+                            <li class={aaTabSummaryClass} role="presentation">
+                                <button type="button" role="tab" data-tab="summary" onclick={handleAaTabClick} class="aa-tab-btn"
+                                        aria-selected={isSummaryTabSelected} aria-controls="aaTabPanel" id="aaTab-summary">
+                                    Meeting Summary
+                                    <span class={summaryTabPillClass}></span>
+                                </button>
+                            </li>
+                            <li class={aaTabWealthPlanClass} role="presentation">
+                                <button type="button" role="tab" data-tab="wealthplan" onclick={handleAaTabClick} class="aa-tab-btn"
+                                        aria-selected={isWealthPlanTabSelected} aria-controls="aaTabPanel" id="aaTab-wealthplan">
+                                    Wealth Plan
+                                    <span class={wpTabPillClass}></span>
+                                </button>
+                            </li>
+                            <li class={aaTabTodosClass} role="presentation">
+                                <button type="button" role="tab" data-tab="todos" onclick={handleAaTabClick} class="aa-tab-btn"
+                                        aria-selected={isTodosTabSelected} aria-controls="aaTabPanel" id="aaTab-todos">
+                                    To-Do's
+                                    <template lwc:if={hasMeetingTodos}>
+                                        <span class="aa-tab-count aa-tab-count--created"
+                                              title={todosCreatedTitle}>{todosCreatedCount}</span>
+                                        <span class="aa-tab-count aa-tab-count--accepted"
+                                              title={todosAcceptedTitle}>
+                                            <svg viewBox="0 0 24 24" width="9" height="9" stroke="currentColor" stroke-width="3.5" fill="none"><polyline points="20 6 9 17 4 12"/></svg>
+                                            {acceptedTodosCount}
+                                        </span>
+                                    </template>
+                                    <span class={todosTabPillClass}></span>
+                                </button>
+                            </li>
+                            <li class={aaTabInternalNotesClass} role="presentation">
+                                <button type="button" role="tab" data-tab="internalnotes" onclick={handleAaTabClick} class="aa-tab-btn"
+                                        aria-selected={isInternalNotesTabSelected} aria-controls="aaTabPanel" id="aaTab-internalnotes">
+                                    Internal Notes
+                                    <span class="aa-wip-pill" title="Work in progress"><svg viewBox="0 0 24 24" width="10" height="10" stroke="currentColor" stroke-width="2.5" fill="none"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg></span>
+                                </button>
+                            </li>
+                        </ul>
+
+                        <!-- Background job banner — appears when a job is running on a non-active tab -->
+                        <template lwc:if={hasBackgroundBanner}>
+                            <div class="aa-bg-banner" role="status" aria-live="polite">
+                                <span class="aa-bg-banner-dot"></span>
+                                <span>{backgroundBannerLabel}</span>
+                            </div>
+                        </template>
+
+                        <!-- Tab content — persistent 3-child mount, loaders + empty-state heros -->
+                        <div class="aa-tab-content" role="tabpanel" id="aaTabPanel" aria-live="polite">
+
+                            <!-- Per-tab loader (fills the tab body) — only for the ACTIVE tab. -->
+                            <template lwc:if={showSummaryLoader}>
+                                <div class="aa-tab-loader" role="status" aria-live="polite">
+                                    <div class="wph-orb-wrap"><div class="wph-orb-core"></div><div class="wph-orb-ring wph-ring-1"></div><div class="wph-orb-ring wph-ring-2"></div></div>
+                                    <div class="aa-tab-loader-label">Generating Meeting Summary…</div>
+                                    <div class="aa-tab-loader-progress">
+                                        <div class="aa-tab-loader-track"><div class="aa-tab-loader-fill" style={progressBarStyle}></div></div>
+                                        <span class="aa-tab-loader-pct">{formattedProgress}</span>
+                                    </div>
+                                </div>
+                            </template>
+                            <template lwc:if={showWpLoader}>
+                                <div class="aa-tab-loader" role="status" aria-live="polite">
+                                    <div class="wph-orb-wrap"><div class="wph-orb-core"></div><div class="wph-orb-ring wph-ring-1"></div><div class="wph-orb-ring wph-ring-2"></div></div>
+                                    <div class="aa-tab-loader-label">Structuring Wealth Plan…</div>
+                                    <div class="aa-tab-loader-progress">
+                                        <div class="aa-tab-loader-track"><div class="aa-tab-loader-fill" style={progressBarStyle}></div></div>
+                                        <span class="aa-tab-loader-pct">{formattedProgress}</span>
+                                    </div>
+                                </div>
+                            </template>
+                            <template lwc:if={showTodosLoader}>
+                                <div class="aa-tab-loader" role="status" aria-live="polite">
+                                    <div class="wph-orb-wrap"><div class="wph-orb-core"></div><div class="wph-orb-ring wph-ring-1"></div><div class="wph-orb-ring wph-ring-2"></div></div>
+                                    <div class="aa-tab-loader-label">Generating To-Do's…</div>
+                                    <div class="aa-tab-loader-progress">
+                                        <div class="aa-tab-loader-track"><div class="aa-tab-loader-fill" style={progressBarStyle}></div></div>
+                                        <span class="aa-tab-loader-pct">{formattedProgress}</span>
+                                    </div>
+                                </div>
+                            </template>
+
+                            <!-- Empty-state hero CTAs (shown when the active tab has no data and nothing is generating) -->
+                            <template lwc:if={showSummaryHero}>
+                                <div class="aa-hero">
+                                    <svg class="aa-hero-sparkle" viewBox="0 0 24 24" width="34" height="34" fill="currentColor"><path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z"/></svg>
+                                    <div class="aa-hero-title">No meeting summary yet</div>
+                                    <div class="aa-hero-sub">Provide the meeting notes, files and category on the left, then generate.</div>
+                                    <button class="aa-primary-cta" onclick={handlePrimaryAction} disabled={isPrimaryActionDisabled}>
+                                        <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z"/></svg>
+                                        <span>Generate Meeting Summary</span>
+                                    </button>
+                                    <template lwc:if={needsEventFirst}>
+                                        <div class="aa-hero-blocked">Select a meeting event above to continue.</div>
+                                    </template>
+                                    <template lwc:if={isCategoryMissing}>
+                                        <div class="aa-hero-blocked">Choose a Meeting Category on the left to continue.</div>
+                                    </template>
+                                </div>
+                            </template>
+                            <template lwc:if={showWpHero}>
+                                <div class="aa-hero">
+                                    <svg class="aa-hero-sparkle" viewBox="0 0 24 24" width="34" height="34" fill="currentColor"><path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z"/></svg>
+                                    <div class="aa-hero-title">No Wealth Plan yet</div>
+                                    <div class="aa-hero-sub">Add context on the left and let the AI structure the plan.</div>
+                                    <button class="aa-primary-cta" onclick={handlePrimaryAction}>
+                                        <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z"/></svg>
+                                        <span>Generate Wealth Plan</span>
+                                    </button>
+                                </div>
+                            </template>
+                            <template lwc:if={showTodosHero}>
+                                <div class="aa-hero">
+                                    <svg class="aa-hero-sparkle" viewBox="0 0 24 24" width="34" height="34" fill="currentColor"><path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z"/></svg>
+                                    <div class="aa-hero-title">No To-Do's yet</div>
+                                    <div class="aa-hero-sub">Turn the meeting notes into action items with one click.</div>
+                                    <button class="aa-primary-cta" onclick={handlePrimaryAction}>
+                                        <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z"/></svg>
+                                        <span>Generate To-Do's</span>
+                                    </button>
+                                </div>
+                            </template>
+
+                            <!-- ═══════════════════════════════════════════
+                                 WORK-IN-PROGRESS TABS
+                                 Placeholders so the shape of the feature is visible.
+                                 Neither generates, saves, or shows a footer CTA (isWipTab).
+                                 ═══════════════════════════════════════════ -->
+                            <template lwc:if={isPreMeetingTab}>
+                                <div class="aa-wip-panel">
+                                    <div class="aa-wip-banner">
+                                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
+                                        <span><b>Work in progress</b> — this tab is a placeholder. Nothing here is generated or saved yet.</span>
+                                    </div>
+                                    <div class="aa-wip-body">
+                                        <div class="aa-wip-title">Meeting preparation</div>
+                                        <p class="aa-wip-sub">
+                                            This will pull together everything that has happened with the client
+                                            over the last year and turn it into a short bullet-point prep sheet to
+                                            read before the meeting.
+                                        </p>
+                                        <ul class="aa-wip-list">
+                                            <li>Previous meeting summaries</li>
+                                            <li>Open and recently completed tasks</li>
+                                            <li>Events from the last 12 months</li>
+                                            <li>A generated bullet-point briefing</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </template>
+
+                            <template lwc:if={isInternalNotesTab}>
+                                <div class="aa-wip-panel">
+                                    <div class="aa-wip-banner">
+                                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
+                                        <span><b>Work in progress</b> — you can type here, but notes are <b>not saved yet</b> and are lost when you leave.</span>
+                                    </div>
+                                    <div class="aa-wip-body aa-wip-body--fill">
+                                        <div class="aa-wip-title">Internal meeting notes</div>
+                                        <p class="aa-wip-sub">
+                                            Your own working notes. Internal only — these are not part of the client
+                                            meeting summary.
+                                        </p>
+                                        <textarea class="aa-textarea aa-internal-notes"
+                                                  placeholder="Internal notes, reminders, things to follow up on…"
+                                                  aria-label="Internal meeting notes"
+                                                  oninput={handleInternalNotesInput}></textarea>
+                                    </div>
+                                </div>
+                            </template>
+
+                            <!-- ═══════════════════════════════════════════════════
+                                 THE THREE CHILD PANELS
+                                 All three are mounted at ALL times. `summaryPanelClass`
+                                 / `wealthPlanPanelClass` / `todosPanelClass` add
+                                 `aa-tab-panel--hidden` to the inactive ones — CSS, not
+                                 lwc:if, so a background generation is not destroyed by a
+                                 tab switch and its result still arrives.
+
+                                 Note the two DISTINCT c-advisor-meeting-summary instances
+                                 below (data-role="summary" and data-role="todos"). They
+                                 have separate state; JS must address them via
+                                 _msChild(role), not a bare querySelector.
+
+                                 `embedded-layout` tells the child to render body-only —
+                                 no header, no left panel, no save bar — because this
+                                 parent supplies all of that chrome.
+
+                                 Listeners: onsummarychange / ontodoschange / onwpgenerated
+                                 mirror results up; onmsstatechange drives the footer;
+                                 onflowoutput / onflownext are re-emitted to the Flow.
+                                 ═══════════════════════════════════════════════════ -->
+
+                            <!-- Meeting Summary panel (persistent) -->
+                            <div class={summaryPanelClass}>
+                                    <c-advisor-meeting-summary
+                                        data-role="summary"
+                                        embedded-layout
+                                        record-id={recordId}
+                                        selected-event-id={_selectedEventId}
+                                        input-primary-member={inputPrimaryMember}
+                                        input-primary-member-id={inputPrimaryMemberId}
+                                        selected-meeting-type={_selectedMeetingType}
+                                        has-todos={_hasTodos}
+                                        input-meeting-notes={inputMeetingNotes}
+                                        input-events={inputEvents}
+                                        input-artifacts={inputArtifacts}
+                                        input-content-document-links={inputContentDocumentLinks}
+                                        input-content-documents={inputContentDocuments}
+                                        input-tasks={inputTasks}
+                                        input-household-members={inputHouseholdMembers}
+                                        shared-files={_sharedFiles}
+                                        artifact-file-ids={_selectedArtifactFileIds}
+                                        free-text={_freeText}
+                                        meeting-summary-flow-api-name={meetingSummaryFlowApiName}
+                                        regenerate-summary-flow-api-name={regenerateSummaryFlowApiName}
+                                        save-summary-flow-api-name={saveSummaryFlowApiName}
+                                        version-history-flow-api-name={versionHistoryFlowApiName}
+                                        create-version-flow-api-name={createVersionFlowApiName}
+                                        save-todos-flow-api-name={saveTodosFlowApiName}
+                                        save-file-to-event-flow-api-name={saveFileToEventFlowApiName}
+                                        input-who-id={inputWhoId}
+                                        brief-enabled={briefEnabled}
+                                        brief-open-by-default={briefOpenByDefault}
+                                        show-edit-tracking={showEditTracking}
+                                        show-discard-section={showDiscardSection}
+                                        show-regenerate-section={showRegenerateSection}
+                                        show-scroll-to-error={showScrollToError}
+                                        active-ms-section={_activeMsSection}
+                                        onsummarychange={handleSummaryChange}
+                                        onflowoutput={handleChildFlowOutput}
+                                        onflownext={handleChildFlowNext}
+                                        ontodoschange={handleTodosChange}
+                                        onmsstatechange={handleMsStateChange}
+                                    ></c-advisor-meeting-summary>
+                            </div><!-- end summary panel -->
+
+                            <!-- Wealth Plan panel (persistent) -->
+                            <div class={wpPanelClass}>
+                                    <c-advisor-wealth-plan
+                                        embedded-layout
+                                        record-id={recordId}
+                                        selected-event-id={_selectedEventId}
+                                        shared-files={_sharedFiles}
+                                        artifact-file-ids={_selectedArtifactFileIds}
+                                        free-text={_freeText}
+                                        flow-api-name={flowApiName}
+                                        wealth-plan-save-flow-api-name={wealthPlanSaveFlowApiName}
+                                        save-todos-flow-api-name={saveTodosFlowApiName}
+                                        save-file-to-event-flow-api-name={saveFileToEventFlowApiName}
+                                        input-who-id={inputWhoId}
+                                        input-household-members={inputHouseholdMembers}
+                                        input-primary-member={inputPrimaryMember}
+                                        input-primary-member-id={inputPrimaryMemberId}
+                                        input-companies={inputCompanies}
+                                        input-persons={inputPersons}
+                                        input-existing-goals={inputExistingGoals}
+                                        input-existing-incomes={inputExistingIncomes}
+                                        input-existing-assets={inputExistingAssets}
+                                        input-existing-milestones={inputExistingMilestones}
+                                        input-existing-ownerships={inputExistingOwnerships}
+                                        input-existing-sustainability={inputExistingSustainability}
+                                        input-existing-greetings={inputExistingGreetings}
+                                        input-events={inputEvents}
+                                        input-meeting-notes={inputMeetingNotes}
+                                        input-tasks={inputTasks}
+                                        current-note-html={_currentNoteHtml}
+                                        show-edit-tracking={showEditTracking}
+                                        show-expand-collapse-all={showExpandCollapseAll}
+                                        show-detailed-stats={showDetailedStats}
+                                        show-discard-section={showDiscardSection}
+                                        show-regenerate-section={showRegenerateSection}
+                                        show-scroll-to-error={showScrollToError}
+                                        onwpgenerated={handleWpGenerated}
+                                        onflowoutput={handleChildFlowOutput}
+                                        onflownext={handleChildFlowNext}
+                                    ></c-advisor-wealth-plan>
+                            </div><!-- end wealth plan panel -->
+
+                            <!-- To-Do's panel (persistent, always in todos mode) -->
+                            <div class={todosPanelClass}>
+                                    <c-advisor-meeting-summary
+                                        data-role="todos"
+                                        embedded-layout
+                                        record-id={recordId}
+                                        selected-event-id={_selectedEventId}
+                                        input-primary-member={inputPrimaryMember}
+                                        input-primary-member-id={inputPrimaryMemberId}
+                                        selected-meeting-type={_selectedMeetingType}
+                                        has-todos={_hasTodos}
+                                        input-meeting-notes={inputMeetingNotes}
+                                        input-events={inputEvents}
+                                        input-artifacts={inputArtifacts}
+                                        input-content-document-links={inputContentDocumentLinks}
+                                        input-content-documents={inputContentDocuments}
+                                        input-tasks={inputTasks}
+                                        input-household-members={inputHouseholdMembers}
+                                        shared-files={_sharedFiles}
+                                        artifact-file-ids={_selectedArtifactFileIds}
+                                        free-text={_freeText}
+                                        meeting-summary-flow-api-name={meetingSummaryFlowApiName}
+                                        regenerate-summary-flow-api-name={regenerateSummaryFlowApiName}
+                                        save-summary-flow-api-name={saveSummaryFlowApiName}
+                                        version-history-flow-api-name={versionHistoryFlowApiName}
+                                        create-version-flow-api-name={createVersionFlowApiName}
+                                        save-todos-flow-api-name={saveTodosFlowApiName}
+                                        save-file-to-event-flow-api-name={saveFileToEventFlowApiName}
+                                        input-who-id={inputWhoId}
+                                        brief-enabled={briefEnabled}
+                                        brief-open-by-default={briefOpenByDefault}
+                                        show-edit-tracking={showEditTracking}
+                                        show-discard-section={showDiscardSection}
+                                        show-regenerate-section={showRegenerateSection}
+                                        show-scroll-to-error={showScrollToError}
+                                        active-ms-section="todos"
+                                        onsummarychange={handleSummaryChange}
+                                        onflowoutput={handleChildFlowOutput}
+                                        onflownext={handleChildFlowNext}
+                                        ontodoschange={handleTodosChange}
+                                        onmsstatechange={handleMsStateChange}
+                                    ></c-advisor-meeting-summary>
+                            </div><!-- end todos panel -->
+                        </div><!-- end aa-tab-content -->
+                    </div>
+                </div>
+
+            </div><!-- end aa-body grid -->
+
+            <!-- ═══════════════════════════════════════════
+                 UNIFIED FIXED FOOTER — spans the full width, always visible.
+                 Left  = primary CTA (Generate Meeting Summary / Wealth Plan / To-Do's)
+                 Right = contextual buttons that appear only when their action is relevant
+                         (Publish, Publish & Exit, Delete Note, Save to Wealth Plan, Save & Exit)
+
+                 Every button here is a REMOTE CONTROL for a child: the handlers do
+                 nothing but call an imperative @api method on the right child instance
+                 (handleMsPublish → _msChild('summary').publishNote(), etc.).
+                 Which buttons show is decided by `_msState`, the state object the
+                 meeting-summary child pushes up via `msstatechange` — the parent's own
+                 note-state getters are stale fork residue and must not be used here.
+                 ═══════════════════════════════════════════ -->
+            <div class="aa-footer">
+                <!-- LEFT (1/3): primary CTA — Generate Meeting Summary / Wealth Plan / To-Do's -->
+                <div class="aa-footer-left">
+                    <template lwc:if={showFooterPrimaryCta}>
+                        <button class="aa-primary-cta" onclick={handlePrimaryAction} disabled={isPrimaryActionDisabled}>
+                            <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z"/></svg>
+                            <span>{primaryActionLabel}</span>
+                        </button>
+                    </template>
+                </div>
+
+                <!-- RIGHT (2/3): contextual action buttons, right-aligned in one row -->
+                <div class="aa-footer-right">
+                    <!-- Unsaved draft: save first, publish later. Mirrors the child's save bar. -->
+                    <template lwc:if={showSummarySaveActions}>
+                        <button class="aa-footer-btn aa-footer-btn--brand" onclick={handleMsSaveReview} disabled={summaryActionsBusy}>
+                            <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                            <span>Save &amp; Review</span>
+                        </button>
+                        <button class="aa-footer-btn aa-footer-btn--neutral" onclick={handleMsPublish} disabled={summaryActionsBusy}>
+                            <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                            <span>Save &amp; Publish</span>
+                        </button>
+                        <button class="aa-footer-btn aa-footer-btn--neutral" onclick={handleMsSaveAndExit} disabled={summaryActionsBusy}>
+                            <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                            <span>Save &amp; Exit</span>
+                        </button>
+                    </template>
+                    <template lwc:if={showPublishButtons}>
+                        <button class="aa-footer-btn aa-footer-btn--brand" onclick={handleMsPublish}>
+                            <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                            <span>Publish</span>
+                        </button>
+                        <button class="aa-footer-btn aa-footer-btn--neutral" onclick={handleMsPublishAndExit}>
+                            <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                            <span>Publish &amp; Exit</span>
+                        </button>
+                    </template>
+                    <template lwc:if={showDeleteNoteButton}>
+                        <button class="aa-footer-btn aa-footer-btn--danger" onclick={handleMsDelete}>
+                            <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                            <span>Delete Note</span>
+                        </button>
+                    </template>
+                    <template lwc:if={showWealthPlanSave}>
+                        <button class="aa-footer-btn aa-footer-btn--neutral" onclick={handleParentSaveAndExit}>
+                            <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                            <span>Save &amp; Exit</span>
+                        </button>
+                        <button class="aa-footer-btn aa-footer-btn--brand" onclick={handleParentSaveToWealthPlan}>
+                            <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                            <span>Save to Wealth Plan</span>
+                        </button>
+                    </template>
+                </div>
+            </div>
+        </template>
+
+
+    </div><!-- /containerClass (opened line 88) — NOTE: the comments on the three
+              closing tags at the end of this file are off by one level because of
+              the stray </div> there; this is the tag that actually closes it. -->
+
+    <!-- Save-before-regenerate: never destroy an unpublished draft silently.
+         Reached from handlePrimaryAction when _msState.hasUnpublishedSummary is true.
+         Three outcomes: Cancel / Discard & generate / Save then generate.
+         Renders OUTSIDE containerClass — a side effect of the stray </div> below. -->
+    <template lwc:if={_showSaveBeforeGenerate}>
+        <section class="wph-modal-root" role="dialog" aria-modal="true" aria-labelledby="aaSaveFirstTitle">
+            <div class="wph-modal-backdrop" onclick={handleCancelSaveBeforeGenerate}></div>
+            <div class="wph-modal-card fade-in-up">
+                <div class="wph-confirm-header">
+                    <svg viewBox="0 0 24 24" width="22" height="22" stroke="#d97706" stroke-width="2" fill="none"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+                    <h3 id="aaSaveFirstTitle"><b>Save the existing meeting summary first?</b></h3>
+                </div>
+                <div class="wph-confirm-body">
+                    <p>{saveBeforeGenerateBody}</p>
+                    <p>Save it now and you can publish it afterwards, or discard it and start fresh.</p>
+                </div>
+                <div class="wph-confirm-actions aa-confirm-actions-3">
+                    <button class="wph-confirm-cancel" onclick={handleCancelSaveBeforeGenerate}>Cancel</button>
+                    <button class="aa-footer-btn aa-footer-btn--danger" onclick={handleDiscardThenGenerate}>
+                        <span>Discard &amp; generate new</span>
+                    </button>
+                    <button class="wph-confirm-go" onclick={handleSaveThenGenerate}>
+                        <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2.5" fill="none"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                        <b>Save existing &amp; generate new</b>
+                    </button>
+                </div>
+            </div>
+        </section>
+    </template>
+
+    <!-- The save-file / save-confirm / bulk-lock modals moved into advisorWealthPlan,
+         which owns the state that opens them. Do not re-add them here. -->
+
+        <!-- ═══════════════════════════════════════════
+             TOUR GUIDE OVERLAY
+             ═══════════════════════════════════════════ -->
+        <template lwc:if={_tourActive}>
+            <div class="wph-tour-highlight" style={_tourHighlightStyle}></div>
+            <div class={tourBubbleClass} style={_tourBubbleStyle}>
+                <div class="wph-tour-arrow" style={_tourArrowStyle}></div>
+                <div class="wph-tour-header">
+                    <span class="wph-tour-badge">{tourStepNum} / {tourStepTotal}</span>
+                    <button class="wph-tour-close" onclick={handleTourSkip} title="Skip tour">&#x2715;</button>
+                </div>
+                <p class="wph-tour-title">{tourTitle}</p>
+                <p class="wph-tour-text">{tourText}</p>
+                <div class="wph-tour-footer">
+                    <button class="wph-tour-skip-btn" onclick={handleTourSkip}>Skip tour</button>
+                    <button class="wph-tour-next-btn" onclick={handleTourNext}>{tourNextLabel}</button>
+                </div>
+            </div>
+        </template>
+
+            </div><!-- /wph-overlay-panel-wrap (opened line 80) -->
+            </div><!-- /rootWrapperClass (opened line 69) -->
+        <!-- ┌─ FIXME (DEFECTS.md #1) — STRAY CLOSING TAG ────────────────────────┐
+             │ The </div> below has no matching <div>. By this point every div is  │
+             │ already closed: line 1090 closed containerClass, and the two above  │
+             │ closed the panel wrap and the root wrapper. The open element here   │
+             │ is <template lwc:if={showMainContent}> from line 68.                │
+             │                                                                    │
+             │ It does NOT break the build — the LWC compiler parses this file     │
+             │ with zero warnings and silently drops the tag. The real effect is   │
+             │ structural: the save-before-generate modal and the tour overlay     │
+             │ above end up as SIBLINGS of containerClass inside the panel wrap,   │
+             │ rather than inside containerClass. Both are positioned overlays, so │
+             │ they look correct today, but they no longer inherit containerClass's│
+             │ stacking and scroll context.                                        │
+             │                                                                    │
+             │ The fix is to DELETE this line — left in place deliberately, since  │
+             │ this pass is documentation-only.                                    │
+             └────────────────────────────────────────────────────────────────────┘ -->
+        </div>
+    </template><!-- /showMainContent (opened line 68) -->
+    <!-- Global drag overlay — captures mousemove/mouseup during modal resize drag -->
+    <template lwc:if={_modalDragging}>
+        <div class="wph-drag-overlay"
+             onmousemove={handleModalResizeDrag}
+             onmouseup={handleModalResizeDragEnd}
+             onmouseleave={handleModalResizeDragEnd}>
+        </div>
+    </template>
+</template>
