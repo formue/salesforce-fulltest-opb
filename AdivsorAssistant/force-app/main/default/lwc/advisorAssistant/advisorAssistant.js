@@ -78,8 +78,8 @@ import saveWealthPlan      from '@salesforce/apex/MeetingSummaryController.saveW
 import getMeetingNoteVersions from '@salesforce/apex/MeetingSummaryController.getMeetingNoteVersions';
 // ── Platform modules ────────────────────────────────────────────────────────
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
-// NavigationMixin is applied to the class but never used here — the file-preview
-// navigation that needed it now lives in the children. Harmless, fork residue.
+// NavigationMixin powers handlePreviewFile — the standard Salesforce file preview
+// opened from the Meeting Files and Document Upload lists.
 import { NavigationMixin } from 'lightning/navigation';
 // Only this parent may use flowSupport; nested children cannot (see file header).
 import { FlowAttributeChangeEvent, FlowNavigationNextEvent } from 'lightning/flowSupport';
@@ -90,7 +90,7 @@ import { getObjectInfo, getPicklistValues } from 'lightning/uiObjectInfoApi';
 // the getObjectInfo / getPicklistValues wires further down, which in turn build the
 // dropdown options for the wealth-plan review grid.
 // NOTE: that review grid now lives in advisorWealthPlan; the wires here still run
-// on every mount but nothing in this template consumes them. See DEFECTS.md #12.
+// on every mount but nothing in this template consumes them. See DEFECTS.md #11.
 import GOAL_OBJECT from '@salesforce/schema/FinServ__FinancialGoal__c';
 import STATUS_FIELD from '@salesforce/schema/FinServ__FinancialGoal__c.FinServ__Status__c';
 import FF_GOAL_FIELD from '@salesforce/schema/FinServ__FinancialGoal__c.FF_Goal__c';
@@ -402,10 +402,17 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
     //                   silently disables the feature that uses it.
     //   input*        — record collections the Flow queried up front. On a Record
     //                   Page target none of them are exposed in the meta, so they
-    //                   are always empty there (see DEFECTS.md #11).
+    //                   are always empty there (see DEFECTS.md #10).
     //
     // The four collections that arrive late from the Flow use getter/setter pairs
     // rather than plain fields, so the component can react the moment data lands.
+
+    // ── Header text ─────────────────────────────────────────────────────────
+    // Both default to the product's own wording when left unset or blank, so an
+    // existing placement that configures neither is unaffected. Resolved through
+    // `headerTitle` / `headerSubtitle` below — never read these two directly.
+    @api componentTitle    = '';
+    @api componentSubtitle = '';
 
     @api recordId;
     @api flowApiName;                      // Wealth Plan structuring flow
@@ -472,6 +479,21 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
             this._step = 'summary';
         }
     }
+
+    // ── Optional event ranges ───────────────────────────────────────────────
+    // Each populated collection adds an option to the range selector in the event
+    // picker; an empty one is simply not offered (see `eventRangeOptions`). The
+    // Flow supplies them all up front, so switching range is a client-side swap
+    // with no extra query. The ranges nest (3 ⊂ 6 ⊂ 12 ⊂ all), which is why
+    // `allKnownEvents` dedupes on Id.
+    //
+    // Do NOT read these directly — go through `activeEvents` (the current range)
+    // or `allKnownEvents` (the union, for resolving the selected event).
+    @api inputEventsLast3Months  = [];
+    @api inputEventsLast6Months  = [];
+    @api inputEventsLast12Months = [];
+    @api inputEventsAll          = [];
+
     @api inputHouseholdMembers = [];
     @api inputCompanies = [];   // Account records — used as options for Company_Owned__c
     @api inputPersons   = [];   // Person/Account records — used as options for Company_Owner__c
@@ -519,6 +541,8 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
     @api showScrollToError      = false;
     @api briefEnabled           = false;   // show "At a Glance" section when a brief is returned
     @api briefOpenByDefault     = false;   // start the section expanded
+    // Forwarded to <c-advisor-internal-notes>, which owns the save.
+    @api saveInternalNotesFlowApiName = '';
     @api saveTodosFlowApiName       = '';  // autolaunched flow that creates Task records from accepted action items
     @api saveFileToEventFlowApiName = '';  // autolaunched flow invoked when saving an uploaded file to the event record
     @api wealthPlanSaveFlowApiName  = '';  // autolaunched flow that handles WP DML via typed SObject record collections
@@ -563,7 +587,7 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
         }, 10000);
 
         // Keyboard shortcuts for the wealth-plan review grid (↑ ↓ Enter d Esc).
-        // FIXME (DEFECTS.md #8): `_handleKeyDown` bails immediately unless
+        // FIXME (DEFECTS.md #7): `_handleKeyDown` bails immediately unless
         // `_step === 'review'`, and no live path here ever sets that — the grid
         // moved to advisorWealthPlan. This is a permanent no-op document listener.
         this._boundKeyHandler = this._handleKeyDown.bind(this);
@@ -578,7 +602,7 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
      *  2. seed the contenteditable editors' innerHTML once (they are uncontrolled —
      *     re-setting innerHTML on every render would destroy the caret).
      *
-     * FIXME (DEFECTS.md #9): neither `summaryEditor` nor `briefEditor` exists as an
+     * FIXME (DEFECTS.md #8): neither `summaryEditor` nor `briefEditor` exists as an
      * `lwc:ref` in this template any more (only `focusAbsorber` does), so both
      * seeding branches below are dead. The live editors are in the children.
      */
@@ -692,7 +716,7 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
     @track _stagedFile  = null;   // single file for Advanced section regeneration (unchanged)
     @track _sharedFiles = [];    // shared file pool — visible in both WP and MS upload zones
     @track _uploadFeedback = null; // { latestName, totalFiles } — shown for 3s after upload
-    // FIXME (DEFECTS.md #7): not cleared in disconnectedCallback, unlike the other
+    // FIXME (DEFECTS.md #6): not cleared in disconnectedCallback, unlike the other
     // timers — fires into a torn-down component if the user closes within 3 s.
     _uploadFeedbackTimer = null;
     @track _selectedTaskIds = {};
@@ -856,8 +880,8 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
     // TWO THINGS TO KNOW BEFORE EDITING:
     //  1. LEGACY — the only consumer of these options is `reviewSections` further
     //     down, which this template never renders. The live grid is in
-    //     advisorWealthPlan. They still fire on every mount. See DEFECTS.md #12.
-    //  2. FIXME (DEFECTS.md #6) — every wire below destructures `{ data }` only.
+    //     advisorWealthPlan. They still fire on every mount. See DEFECTS.md #11.
+    //  2. FIXME (DEFECTS.md #5) — every wire below destructures `{ data }` only.
     //     A picklist that fails to load (FLS, deleted field, bad record type) is
     //     silent: the option list stays empty, and `_isValidOption` treats an empty
     //     list as "not loaded yet, skip validation", so bad values pass validation.
@@ -979,7 +1003,7 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
      * Deliberately permissive: an unloaded picklist (length <= 1, i.e. only the
      * "-- Select --" placeholder) is treated as valid so the grid does not flag
      * every row red during the wire round-trip. The cost of that leniency is
-     * DEFECTS.md #6 — a wire that errors looks identical to one still loading.
+     * DEFECTS.md #5 — a wire that errors looks identical to one still loading.
      * @param {string} selectKey key into `_selectOptionsMap`
      * @param {string} value stored field value
      * @returns {boolean}
@@ -1067,12 +1091,169 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
     get showEventPicker()  { return this.isSummaryStep || this.isReviewStep || this.isLoadingStep; }
     get showBetaBadge()  { return !this.hideBetaBadge; }
 
+    // ── Header text ─────────────────────────────────────────────────────────
+    // Single source for the displayed title/subtitle. A blank or whitespace-only
+    // @api value falls back to the default wording, so an admin cannot
+    // accidentally ship an empty header by clearing the field.
+    get headerTitle() {
+        return (this.componentTitle || '').trim() || 'Advisor Assistant';
+    }
+    get headerSubtitle() {
+        return (this.componentSubtitle || '').trim() || 'AI-powered meeting & wealth plan structuring';
+    }
+
     get progressBarStyle()  { return `width: ${this._progressValue}%`; }
     get formattedProgress() { return `${Math.round(this._progressValue)}%`; }
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // EVENT RANGES
+    // ═══════════════════════════════════════════════════════════════════════
+    //
+    // The picker can show one of up to five lists. `inputEvents` is the always-present
+    // "Default" range; the four optional collections each add an option when populated.
+    //
+    // TWO ACCESSORS, and using the wrong one is a real bug:
+    //   activeEvents    — just the selected range. For the picker list and its count.
+    //   allKnownEvents  — the union of all five, deduped by Id. For resolving the
+    //                     SELECTED event, and for what the children receive.
+    //
+    // Why the split: switching range deliberately KEEPS the current selection, so the
+    // selected event may not be in the active range. If the selected-event lookups used
+    // `activeEvents`, picking an event under "All" and then narrowing to "Last 3 months"
+    // would silently break the header pill, the meeting-type restore, the WhoId used for
+    // to-dos, and the child's note matching.
+
+    /** Selected range key. Not necessarily available — resolve via `_activeRangeKey`. */
+    @track _selectedRange = 'default';
+
+    /** The five candidate ranges, in display order. Single source for keys and labels. */
+    get _rangeDefs() {
+        return [
+            // Labels are deliberately terse: the "RANGE" caption above the control
+            // supplies the "last …" sense, and the full wording ("Last 12 months")
+            // overflowed the 560px picker and wrapped to a ragged second line.
+            { key: 'default', label: 'Default',   events: this._inputEvents            || [] },
+            { key: 'm3',      label: '3 months',  events: this.inputEventsLast3Months  || [] },
+            { key: 'm6',      label: '6 months',  events: this.inputEventsLast6Months  || [] },
+            { key: 'm12',     label: '12 months', events: this.inputEventsLast12Months || [] },
+            { key: 'all',     label: 'All',       events: this.inputEventsAll          || [] },
+        ];
+    }
+
+    /** Ranges the Flow actually populated. An empty collection is never offered. */
+    get _availableRanges() {
+        return this._rangeDefs.filter(r => r.events.length > 0);
+    }
+
+    /**
+     * The range in effect, which is not always the one the advisor clicked: Flow
+     * collections arrive asynchronously and can change on a re-run, so a selected
+     * range may not (yet) exist. Falls back to 'default', then to the first available.
+     */
+    get _activeRangeKey() {
+        const avail = this._availableRanges;
+        if (avail.some(r => r.key === this._selectedRange)) return this._selectedRange;
+        if (avail.some(r => r.key === 'default')) return 'default';
+        return avail.length ? avail[0].key : 'default';
+    }
+
+    /** Pill models for the selector. */
+    get eventRangeOptions() {
+        const active = this._activeRangeKey;
+        return this._availableRanges.map(r => ({
+            key: r.key,
+            label: r.label,
+            count: r.events.length,
+            isActive: r.key === active,
+            cls: r.key === active ? 'aa-range-seg aa-range-seg--active' : 'aa-range-seg',
+            pressed: String(r.key === active),
+        }));
+    }
+
+    /** Only worth showing the selector when there is an actual choice. */
+    get showEventRangeSelector() { return this._availableRanges.length > 1; }
+
+    /** Events in the active range — drives the picker list and its count. */
+    get activeEvents() {
+        const active = this._activeRangeKey;
+        const def = this._rangeDefs.find(r => r.key === active);
+        return def ? def.events : [];
+    }
+
+    // Memo for `allKnownEvents`. Keyed on the identities of the five source arrays,
+    // which Flow replaces wholesale when the data changes.
+    _allKnownSrcs  = null;
+    _allKnownCache = [];
+
+    /**
+     * Every event the component knows about, across all ranges, deduped by Id.
+     * Use this for any lookup of the *selected* event — see the note above.
+     *
+     * MUST return a STABLE reference. This value is passed down as `input-events`,
+     * and both children's `inputEvents` setter runs `this._step = 'summary'` on any
+     * non-empty assignment. LWC re-invokes an @api setter whenever the value's
+     * identity changes, so rebuilding the array on every access made that setter
+     * fire on every parent re-render — which continuously reset advisorWealthPlan
+     * out of its 'review' step and blanked the completed plan. Memoise, and only
+     * rebuild when one of the source collections is actually replaced.
+     */
+    get allKnownEvents() {
+        const srcs = [
+            this._inputEvents            || [],
+            this.inputEventsLast3Months  || [],
+            this.inputEventsLast6Months  || [],
+            this.inputEventsLast12Months || [],
+            this.inputEventsAll          || [],
+        ];
+        const prev = this._allKnownSrcs;
+        if (prev && prev.length === srcs.length && prev.every((a, i) => a === srcs[i])) {
+            return this._allKnownCache;
+        }
+        // Common case — only the default collection is populated. Hand back that very
+        // array so the reference is identical to what the children saw before ranges existed.
+        const nonEmpty = srcs.filter(a => a.length > 0);
+        let out;
+        if (nonEmpty.length <= 1) {
+            out = nonEmpty[0] || [];
+        } else {
+            const seen = new Set();
+            out = [];
+            for (const arr of srcs) {
+                for (const e of arr) {
+                    if (!e || !e.Id || seen.has(e.Id)) continue;
+                    seen.add(e.Id);
+                    out.push(e);
+                }
+            }
+        }
+        this._allKnownSrcs  = srcs;
+        this._allKnownCache = out;
+        return out;
+    }
+
+    handleEventRangeSelect(event) {
+        const key = event.currentTarget.dataset.range;
+        // Selection is intentionally preserved — see the note above.
+        if (key) this._selectedRange = key;
+    }
+
+    /**
+     * Empty-state text for the picker. Names the range when the advisor has narrowed
+     * to one, so "nothing here" doesn't read as "this household has no meetings".
+     */
+    get noEventsMessage() {
+        const key = this._activeRangeKey;
+        if (key === 'default' || !this.showEventRangeSelector) {
+            return 'No meeting events found for this contact.';
+        }
+        const full = { m3: 'the last 3 months', m6: 'the last 6 months',
+                       m12: 'the last 12 months', all: 'any period' };
+        return `No meeting events in ${full[key] || 'this range'}. Try a wider range.`;
+    }
+
     // ── Event selection ──────────────────────────────────────────────────────
     get eventItems() {
-        return (this.inputEvents || []).map(e => {
+        return (this.activeEvents || []).map(e => {
             const dateStr = e.ActivityDate || e.StartDateTime || '';
             let date = '';
             if (dateStr) {
@@ -1132,11 +1313,11 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
         if (!ev) return '';
         return ev.time ? `${ev.date} · kl. ${ev.time}` : ev.date;
     }
-    get hasEvents()              { return (this.inputEvents || []).length > 0; }
+    get hasEvents()              { return (this.activeEvents || []).length > 0; }
     get isEventsLoading()        { return this._inputEventsLoading; }
     get hasNoEvents()            { return !this._inputEventsLoading && !this.hasEvents; }
     get eventsCountLabel() {
-        const n = (this.inputEvents || []).length;
+        const n = (this.activeEvents || []).length;
         return n === 1 ? '1 meeting found' : `${n} meetings found`;
     }
     get eventsLoadedTimeLabel() {
@@ -1151,7 +1332,7 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
     // ── Meeting note getters ─────────────────────────────────────────────────
     get selectedEventNote() {
         if (this._noteDeletedLocally) return null;
-        const evt = (this._inputEvents || []).find(e => e.Id === this._selectedEventId);
+        const evt = (this.allKnownEvents || []).find(e => e.Id === this._selectedEventId);
         if (!evt?.MeetingNote__c) return null;
         return (this._inputMeetingNotes || []).find(n => n.Id === evt.MeetingNote__c) || null;
     }
@@ -1310,21 +1491,11 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
     get todosAcceptedTitle()    { return `${this.acceptedTodosCount} of ${this.todosCreatedCount} accepted`; }
     get hasExistingWealthPlan() { return !!this.inputWealthPlanId; }
     get hasSavedDraft()        { return this._savedDraftSections !== null; }
-    // Inline style for active tab — bypasses CSS scoping issues in Salesforce synthetic shadow DOM
-    static _TAB_ACTIVE_STYLE   = 'background:#dce8f5;border-color:#1e3a5f;color:#0f2044;font-weight:700';
-    static _TAB_INACTIVE_STYLE = '';
-    // ┌─ FIXME (DEFECTS.md #2) — BROKEN, DO NOT BIND ─────────────────────────┐
-    // │ `WealthPlanHelper` is not defined in this module. It was the class name
-    // │ in the wealthPlanHelper fork this file was copied from; here the class is
-    // │ `AdvisorAssistant` (and the two statics above belong to it). Reading any
-    // │ of the three getters below throws ReferenceError and kills the render.
-    // │ They survive only because nothing in advisorAssistant.html binds them —
-    // │ the live tab styling is aaTabSummaryClass / aaTabWealthPlanClass /
-    // │ aaTabTodosClass. The correct receiver is `AdvisorAssistant`.
-    // └───────────────────────────────────────────────────────────────────────┘
-    get summaryTabStyle()    { return this._activeTab === 'summary'    ? WealthPlanHelper._TAB_ACTIVE_STYLE : WealthPlanHelper._TAB_INACTIVE_STYLE; }
-    get wealthPlanTabStyle() { return this._activeTab === 'wealthplan' ? WealthPlanHelper._TAB_ACTIVE_STYLE : WealthPlanHelper._TAB_INACTIVE_STYLE; }
-    get existingTabStyle()   { return this._activeTab === 'existing'   ? WealthPlanHelper._TAB_ACTIVE_STYLE : WealthPlanHelper._TAB_INACTIVE_STYLE; }
+    // Removed: summaryTabStyle / wealthPlanTabStyle / existingTabStyle and the two
+    // _TAB_*_STYLE statics they used. They referenced `WealthPlanHelper`, an identifier
+    // that does not exist in this module (fork residue), so reading any of them threw
+    // ReferenceError. Nothing bound them. Live tab styling is aaTabSummaryClass /
+    // aaTabWealthPlanClass / aaTabTodosClass.
     get summaryLeftTabClass()    { return 'wph-left-tab' + (this._activeTab === 'summary' ? ' wph-left-tab--active' : ''); }
     get wealthPlanLeftTabClass() { return 'wph-left-tab' + (this._activeTab === 'wealthplan' ? ' wph-left-tab--active' : ''); }
 
@@ -1333,12 +1504,8 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
     get isTodosSection()   { return this._activeMsSection === 'todos'; }
     get hasRegenInstructions() { return (this._summaryInstructions || '').trim().length > 0; }
     get isRegenDisabled()      { return !this.regenerateSummaryFlowApiName || !this.hasRegenInstructions; }
-    static _SUBTAB_ACTIVE   = 'wph-ms-subtab wph-ms-subtab-active';
-    static _SUBTAB_INACTIVE = 'wph-ms-subtab';
-    // FIXME (DEFECTS.md #2): same undefined `WealthPlanHelper` receiver as above.
-    // Unbound, therefore latent — binding either getter throws ReferenceError.
-    get meetingSubtabClass() { return this._activeMsSection === 'meeting' ? WealthPlanHelper._SUBTAB_ACTIVE : WealthPlanHelper._SUBTAB_INACTIVE; }
-    get todosSubtabClass()   { return this._activeMsSection === 'todos'   ? WealthPlanHelper._SUBTAB_ACTIVE : WealthPlanHelper._SUBTAB_INACTIVE; }
+    // Removed: meetingSubtabClass / todosSubtabClass and the two _SUBTAB_* statics —
+    // same undefined `WealthPlanHelper` receiver as the tab-style getters above.
 
     // Advanced section collapsible
     get advancedBodyClass()    { return this._advancedExpanded ? 'wph-advanced-body' : 'wph-advanced-body wph-zone-collapse-hidden'; }
@@ -1346,7 +1513,7 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
 
     // ── Meeting artifact + file getters ──────────────────────────────────────
     get selectedEventArtifact() {
-        const evt = (this._inputEvents || []).find(e => e.Id === this._selectedEventId);
+        const evt = (this.allKnownEvents || []).find(e => e.Id === this._selectedEventId);
         if (!evt?.MeetingArtifacts__c) return null;
         return (this._inputArtifacts || []).find(a => a.Id === evt.MeetingArtifacts__c) || null;
     }
@@ -1438,6 +1605,11 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
             this._notePublishedLocally  = false;
             this._summarySaved          = false;
         }
+        // Note ids belong to the event we just left; reusing one would update the WRONG
+        // event's note. Both children reseed for the new event on their next render.
+        this._msState            = { ...this._msState, savedNoteId: null };
+        this._internalNotesState = { ...this._internalNotesState, savedNoteId: null };
+
         // Restore brief from the linked MeetingNote__c (Brief_Summary__c must be queried by the parent flow)
         this._meetingBrief  = this.selectedEventNote?.Brief_Summary__c || null;
         this._briefExpanded = !!(this.selectedEventNote?.Brief_Summary__c) &&
@@ -1461,7 +1633,7 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
             this._selectedArtifactFileIds = new Set(ids);
         });
         // Restore per-event meeting type — cache wins; fall back to MeetingType__c on the Event record
-        const _evtForType = (this._inputEvents || []).find(e => e.Id === this._selectedEventId);
+        const _evtForType = (this.allKnownEvents || []).find(e => e.Id === this._selectedEventId);
         const cachedType = this._selectedEventId ? this._meetingTypeCache[this._selectedEventId] : null;
         const _labelToKey = { 'Whiteboard Meeting': 'whiteboard', 'Status Meeting': 'status', 'Annual Review': 'annual' };
         const _typeFromEvent = _evtForType?.MeetingType__c ? (_labelToKey[_evtForType.MeetingType__c] || null) : null;
@@ -1611,7 +1783,7 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
     // ║   handleConfirmDeleteNote, handleCreateNewVersion, _loadVersionHistory ║
     // ║                                                                       ║
     // ║ Change the child, not this. Kept only because deleting it is a         ║
-    // ║ separate, regression-tested change (DEFECTS.md #12).                   ║
+    // ║ separate, regression-tested change (DEFECTS.md #11).                   ║
     // ╚═══════════════════════════════════════════════════════════════════════╝
 
     // ── Summary step handlers ────────────────────────────────────────────────
@@ -2285,13 +2457,11 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
         this._recognition.interimResults = true;
 
         this._recognition.onresult = (event) => {
-            let interimTranscript = '';
+            // Interim (non-final) results are ignored — only settled text is committed.
             let finalTranscript = '';
             for (let i = event.resultIndex; i < event.results.length; ++i) {
                 if (event.results[i].isFinal) {
                     finalTranscript += event.results[i][0].transcript;
-                } else {
-                    interimTranscript += event.results[i][0].transcript;
                 }
             }
             // Append to existing text
@@ -2311,9 +2481,17 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
     handleToggleMsNotes()     { this._msNotesOpen     = !this._msNotesOpen; }
     handleToggleMsRegen()     { this._msRegenOpen     = !this._msRegenOpen; }
 
+    /**
+     * Opens the standard Salesforce file preview for one ContentDocument.
+     *
+     * stopPropagation matters: on the Meeting Files rows the row itself toggles
+     * selection, so without it a preview click would also select or deselect the file.
+     */
     handlePreviewFile(event) {
         event.stopPropagation();
         const documentId = event.currentTarget.dataset.documentId;
+        // A row with no ContentDocumentId would navigate to an empty preview.
+        if (!documentId) return;
         this[NavigationMixin.Navigate]({
             type: 'standard__namedPage',
             attributes: { pageName: 'filePreview' },
@@ -2463,7 +2641,7 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
     }
     /**
      * Meeting Notes textarea.
-     * FIXME (DEFECTS.md #4): the template writes the value as textarea child text
+     * FIXME (DEFECTS.md #3): the template writes the value as textarea child text
      * (`>{_freeText}</textarea>`), which LWC only applies on the FIRST render. This
      * handler keeps `_freeText` correct, but assigning `_freeText` in JS will not
      * update what the user sees. Same defect on the regen-instructions textarea.
@@ -2518,7 +2696,7 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
      * To-Do's is a SUB-mode of 'summary' selected by `_activeMsSection`, because both
      * are served by the same child component. This getter collapses the pair into the
      * single value the tab bar renders. Read tabs through here, never off `_activeTab`.
-     * @returns {'summary'|'todos'|'wealthplan'|'premeeting'|'internalnotes'|'existing'}
+     * @returns {'summary'|'todos'|'wealthplan'|'internalnotes'|'existing'}
      */
     get activeTabValue() {
         if (this._activeTab === 'summary' && this._activeMsSection === 'todos') return 'todos';
@@ -2527,21 +2705,67 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
     get aaTabSummaryClass()    { return this.activeTabValue === 'summary'    ? 'aa-tab-li aa-tab-li--active' : 'aa-tab-li'; }
     get aaTabWealthPlanClass() { return this.activeTabValue === 'wealthplan' ? 'aa-tab-li aa-tab-li--active' : 'aa-tab-li'; }
     get aaTabTodosClass()      { return this.activeTabValue === 'todos'     ? 'aa-tab-li aa-tab-li--active' : 'aa-tab-li'; }
-    get aaTabPreMeetingClass()    { return this.activeTabValue === 'premeeting'    ? 'aa-tab-li aa-tab-li--active' : 'aa-tab-li'; }
     get aaTabInternalNotesClass() { return this.activeTabValue === 'internalnotes' ? 'aa-tab-li aa-tab-li--active' : 'aa-tab-li'; }
 
-    // ── Work-in-progress tabs ────────────────────────────────────────────────
-    // Pre-meeting and Internal Notes are placeholders: they render, but they have no
-    // generation, no save and no footer CTA. isWipTab keeps them out of every action path.
-    get isPreMeetingTab()    { return this.activeTabValue === 'premeeting'; }
+    // ── Tabs with no generation step ─────────────────────────────────────────
+    // Internal Notes renders and saves, but has nothing to generate — so it must stay out
+    // of the primary CTA's path. Named for the rule it enforces.
     get isInternalNotesTab() { return this.activeTabValue === 'internalnotes'; }
-    get isWipTab()           { return this.isPreMeetingTab || this.isInternalNotesTab; }
-    get isPreMeetingTabSelected()    { return String(this.isPreMeetingTab); }
+    get tabHasNoGeneration() { return this.isInternalNotesTab; }
     get isInternalNotesTabSelected() { return String(this.isInternalNotesTab); }
 
-    /** Advisor's own notes. In-memory only for now — persistence is not wired yet. */
-    @track _internalNotes = '';
-    handleInternalNotesInput(event) { this._internalNotes = event.target.value; }
+    // ── Internal Notes tab ──────────────────────────────────────────────────
+    // The editor, its state, its per-event cache and its Apex call all live in
+    // <c-advisor-internal-notes>. The parent keeps only what it needs as BROKER:
+    // the footer button, and the note id / in-flight state shared across tabs.
+    //
+    // See that component's header for the tab contract this follows.
+
+    /** Latest `tabstatechange` from the internal-notes tab. */
+    @track _internalNotesState = {
+        isDirty: false, isSaving: false, canSave: false, savedNoteId: null, statusLabel: ''
+    };
+
+    handleInternalNotesStateChange(event) {
+        if (event?.detail) this._internalNotesState = { ...event.detail };
+    }
+
+    /** Footer action. Thin imperative call, same shape as handleMsSaveReview. */
+    handleSaveInternalNotes() {
+        const child = this.template.querySelector('c-advisor-internal-notes');
+        if (child && typeof child.save === 'function') child.save();
+    }
+
+    get showInternalNotesSave() {
+        return this.activeTabValue === 'internalnotes' && !!this._selectedEventId;
+    }
+    get internalNotesSaveDisabled() {
+        // Both tabs can create the note record, so never let their saves overlap.
+        return this.anySaveInFlight || !this._internalNotesState.canSave;
+    }
+    get saveInternalNotesLabel() {
+        return this._internalNotesState.isSaving ? 'Saving…' : 'Save Internal Notes';
+    }
+
+    /**
+     * THE note record for the selected event, merged from every source that can know one.
+     *
+     * Two children can CREATE a MeetingNote__c, and `inputMeetingNotes` is a snapshot queried
+     * at load that goes stale the moment either does. So each tab reports the id it knows and
+     * the parent merges them here, then hands the result back down. Sending a blank id when a
+     * record already exists is what produces duplicates.
+     */
+    get resolvedNoteId() {
+        return this.selectedEventNote?.Id
+            || this._internalNotesState.savedNoteId
+            || this._msState.savedNoteId
+            || '';
+    }
+
+    /** True while either tab is saving. Prevents two blank-id creates racing. */
+    get anySaveInFlight() {
+        return !!this._internalNotesState.isSaving || !!this._msState.isSaving;
+    }
 
     /**
      * Tab bar click. Inverse of `activeTabValue`: expands the flat tab id back into
@@ -2559,7 +2783,7 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
             this._activeTab = 'summary';
             this._activeMsSection = 'todos';
             this._hasTodos = true;
-        } else if (v === 'premeeting' || v === 'internalnotes') {
+        } else if (v === 'internalnotes') {
             this._activeTab = v;
         }
     }
@@ -2608,7 +2832,7 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
         // todos flow) are independent Apex calls on independent child instances.
         // If the same tab is already running, no-op instead of double-firing.
         const tab = this.activeTabValue;
-        if (tab === 'premeeting' || tab === 'internalnotes') return;
+        if (tab === 'internalnotes') return;
         if (tab === 'wealthplan') {
             if (this._bgJobs.wealthplan) return;
             this._bgJobs = { ...this._bgJobs, wealthplan: true };
@@ -2765,7 +2989,7 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
     get todosTabHasData()   { return (this._meetingTodos && this._meetingTodos.length > 0); }
     get activeTabHasData() {
         const t = this.activeTabValue;
-        if (t === 'premeeting' || t === 'internalnotes') return false;
+        if (t === 'internalnotes') return false;
         if (t === 'wealthplan') return this.wpTabHasData;
         if (t === 'todos')      return this.todosTabHasData;
         return this.summaryTabHasData;
@@ -2773,7 +2997,7 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
     // Footer's primary CTA hides on empty tabs — the hero CTA in the body takes over.
     get showFooterPrimaryCta() {
         // Nothing to generate from a placeholder tab, even if a background job is running.
-        if (this.isWipTab) return false;
+        if (this.tabHasNoGeneration) return false;
         return this.activeTabHasData || this.isAnyJobRunning;
     }
     // The tab body renders one of loader / hero / child (via visibility classes).
@@ -2791,6 +3015,8 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
     get summaryPanelClass() { return this._panelClass(this.activeTabValue === 'summary' && this.summaryTabHasData && !this.isSummaryGenerating); }
     get wpPanelClass()      { return this._panelClass(this.activeTabValue === 'wealthplan' && this.wpTabHasData && !this.isWpGenerating); }
     get todosPanelClass()   { return this._panelClass(this.activeTabValue === 'todos' && this.todosTabHasData && !this.isTodosGenerating); }
+    // Internal Notes has no "has data" or "generating" gate — it is an editor, always ready.
+    get internalNotesPanelClass() { return this._panelClass(this.activeTabValue === 'internalnotes'); }
 
     // Tab-label pill class — spinner when generating, otherwise hidden.
     get summaryTabPillClass() { return this.isSummaryGenerating ? 'aa-tab-pill aa-tab-pill--running' : 'aa-tab-pill aa-tab-pill--hidden'; }
@@ -2987,14 +3213,23 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
     get showWealthPlanSave() {
         return this.activeTabValue === 'wealthplan' && Array.isArray(this._sections) && this._sections.length > 0;
     }
-    // No-op listener kept so the child's onmsstatechange dispatch doesn't warn about a
-    // missing handler. Parent state is derived from its own getters, not this event.
     /** Authoritative meeting-summary state, reported by the child. The parent's own
      *  hasSummaryForEvent / isNotePublished copies are stale (their backing fields are
-     *  never written here), so the footer and the overwrite guard use this instead. */
-    @track _msState = { canPublish: false, canDelete: false, hasUnpublishedSummary: false, hasUnsavedChanges: false };
+     *  never written here), so the footer and the overwrite guard use this instead.
+     *
+     *  FIXME (DEFECTS.md #9): the child emits EIGHT keys; only four are seeded here.
+     *  hasSummary / isPublished / isGenerating / isSaving read as `undefined` until the
+     *  child's first msstatechange. Benign today (those footer buttons simply stay
+     *  hidden), but a future `if (!this._msState.isSaving)` would treat the unreported
+     *  state as false. Initialise all eight to false. */
+    @track _msState = {
+        canPublish: false, canDelete: false, hasSummary: false, isPublished: false,
+        isGenerating: false, isSaving: false, hasUnpublishedSummary: false,
+        hasUnsavedChanges: false, savedNoteId: null
+    };
     handleMsStateChange(event) {
-        if (event?.detail) this._msState = { ...this._msState, ...event.detail };
+        if (!event?.detail) return;
+        this._msState = { ...this._msState, ...event.detail };
     }
 
     handleMsPublish() {
@@ -3110,7 +3345,7 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
         }
         const todos = this.outputTodos;
         if (!todos.length) return;
-        const rawEvent = (this.inputEvents || []).find(e => e.Id === this._selectedEventId);
+        const rawEvent = (this.allKnownEvents || []).find(e => e.Id === this._selectedEventId);
         this._todosSaving = true;
         try {
             await saveTodos({
@@ -3136,7 +3371,7 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
         }
     }
     _dispatchAcceptedTodos() {
-        const rawEvent = (this.inputEvents || []).find(e => e.Id === this._selectedEventId);
+        const rawEvent = (this.allKnownEvents || []).find(e => e.Id === this._selectedEventId);
         const whoId  = this.inputWhoId || rawEvent?.WhoId || '';
         const whatId = this._selectedEventId || '';
         const accepted = this._meetingTodos
@@ -3385,7 +3620,7 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
         if (this._freeText) context += this._freeText + '\n\n';
 
         if (this._selectedEventId) {
-            const evt = (this.inputEvents || []).find(e => e.Id === this._selectedEventId);
+            const evt = (this.allKnownEvents || []).find(e => e.Id === this._selectedEventId);
             if (evt) {
                 context += `--- Meeting Event ---\nSubject: ${evt.Subject || ''}\n`;
                 context += `Date: ${evt.ActivityDate || evt.StartDateTime || ''}\n`;
@@ -3582,7 +3817,7 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
         try {
             parsed = JSON.parse(jsonStr);
         } catch (e) {
-            console.error('[WealthPlanHelper] JSON.parse failed:', e.message, '| Input:', jsonStr.substring(0, 300));
+            console.error('[AdvisorAssistant] JSON.parse failed:', e.message, '| Input:', jsonStr.substring(0, 300));
             this._summary = raw;
             this._sections = this._buildEmptySections();
             return;
@@ -5040,7 +5275,7 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
                 todos:          route('todos')
             };
 
-            // FIXME (DEFECTS.md #3): `inputAccountId` is declared nowhere in this class
+            // FIXME (DEFECTS.md #2): `inputAccountId` is declared nowhere in this class
             // — not as @api, not as a field — so it is always undefined and Apex always
             // receives accountId: ''. The same line exists in both children, where it IS
             // reached. The intended value is almost certainly `_resolvedPrimaryMemberId`.
@@ -5499,7 +5734,7 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
      * so it works while focus sits anywhere in the page, and it deliberately
      * ignores keys typed into inputs, textareas, selects and contenteditables.
      *
-     * FIXME (DEFECTS.md #8): the guard below is why this never runs in this
+     * FIXME (DEFECTS.md #7): the guard below is why this never runs in this
      * component — `_step` is pinned to 'summary' by connectedCallback and no live
      * path sets 'review'. The listener is still registered on every mount.
      */

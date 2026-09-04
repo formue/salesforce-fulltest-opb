@@ -1,0 +1,652 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>66.0</apiVersion>
+    <areMetricsLoggedToDataCloud>false</areMetricsLoggedToDataCloud>
+    <assignments>
+        <description>Sets SaveResult = &quot;Saved&quot; to signal successful completion to MeetingSummaryController.saveWealthPlan(). This value is read by the LWC to confirm all DML finished without error.</description>
+        <name>assignSaveResult</name>
+        <label>Set Save Result</label>
+        <locationX>176</locationX>
+        <locationY>4800</locationY>
+        <assignmentItems>
+            <assignToReference>SaveResult</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <stringValue>Saved</stringValue>
+            </value>
+        </assignmentItems>
+    </assignments>
+    <decisions>
+        <name>checkAssetsToDelete</name>
+        <label>Assets to Delete?</label>
+        <locationX>440</locationX>
+        <locationY>1700</locationY>
+        <defaultConnector>
+            <targetReference>createMilestones</targetReference>
+        </defaultConnector>
+        <defaultConnectorLabel>Empty – Skip</defaultConnectorLabel>
+        <rules>
+            <name>hasAssetsToDelete</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>AssetsToDelete</leftValueReference>
+                <operator>IsNull</operator>
+                <rightValue>
+                    <booleanValue>false</booleanValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>deleteAssets</targetReference>
+            </connector>
+            <label>Has Records to Delete</label>
+        </rules>
+    </decisions>
+    <decisions>
+        <name>checkGoalsToDelete</name>
+        <label>Goals to Delete?</label>
+        <locationX>440</locationX>
+        <locationY>500</locationY>
+        <defaultConnector>
+            <targetReference>createIncomes</targetReference>
+        </defaultConnector>
+        <defaultConnectorLabel>Empty – Skip</defaultConnectorLabel>
+        <rules>
+            <name>hasGoalsToDelete</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>GoalsToDelete</leftValueReference>
+                <operator>IsNull</operator>
+                <rightValue>
+                    <booleanValue>false</booleanValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>deleteGoals</targetReference>
+            </connector>
+            <label>Has Records to Delete</label>
+        </rules>
+    </decisions>
+    <decisions>
+        <name>checkGreetingsToDelete</name>
+        <label>Greetings to Delete?</label>
+        <locationX>440</locationX>
+        <locationY>4100</locationY>
+        <defaultConnector>
+            <targetReference>createTodos</targetReference>
+        </defaultConnector>
+        <defaultConnectorLabel>Empty – Skip</defaultConnectorLabel>
+        <rules>
+            <name>hasGreetingsToDelete</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>GreetingsToDelete</leftValueReference>
+                <operator>IsNull</operator>
+                <rightValue>
+                    <booleanValue>false</booleanValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>deleteGreetings</targetReference>
+            </connector>
+            <label>Has Records to Delete</label>
+        </rules>
+    </decisions>
+    <decisions>
+        <name>checkIncomesToDelete</name>
+        <label>Incomes to Delete?</label>
+        <locationX>440</locationX>
+        <locationY>1100</locationY>
+        <defaultConnector>
+            <targetReference>createAssets</targetReference>
+        </defaultConnector>
+        <defaultConnectorLabel>Empty – Skip</defaultConnectorLabel>
+        <rules>
+            <name>hasIncomesToDelete</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>IncomesToDelete</leftValueReference>
+                <operator>IsNull</operator>
+                <rightValue>
+                    <booleanValue>false</booleanValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>deleteIncomes</targetReference>
+            </connector>
+            <label>Has Records to Delete</label>
+        </rules>
+    </decisions>
+    <decisions>
+        <name>checkMilestonesToDelete</name>
+        <label>Milestones to Delete?</label>
+        <locationX>440</locationX>
+        <locationY>2300</locationY>
+        <defaultConnector>
+            <targetReference>createOwnerships</targetReference>
+        </defaultConnector>
+        <defaultConnectorLabel>Empty – Skip</defaultConnectorLabel>
+        <rules>
+            <name>hasMilestonesToDelete</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>MilestonesToDelete</leftValueReference>
+                <operator>IsNull</operator>
+                <rightValue>
+                    <booleanValue>false</booleanValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>deleteMilestones</targetReference>
+            </connector>
+            <label>Has Records to Delete</label>
+        </rules>
+    </decisions>
+    <decisions>
+        <name>checkOwnershipsToDelete</name>
+        <label>Ownerships to Delete?</label>
+        <locationX>440</locationX>
+        <locationY>2900</locationY>
+        <defaultConnector>
+            <targetReference>createSustainability</targetReference>
+        </defaultConnector>
+        <defaultConnectorLabel>Empty – Skip</defaultConnectorLabel>
+        <rules>
+            <name>hasOwnershipsToDelete</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>OwnershipsToDelete</leftValueReference>
+                <operator>IsNull</operator>
+                <rightValue>
+                    <booleanValue>false</booleanValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>deleteOwnerships</targetReference>
+            </connector>
+            <label>Has Records to Delete</label>
+        </rules>
+    </decisions>
+    <decisions>
+        <name>checkSustainabilityToDelete</name>
+        <label>Sustainability to Delete?</label>
+        <locationX>440</locationX>
+        <locationY>3500</locationY>
+        <defaultConnector>
+            <targetReference>createGreetings</targetReference>
+        </defaultConnector>
+        <defaultConnectorLabel>Empty – Skip</defaultConnectorLabel>
+        <rules>
+            <name>hasSustainabilityToDelete</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>SustainabilityToDelete</leftValueReference>
+                <operator>IsNull</operator>
+                <rightValue>
+                    <booleanValue>false</booleanValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>deleteSustainability</targetReference>
+            </connector>
+            <label>Has Records to Delete</label>
+        </rules>
+    </decisions>
+    <description>Receives typed SObject record collections from the wealthPlanHelper LWC and performs create/update/delete DML for all Wealth Plan data types. Called via MeetingSummaryController.saveWealthPlan(). Empty/null collections are skipped — each delete step is guarded by a Decision that checks the collection is not null before proceeding. Execution order: Goals → Incomes → Assets → Milestones → Ownerships → Sustainability → Greetings → Todos → assignSaveResult.</description>
+    <interviewLabel>WealthPlan AL WealthPlan Create and Update V2 {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>WealthPlan AL WealthPlan Create and Update V2</label>
+    <processMetadataValues>
+        <name>BuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>CanvasMode</name>
+        <value>
+            <stringValue>FREE_FORM_CANVAS</stringValue>
+        </value>
+    </processMetadataValues>
+    <processType>AutoLaunchedFlow</processType>
+    <recordCreates>
+        <name>createAssets</name>
+        <label>Create Assets</label>
+        <locationX>176</locationX>
+        <locationY>1400</locationY>
+        <connector>
+            <targetReference>updateAssets</targetReference>
+        </connector>
+        <inputReference>AssetsToCreate</inputReference>
+    </recordCreates>
+    <recordCreates>
+        <name>createGoals</name>
+        <label>Create Goals</label>
+        <locationX>176</locationX>
+        <locationY>200</locationY>
+        <connector>
+            <targetReference>updateGoals</targetReference>
+        </connector>
+        <inputReference>GoalsToCreate</inputReference>
+    </recordCreates>
+    <recordCreates>
+        <name>createGreetings</name>
+        <label>Create Greetings</label>
+        <locationX>176</locationX>
+        <locationY>3800</locationY>
+        <connector>
+            <targetReference>updateGreetings</targetReference>
+        </connector>
+        <inputReference>GreetingsToCreate</inputReference>
+    </recordCreates>
+    <recordCreates>
+        <name>createIncomes</name>
+        <label>Create Incomes</label>
+        <locationX>176</locationX>
+        <locationY>800</locationY>
+        <connector>
+            <targetReference>updateIncomes</targetReference>
+        </connector>
+        <inputReference>IncomesToCreate</inputReference>
+    </recordCreates>
+    <recordCreates>
+        <name>createMilestones</name>
+        <label>Create Milestones</label>
+        <locationX>176</locationX>
+        <locationY>2000</locationY>
+        <connector>
+            <targetReference>updateMilestones</targetReference>
+        </connector>
+        <inputReference>MilestonesToCreate</inputReference>
+    </recordCreates>
+    <recordCreates>
+        <name>createOwnerships</name>
+        <label>Create Ownerships</label>
+        <locationX>176</locationX>
+        <locationY>2600</locationY>
+        <connector>
+            <targetReference>updateOwnerships</targetReference>
+        </connector>
+        <inputReference>OwnershipsToCreate</inputReference>
+    </recordCreates>
+    <recordCreates>
+        <name>createSustainability</name>
+        <label>Create Sustainability Preferences</label>
+        <locationX>176</locationX>
+        <locationY>3200</locationY>
+        <connector>
+            <targetReference>updateSustainability</targetReference>
+        </connector>
+        <inputReference>SustainabilityToCreate</inputReference>
+    </recordCreates>
+    <recordCreates>
+        <name>createTodos</name>
+        <label>Create Todos (Action Items)</label>
+        <locationX>176</locationX>
+        <locationY>4400</locationY>
+        <connector>
+            <targetReference>assignSaveResult</targetReference>
+        </connector>
+        <inputReference>TodosToCreate</inputReference>
+    </recordCreates>
+    <recordDeletes>
+        <name>deleteAssets</name>
+        <label>Delete Assets</label>
+        <locationX>176</locationX>
+        <locationY>1800</locationY>
+        <connector>
+            <targetReference>createMilestones</targetReference>
+        </connector>
+        <inputReference>AssetsToDelete</inputReference>
+    </recordDeletes>
+    <recordDeletes>
+        <name>deleteGoals</name>
+        <label>Delete Goals</label>
+        <locationX>176</locationX>
+        <locationY>600</locationY>
+        <connector>
+            <targetReference>createIncomes</targetReference>
+        </connector>
+        <inputReference>GoalsToDelete</inputReference>
+    </recordDeletes>
+    <recordDeletes>
+        <name>deleteGreetings</name>
+        <label>Delete Greetings</label>
+        <locationX>176</locationX>
+        <locationY>4200</locationY>
+        <connector>
+            <targetReference>createTodos</targetReference>
+        </connector>
+        <inputReference>GreetingsToDelete</inputReference>
+    </recordDeletes>
+    <recordDeletes>
+        <name>deleteIncomes</name>
+        <label>Delete Incomes</label>
+        <locationX>176</locationX>
+        <locationY>1200</locationY>
+        <connector>
+            <targetReference>createAssets</targetReference>
+        </connector>
+        <inputReference>IncomesToDelete</inputReference>
+    </recordDeletes>
+    <recordDeletes>
+        <name>deleteMilestones</name>
+        <label>Delete Milestones</label>
+        <locationX>176</locationX>
+        <locationY>2400</locationY>
+        <connector>
+            <targetReference>createOwnerships</targetReference>
+        </connector>
+        <inputReference>MilestonesToDelete</inputReference>
+    </recordDeletes>
+    <recordDeletes>
+        <name>deleteOwnerships</name>
+        <label>Delete Ownerships</label>
+        <locationX>176</locationX>
+        <locationY>3000</locationY>
+        <connector>
+            <targetReference>createSustainability</targetReference>
+        </connector>
+        <inputReference>OwnershipsToDelete</inputReference>
+    </recordDeletes>
+    <recordDeletes>
+        <name>deleteSustainability</name>
+        <label>Delete Sustainability Preferences</label>
+        <locationX>176</locationX>
+        <locationY>3600</locationY>
+        <connector>
+            <targetReference>createGreetings</targetReference>
+        </connector>
+        <inputReference>SustainabilityToDelete</inputReference>
+    </recordDeletes>
+    <recordUpdates>
+        <name>updateAssets</name>
+        <label>Update Assets</label>
+        <locationX>176</locationX>
+        <locationY>1600</locationY>
+        <connector>
+            <targetReference>checkAssetsToDelete</targetReference>
+        </connector>
+        <inputReference>AssetsToUpdate</inputReference>
+    </recordUpdates>
+    <recordUpdates>
+        <name>updateGoals</name>
+        <label>Update Goals</label>
+        <locationX>176</locationX>
+        <locationY>400</locationY>
+        <connector>
+            <targetReference>checkGoalsToDelete</targetReference>
+        </connector>
+        <inputReference>GoalsToUpdate</inputReference>
+    </recordUpdates>
+    <recordUpdates>
+        <name>updateGreetings</name>
+        <label>Update Greetings</label>
+        <locationX>176</locationX>
+        <locationY>4000</locationY>
+        <connector>
+            <targetReference>checkGreetingsToDelete</targetReference>
+        </connector>
+        <inputReference>GreetingsToUpdate</inputReference>
+    </recordUpdates>
+    <recordUpdates>
+        <name>updateIncomes</name>
+        <label>Update Incomes</label>
+        <locationX>176</locationX>
+        <locationY>1000</locationY>
+        <connector>
+            <targetReference>checkIncomesToDelete</targetReference>
+        </connector>
+        <inputReference>IncomesToUpdate</inputReference>
+    </recordUpdates>
+    <recordUpdates>
+        <name>updateMilestones</name>
+        <label>Update Milestones</label>
+        <locationX>176</locationX>
+        <locationY>2200</locationY>
+        <connector>
+            <targetReference>checkMilestonesToDelete</targetReference>
+        </connector>
+        <inputReference>MilestonesToUpdate</inputReference>
+    </recordUpdates>
+    <recordUpdates>
+        <name>updateOwnerships</name>
+        <label>Update Ownerships</label>
+        <locationX>176</locationX>
+        <locationY>2800</locationY>
+        <connector>
+            <targetReference>checkOwnershipsToDelete</targetReference>
+        </connector>
+        <inputReference>OwnershipsToUpdate</inputReference>
+    </recordUpdates>
+    <recordUpdates>
+        <name>updateSustainability</name>
+        <label>Update Sustainability Preferences</label>
+        <locationX>176</locationX>
+        <locationY>3400</locationY>
+        <connector>
+            <targetReference>checkSustainabilityToDelete</targetReference>
+        </connector>
+        <inputReference>SustainabilityToUpdate</inputReference>
+    </recordUpdates>
+    <start>
+        <locationX>134</locationX>
+        <locationY>0</locationY>
+        <connector>
+            <targetReference>createGoals</targetReference>
+        </connector>
+    </start>
+    <status>Active</status>
+    <variables>
+        <description>Optional. Household Account Id passed from the wealthPlanHelper component. Not used directly by DML steps — available for future extension.</description>
+        <name>AccountId</name>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+    </variables>
+    <variables>
+        <description>New FinServ__AssetsAndLiabilities__c records to insert. Null when there is nothing to create.</description>
+        <name>AssetsToCreate</name>
+        <dataType>SObject</dataType>
+        <isCollection>true</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+        <objectType>FinServ__AssetsAndLiabilities__c</objectType>
+    </variables>
+    <variables>
+        <description>Existing FinServ__AssetsAndLiabilities__c records to delete. Null when there is nothing to delete — guarded by checkAssetsToDelete Decision.</description>
+        <name>AssetsToDelete</name>
+        <dataType>SObject</dataType>
+        <isCollection>true</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+        <objectType>FinServ__AssetsAndLiabilities__c</objectType>
+    </variables>
+    <variables>
+        <description>Existing FinServ__AssetsAndLiabilities__c records to update. Each carries its Salesforce Id plus modified field values. Null when there is nothing to update.</description>
+        <name>AssetsToUpdate</name>
+        <dataType>SObject</dataType>
+        <isCollection>true</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+        <objectType>FinServ__AssetsAndLiabilities__c</objectType>
+    </variables>
+    <variables>
+        <description>New FinServ__FinancialGoal__c records to insert. Null when there is nothing to create.</description>
+        <name>GoalsToCreate</name>
+        <dataType>SObject</dataType>
+        <isCollection>true</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+        <objectType>FinServ__FinancialGoal__c</objectType>
+    </variables>
+    <variables>
+        <description>Existing FinServ__FinancialGoal__c records to delete. Null when there is nothing to delete — guarded by checkGoalsToDelete Decision.</description>
+        <name>GoalsToDelete</name>
+        <dataType>SObject</dataType>
+        <isCollection>true</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+        <objectType>FinServ__FinancialGoal__c</objectType>
+    </variables>
+    <variables>
+        <description>Existing FinServ__FinancialGoal__c records to update. Each carries its Salesforce Id plus modified field values. Null when there is nothing to update.</description>
+        <name>GoalsToUpdate</name>
+        <dataType>SObject</dataType>
+        <isCollection>true</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+        <objectType>FinServ__FinancialGoal__c</objectType>
+    </variables>
+    <variables>
+        <description>New FF_PersonalGreeting__c records to insert. Null when there is nothing to create.</description>
+        <name>GreetingsToCreate</name>
+        <dataType>SObject</dataType>
+        <isCollection>true</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+        <objectType>FF_PersonalGreeting__c</objectType>
+    </variables>
+    <variables>
+        <description>Existing FF_PersonalGreeting__c records to delete. Null when there is nothing to delete — guarded by checkGreetingsToDelete Decision.</description>
+        <name>GreetingsToDelete</name>
+        <dataType>SObject</dataType>
+        <isCollection>true</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+        <objectType>FF_PersonalGreeting__c</objectType>
+    </variables>
+    <variables>
+        <description>Existing FF_PersonalGreeting__c records to update. Each carries its Salesforce Id plus modified field values. Null when there is nothing to update.</description>
+        <name>GreetingsToUpdate</name>
+        <dataType>SObject</dataType>
+        <isCollection>true</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+        <objectType>FF_PersonalGreeting__c</objectType>
+    </variables>
+    <variables>
+        <description>New FF_Income__c records to insert. Null when there is nothing to create.</description>
+        <name>IncomesToCreate</name>
+        <dataType>SObject</dataType>
+        <isCollection>true</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+        <objectType>FF_Income__c</objectType>
+    </variables>
+    <variables>
+        <description>Existing FF_Income__c records to delete. Null when there is nothing to delete — guarded by checkIncomesToDelete Decision.</description>
+        <name>IncomesToDelete</name>
+        <dataType>SObject</dataType>
+        <isCollection>true</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+        <objectType>FF_Income__c</objectType>
+    </variables>
+    <variables>
+        <description>Existing FF_Income__c records to update. Each carries its Salesforce Id plus modified field values. Null when there is nothing to update.</description>
+        <name>IncomesToUpdate</name>
+        <dataType>SObject</dataType>
+        <isCollection>true</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+        <objectType>FF_Income__c</objectType>
+    </variables>
+    <variables>
+        <description>New Household_Milestones__c records to insert. RelatedHousehold__c is injected by MeetingSummaryController before this collection arrives. Null when there is nothing to create.</description>
+        <name>MilestonesToCreate</name>
+        <dataType>SObject</dataType>
+        <isCollection>true</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+        <objectType>Household_Milestones__c</objectType>
+    </variables>
+    <variables>
+        <description>Existing Household_Milestones__c records to delete. Null when there is nothing to delete — guarded by checkMilestonesToDelete Decision.</description>
+        <name>MilestonesToDelete</name>
+        <dataType>SObject</dataType>
+        <isCollection>true</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+        <objectType>Household_Milestones__c</objectType>
+    </variables>
+    <variables>
+        <description>Existing Household_Milestones__c records to update. Each carries its Salesforce Id plus modified field values. Null when there is nothing to update.</description>
+        <name>MilestonesToUpdate</name>
+        <dataType>SObject</dataType>
+        <isCollection>true</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+        <objectType>Household_Milestones__c</objectType>
+    </variables>
+    <variables>
+        <description>New Company_Ownership__c records to insert. Null when there is nothing to create.</description>
+        <name>OwnershipsToCreate</name>
+        <dataType>SObject</dataType>
+        <isCollection>true</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+        <objectType>Company_Ownership__c</objectType>
+    </variables>
+    <variables>
+        <description>Existing Company_Ownership__c records to delete. Null when there is nothing to delete — guarded by checkOwnershipsToDelete Decision.</description>
+        <name>OwnershipsToDelete</name>
+        <dataType>SObject</dataType>
+        <isCollection>true</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+        <objectType>Company_Ownership__c</objectType>
+    </variables>
+    <variables>
+        <description>Existing Company_Ownership__c records to update. Each carries its Salesforce Id plus modified field values. Null when there is nothing to update.</description>
+        <name>OwnershipsToUpdate</name>
+        <dataType>SObject</dataType>
+        <isCollection>true</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+        <objectType>Company_Ownership__c</objectType>
+    </variables>
+    <variables>
+        <description>Output variable set to &quot;Saved&quot; by assignSaveResult. Read by MeetingSummaryController.saveWealthPlan() to confirm all DML completed without error.</description>
+        <name>SaveResult</name>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
+        <isOutput>true</isOutput>
+    </variables>
+    <variables>
+        <description>New SustainabilityPreferences__c records to insert. Null when there is nothing to create.</description>
+        <name>SustainabilityToCreate</name>
+        <dataType>SObject</dataType>
+        <isCollection>true</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+        <objectType>SustainabilityPreferences__c</objectType>
+    </variables>
+    <variables>
+        <description>Existing SustainabilityPreferences__c records to delete. Null when there is nothing to delete — guarded by checkSustainabilityToDelete Decision.</description>
+        <name>SustainabilityToDelete</name>
+        <dataType>SObject</dataType>
+        <isCollection>true</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+        <objectType>SustainabilityPreferences__c</objectType>
+    </variables>
+    <variables>
+        <description>Existing SustainabilityPreferences__c records to update. Each carries its Salesforce Id plus modified field values. Null when there is nothing to update.</description>
+        <name>SustainabilityToUpdate</name>
+        <dataType>SObject</dataType>
+        <isCollection>true</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+        <objectType>SustainabilityPreferences__c</objectType>
+    </variables>
+    <variables>
+        <description>New Task records to insert. AI-generated action items accepted in the Todos section. Create-only. Null when there is nothing to create.</description>
+        <name>TodosToCreate</name>
+        <dataType>SObject</dataType>
+        <isCollection>true</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+        <objectType>Task</objectType>
+    </variables>
+</Flow>

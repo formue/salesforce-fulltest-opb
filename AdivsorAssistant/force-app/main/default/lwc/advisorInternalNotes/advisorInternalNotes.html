@@ -1,0 +1,53 @@
+<template>
+    <!--
+      ═══════════════════════════════════════════════════════════════════════════
+      ADVISOR INTERNAL NOTES — private child of advisorAssistant
+      ═══════════════════════════════════════════════════════════════════════════
+
+      Body only: no header, no event picker, no save bar. The parent supplies the tab
+      chrome and the footer Save button, and drives this component through save().
+
+      Amber throughout rather than the brand blue used by every client-facing surface,
+      because nothing here reaches the client. That is the whole point of the tab and it
+      must be obvious at a glance.
+
+      The editor GROWS with content instead of scrolling internally — the parent's
+      .aa-tab-content owns the scrolling, so there is one scrollbar, not two.
+    -->
+    <div class="ain-panel">
+        <div class="ain-banner">
+            <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+            <span><b>Internal only</b> — not shared with the client and never included in the meeting summary.</span>
+        </div>
+
+        <template lwc:if={noEventSelected}>
+            <div class="ain-empty">
+                <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="1.5" fill="none"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                Select a meeting event above to start taking internal notes.
+            </div>
+        </template>
+
+        <template lwc:else>
+            <div class="ain-head">
+                <span class="ain-title">Internal meeting notes</span>
+                <template lwc:if={statusLabel}>
+                    <span class={statusClass}>{statusLabel}</span>
+                </template>
+            </div>
+
+            <!-- lightning-input-rich-text reconciles an incoming `value` against what it last
+                 emitted, so binding it directly is safe: switching events reseeds the editor
+                 without disturbing the caret while the advisor is typing. -->
+            <div class="ain-editor">
+                <lightning-input-rich-text
+                    value={_notes}
+                    formats={formats}
+                    placeholder="Internal notes, reminders, things to follow up on…"
+                    label="Internal meeting notes"
+                    variant="label-hidden"
+                    onchange={handleNotesChange}>
+                </lightning-input-rich-text>
+            </div>
+        </template>
+    </div>
+</template>

@@ -52,7 +52,7 @@
                     </svg>
                 </div>
                 <div>
-                    <span class="wph-launcher-name">Advisor Assistant</span>
+                    <span class="wph-launcher-name">{headerTitle}</span>
                 </div>
             </div>
             <button class="wph-launcher-open-btn" onclick={handleOpenModal}>
@@ -100,13 +100,13 @@
                 </div>
                 <div>
                     <div class="aa-header-title-row">
-                        <span class="aa-header-title">Advisor Assistant</span>
+                        <span class="aa-header-title">{headerTitle}</span>
                         <template lwc:if={showBetaBadge}>
                             <span class="aa-beta-badge">BETA</span>
                         </template>
                         <button class="aa-guide-trigger" onclick={handleToggleGuide} aria-label="Toggle user guide" title="User Guide">?</button>
                     </div>
-                    <span class="aa-header-sub">AI-powered meeting &amp; wealth plan structuring</span>
+                    <span class="aa-header-sub">{headerSubtitle}</span>
                 </div>
             </div>
 
@@ -168,12 +168,39 @@
                             <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                         </button>
                     </header>
+
+                    <!-- Date-range selector. Only rendered when the Flow populated more
+                         than one event collection — with a single list there is no choice
+                         to make. Switching range deliberately keeps the current selection,
+                         so the list can legitimately not contain the selected event. -->
+                    <template lwc:if={showEventRangeSelector}>
+                        <div class="aa-range-bar">
+                            <span class="aa-range-label" id="aaRangeLabel">Range</span>
+                            <!-- Segmented control: one track, flush segments, active one
+                                 raised. `aa-range-track` scrolls horizontally rather than
+                                 wrapping, so five options on a narrow viewport degrade to
+                                 a scroll instead of a ragged second line. -->
+                            <div class="aa-range-track" role="group" aria-labelledby="aaRangeLabel">
+                                <template for:each={eventRangeOptions} for:item="r">
+                                    <button key={r.key}
+                                            class={r.cls}
+                                            data-range={r.key}
+                                            aria-pressed={r.pressed}
+                                            onclick={handleEventRangeSelect}>
+                                        <span class="aa-range-seg-label">{r.label}</span>
+                                        <span class="aa-range-count">{r.count}</span>
+                                    </button>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+
                     <div class="aa-event-modal-body">
                         <template lwc:if={isEventsLoading}>
                             <div class="aa-event-empty">Loading events…</div>
                         </template>
                         <template lwc:elseif={hasNoEvents}>
-                            <div class="aa-event-empty">No meeting events found for this contact.</div>
+                            <div class="aa-event-empty">{noEventsMessage}</div>
                         </template>
                         <template lwc:else>
                             <ul class="aa-event-list">
@@ -533,7 +560,7 @@
                         </button>
                         <template lwc:if={isNotesOpen}>
                         <div class="aa-card-body">
-                            <!-- FIXME (DEFECTS.md #4): the value is written as textarea
+                            <!-- FIXME (DEFECTS.md #3): the value is written as textarea
                                  CHILD TEXT, which LWC applies only on the first render.
                                  This is an uncontrolled field: setting `_freeText` in JS
                                  will not update what the user sees. Binding `value=` on
@@ -574,6 +601,16 @@
                                                 <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                                             </span>
                                             <span class="aa-file-title">{af.title}</span>
+                                            <!-- Preview. handlePreviewFile stops propagation so
+                                                 this does not also toggle row selection. -->
+                                            <button class="aa-file-preview"
+                                                    type="button"
+                                                    data-document-id={af.id}
+                                                    onclick={handlePreviewFile}
+                                                    title="Preview file"
+                                                    aria-label="Preview file">
+                                                <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                                            </button>
                                         </li>
                                     </template>
                                 </ul>
@@ -618,13 +655,21 @@
                             </div>
                             <template lwc:if={_sharedFiles.length}>
                                 <ul class="aa-uploaded-list">
-                                    <!-- FIXME (DEFECTS.md #5): key={f.name} is not unique —
+                                    <!-- FIXME (DEFECTS.md #4): key={f.name} is not unique —
                                          uploading two files with the same name produces
                                          duplicate keys and LWC list corruption.
                                          `f.documentId` is present on these objects. -->
                                     <template for:each={_sharedFiles} for:item="f" for:index="idx">
                                         <li key={f.name} class="aa-uploaded-row">
                                             <span class="aa-uploaded-name" title={f.name}>{f.name}</span>
+                                            <button class="aa-uploaded-preview"
+                                                    type="button"
+                                                    data-document-id={f.documentId}
+                                                    onclick={handlePreviewFile}
+                                                    title="Preview file"
+                                                    aria-label="Preview file">
+                                                <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                                            </button>
                                             <button class="aa-uploaded-remove" data-index={idx}
                                                     onclick={handleRemoveSharedFile}
                                                     title="Remove" aria-label="Remove file">
@@ -650,7 +695,7 @@
                         </button>
                         <template lwc:if={isRegenOpen}>
                         <div class="aa-card-body">
-                            <!-- FIXME (DEFECTS.md #4): uncontrolled, same as the notes
+                            <!-- FIXME (DEFECTS.md #3): uncontrolled, same as the notes
                                  textarea above. handleRunRegenerateInstructions clears
                                  `_regenInstructions` after sending, but the text stays
                                  visible to the user because the DOM is never updated. -->
@@ -680,13 +725,6 @@
                     <div class="aa-right-inner">
                         <!-- Custom tab bar (SLDS-styled, controllable) -->
                         <ul class="aa-tabs" role="tablist">
-                            <li class={aaTabPreMeetingClass} role="presentation">
-                                <button type="button" role="tab" data-tab="premeeting" onclick={handleAaTabClick} class="aa-tab-btn"
-                                        aria-selected={isPreMeetingTabSelected} aria-controls="aaTabPanel" id="aaTab-premeeting">
-                                    Pre-meeting
-                                    <span class="aa-wip-pill" title="Work in progress"><svg viewBox="0 0 24 24" width="10" height="10" stroke="currentColor" stroke-width="2.5" fill="none"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg></span>
-                                </button>
-                            </li>
                             <li class={aaTabSummaryClass} role="presentation">
                                 <button type="button" role="tab" data-tab="summary" onclick={handleAaTabClick} class="aa-tab-btn"
                                         aria-selected={isSummaryTabSelected} aria-controls="aaTabPanel" id="aaTab-summary">
@@ -721,7 +759,6 @@
                                 <button type="button" role="tab" data-tab="internalnotes" onclick={handleAaTabClick} class="aa-tab-btn"
                                         aria-selected={isInternalNotesTabSelected} aria-controls="aaTabPanel" id="aaTab-internalnotes">
                                     Internal Notes
-                                    <span class="aa-wip-pill" title="Work in progress"><svg viewBox="0 0 24 24" width="10" height="10" stroke="currentColor" stroke-width="2.5" fill="none"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg></span>
                                 </button>
                             </li>
                         </ul>
@@ -813,50 +850,24 @@
                             <!-- ═══════════════════════════════════════════
                                  WORK-IN-PROGRESS TABS
                                  Placeholders so the shape of the feature is visible.
-                                 Neither generates, saves, or shows a footer CTA (isWipTab).
                                  ═══════════════════════════════════════════ -->
-                            <template lwc:if={isPreMeetingTab}>
-                                <div class="aa-wip-panel">
-                                    <div class="aa-wip-banner">
-                                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
-                                        <span><b>Work in progress</b> — this tab is a placeholder. Nothing here is generated or saved yet.</span>
-                                    </div>
-                                    <div class="aa-wip-body">
-                                        <div class="aa-wip-title">Meeting preparation</div>
-                                        <p class="aa-wip-sub">
-                                            This will pull together everything that has happened with the client
-                                            over the last year and turn it into a short bullet-point prep sheet to
-                                            read before the meeting.
-                                        </p>
-                                        <ul class="aa-wip-list">
-                                            <li>Previous meeting summaries</li>
-                                            <li>Open and recently completed tasks</li>
-                                            <li>Events from the last 12 months</li>
-                                            <li>A generated bullet-point briefing</li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </template>
+                            <!-- Internal Notes — its own component, mounted like the other
+                                 tabs. Implements the tab contract: selected event + resolved
+                                 note id down, tabstatechange up, save() called from the
+                                 footer. See advisorInternalNotes.js for the contract.
 
-                            <template lwc:if={isInternalNotesTab}>
-                                <div class="aa-wip-panel">
-                                    <div class="aa-wip-banner">
-                                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
-                                        <span><b>Work in progress</b> — you can type here, but notes are <b>not saved yet</b> and are lost when you leave.</span>
-                                    </div>
-                                    <div class="aa-wip-body aa-wip-body--fill">
-                                        <div class="aa-wip-title">Internal meeting notes</div>
-                                        <p class="aa-wip-sub">
-                                            Your own working notes. Internal only — these are not part of the client
-                                            meeting summary.
-                                        </p>
-                                        <textarea class="aa-textarea aa-internal-notes"
-                                                  placeholder="Internal notes, reminders, things to follow up on…"
-                                                  aria-label="Internal meeting notes"
-                                                  oninput={handleInternalNotesInput}></textarea>
-                                    </div>
-                                </div>
-                            </template>
+                                 `resolved-note-id` is the duplicate guard: both this tab and
+                                 the summary tab can create the MeetingNote__c, so the parent
+                                 brokers one id across both. -->
+                            <div class={internalNotesPanelClass}>
+                                <c-advisor-internal-notes
+                                    selected-event-id={_selectedEventId}
+                                    meeting-note={selectedEventNote}
+                                    resolved-note-id={resolvedNoteId}
+                                    save-flow-api-name={saveInternalNotesFlowApiName}
+                                    ontabstatechange={handleInternalNotesStateChange}>
+                                </c-advisor-internal-notes>
+                            </div>
 
                             <!-- ═══════════════════════════════════════════════════
                                  THE THREE CHILD PANELS
@@ -884,6 +895,7 @@
                             <div class={summaryPanelClass}>
                                     <c-advisor-meeting-summary
                                         data-role="summary"
+                                        background-saved-note-id={resolvedNoteId}
                                         embedded-layout
                                         record-id={recordId}
                                         selected-event-id={_selectedEventId}
@@ -892,7 +904,7 @@
                                         selected-meeting-type={_selectedMeetingType}
                                         has-todos={_hasTodos}
                                         input-meeting-notes={inputMeetingNotes}
-                                        input-events={inputEvents}
+                                        input-events={allKnownEvents}
                                         input-artifacts={inputArtifacts}
                                         input-content-document-links={inputContentDocumentLinks}
                                         input-content-documents={inputContentDocuments}
@@ -950,7 +962,7 @@
                                         input-existing-ownerships={inputExistingOwnerships}
                                         input-existing-sustainability={inputExistingSustainability}
                                         input-existing-greetings={inputExistingGreetings}
-                                        input-events={inputEvents}
+                                        input-events={allKnownEvents}
                                         input-meeting-notes={inputMeetingNotes}
                                         input-tasks={inputTasks}
                                         current-note-html={_currentNoteHtml}
@@ -978,7 +990,7 @@
                                         selected-meeting-type={_selectedMeetingType}
                                         has-todos={_hasTodos}
                                         input-meeting-notes={inputMeetingNotes}
-                                        input-events={inputEvents}
+                                        input-events={allKnownEvents}
                                         input-artifacts={inputArtifacts}
                                         input-content-document-links={inputContentDocumentLinks}
                                         input-content-documents={inputContentDocuments}
@@ -1070,6 +1082,16 @@
                         <button class="aa-footer-btn aa-footer-btn--danger" onclick={handleMsDelete}>
                             <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
                             <span>Delete Note</span>
+                        </button>
+                    </template>
+                    <!-- Internal Notes has its own Flow and its own button: saving notes is
+                         independent of the summary's save, publish and delete paths. -->
+                    <template lwc:if={showInternalNotesSave}>
+                        <button class="aa-footer-btn aa-footer-btn--brand"
+                                onclick={handleSaveInternalNotes}
+                                disabled={internalNotesSaveDisabled}>
+                            <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                            <span>{saveInternalNotesLabel}</span>
                         </button>
                     </template>
                     <template lwc:if={showWealthPlanSave}>

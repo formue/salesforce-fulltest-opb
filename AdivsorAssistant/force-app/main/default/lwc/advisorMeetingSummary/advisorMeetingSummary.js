@@ -421,6 +421,22 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
     @api get freeText() { return this._freeText; }
     set freeText(v) { if (v !== undefined && v !== this._freeText) this._freeText = v || ''; }
 
+    /**
+     * Id of a MeetingNote__c the PARENT created — which happens when internal notes are
+     * saved for an event that had no note yet.
+     *
+     * Without this handshake both sides would create their own record: the parent's
+     * internal-notes Flow makes note #1, then this component, seeing no note on the (stale)
+     * inputMeetingNotes collection, tells its own Flow to create note #2 and orphans the
+     * first. Adopting the parent's Id keeps a single record per event.
+     *
+     * Only ever widens what we know — never clears an Id this component already established.
+     */
+    @api get backgroundSavedNoteId() { return this._backgroundSavedNoteId; }
+    set backgroundSavedNoteId(v) {
+        if (v && v !== this._backgroundSavedNoteId) this._backgroundSavedNoteId = v;
+    }
+
     // ── Parent-owned inputs (embedded layout) ────────────────────────────────
     // In embedded layout the parent hosts the Configuration column, so it owns the
     // file pool, the artifact selection and the meeting category. Without these
@@ -532,7 +548,13 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
             isGenerating: this._summaryGenerating,
             isSaving:    this._summarySaving,
             hasUnpublishedSummary: this.msHasUnpublishedSummary,
-            hasUnsavedChanges:     this.msHasUnsavedChanges
+            hasUnsavedChanges:     this.msHasUnsavedChanges,
+            // The MeetingNote__c this component knows about for the selected event — either
+            // queried by the Flow or created by one of its own saves. The parent saves
+            // internal notes against the same record, and its `inputMeetingNotes` copy goes
+            // stale the moment either side creates a note, so this is the only reliable
+            // channel. null means "no note exists yet as far as this component knows".
+            savedNoteId: this.selectedEventNote?.Id || this._backgroundSavedNoteId || null
         };
         const prev = this._lastMsState;
         const changed = !prev || Object.keys(state).some(k => prev[k] !== state[k]);
@@ -839,7 +861,7 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
     // further down) — they are inherited from the monolith, not used by the meeting
     // summary itself.
     //
-    // FIXME (DEFECTS.md #6): every wire destructures `{ data }` only, with no error
+    // FIXME (DEFECTS.md #5): every wire destructures `{ data }` only, with no error
     // branch. A picklist that fails to load leaves an empty option list, and
     // `_isValidOption` reads an empty list as "still loading, skip validation" — so
     // an FLS or metadata failure silently disables validation instead of surfacing.
@@ -2358,13 +2380,11 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
         this._recognition.interimResults = true;
 
         this._recognition.onresult = (event) => {
-            let interimTranscript = '';
+            // Interim (non-final) results are ignored — only settled text is committed.
             let finalTranscript = '';
             for (let i = event.resultIndex; i < event.results.length; ++i) {
                 if (event.results[i].isFinal) {
                     finalTranscript += event.results[i][0].transcript;
-                } else {
-                    interimTranscript += event.results[i][0].transcript;
                 }
             }
             // Append to existing text
@@ -3075,7 +3095,7 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
         try {
             parsed = JSON.parse(jsonStr);
         } catch (e) {
-            console.error('[WealthPlanHelper] JSON.parse failed:', e.message, '| Input:', jsonStr.substring(0, 300));
+            console.error('[AdvisorMeetingSummary] JSON.parse failed:', e.message, '| Input:', jsonStr.substring(0, 300));
             this._summary = raw;
             this._sections = this._buildEmptySections();
             return;
@@ -4564,7 +4584,7 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
                 todos:          route('todos')
             };
 
-            // FIXME (DEFECTS.md #3): `inputAccountId` is declared nowhere in this class,
+            // FIXME (DEFECTS.md #2): `inputAccountId` is declared nowhere in this class,
             // so it is always undefined and Apex always receives accountId: ''. The
             // intended value is almost certainly `_resolvedPrimaryMemberId`. Identical
             // line exists in advisorWealthPlan and advisorAssistant.

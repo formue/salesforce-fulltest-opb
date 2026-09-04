@@ -1,0 +1,109 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   ADVISOR INTERNAL NOTES
+   ═══════════════════════════════════════════════════════════════════════════
+
+   Amber, not the brand blue used everywhere else, because nothing on this tab is
+   client-facing. Shapes follow the parent's vocabulary (card radius, #e5eaf3 hairline)
+   so it still reads as the same product; only the accent differs.
+
+   Class prefix is `ain-` rather than `aa-`: these styles are scoped to this component,
+   and reusing the parent's prefix would imply they are shared when they are not.
+   ═══════════════════════════════════════════════════════════════════════════ */
+:host {
+    --ain-amber:        #d97706;
+    --ain-amber-bg:     #fffbeb;
+    --ain-amber-border: #fde68a;
+    --ain-amber-text:   #92400e;
+    --ain-amber-deep:   #78350f;
+
+    display: block;
+    font-family: 'Salesforce Sans', system-ui, sans-serif;
+}
+
+/* Height is deliberately AUTO. The editor grows with its content and the parent's
+   .aa-tab-content (overflow:auto) does the scrolling, so there is one scrollbar. */
+.ain-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px 18px;
+}
+
+.ain-banner {
+    display: flex; align-items: center; gap: 10px;
+    flex-shrink: 0;
+    padding: 10px 14px;
+    background: var(--ain-amber-bg);
+    border: 1px solid var(--ain-amber-border);
+    border-left: 3px solid var(--ain-amber);
+    border-radius: 12px;
+    color: var(--ain-amber-text);
+    font-size: 0.8rem; line-height: 1.4;
+}
+.ain-banner svg { flex-shrink: 0; color: var(--ain-amber); }
+.ain-banner b   { color: var(--ain-amber-deep); }
+
+.ain-empty {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    padding: 40px 20px;
+    color: #64748b; font-size: 0.88rem; text-align: center;
+}
+.ain-empty svg { opacity: 0.45; flex-shrink: 0; }
+
+.ain-head {
+    display: flex; align-items: baseline; gap: 10px;
+    flex-shrink: 0;
+}
+.ain-title {
+    font-size: 0.9rem; font-weight: 700; color: #0f1c2d;
+}
+
+/* Status: neutral once saved, amber pill while dirty. These notes only persist when the
+   advisor presses Save, so this is the sole cue that the text is not yet on the record —
+   it must not be subtle. */
+.ain-status {
+    margin-left: auto;
+    font-size: 0.74rem; color: #5a6a7e;
+}
+.ain-status--unsaved {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 2px 10px;
+    background: #fef3c7;
+    border: 1px solid var(--ain-amber-border);
+    border-radius: 99px;
+    color: var(--ain-amber-text); font-weight: 600;
+}
+.ain-status--unsaved::before {
+    content: ''; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--ain-amber); flex-shrink: 0;
+}
+
+/* ── Auto-expanding editor ────────────────────────────────────────────────
+   The default lightning-input-rich-text is a fixed-height box with its own scrollbar.
+   Inverted here: the container takes its height from the content and grows per line,
+   handing scrolling to the parent tab.
+
+   CAVEAT, stated plainly: the .ql-* rules reach inside a base component, which is not a
+   supported extension point. They apply because this org renders base components under
+   synthetic shadow DOM. Under native shadow DOM they would simply not match and the editor
+   falls back to its own default height — it degrades, it does not break. The wrapper rules
+   above are host-level and hold either way, so the panel layout survives regardless. */
+.ain-editor {
+    flex: 0 0 auto;          /* take content height, do not stretch to fill */
+    min-width: 0;
+}
+.ain-editor .slds-rich-text-editor,
+.ain-editor .slds-rich-text-editor__textarea {
+    height: auto;
+}
+.ain-editor .ql-container {
+    height: auto;
+    min-height: 220px;
+    overflow: visible;       /* was overflow-y:auto — the internal scrollbar */
+}
+.ain-editor .ql-editor {
+    height: auto;
+    min-height: 220px;
+    overflow-y: visible;
+    resize: none;
+}

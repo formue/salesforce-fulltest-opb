@@ -1,53 +1,4 @@
-/**
- * ═══════════════════════════════════════════════════════════════════════════
- * ADVISOR WEALTH PLAN — the wealth-plan structuring engine.
- * ═══════════════════════════════════════════════════════════════════════════
- *
- * WHAT IT IS
- *   A PRIVATE child of advisorAssistant (js-meta.xml: isExposed=false). It takes
- *   the AI's loose interpretation of a meeting and turns it into reviewed,
- *   validated Salesforce records across seven wealth-plan objects.
- *
- * THE CENTRAL IDEA — LOCK TO SAVE
- *   AI output is a proposal, never a commitment. Every row starts unlocked and
- *   UNSAVEABLE. The advisor reviews a row, edits it if needed, and LOCKS it; only
- *   locked rows are ever sent to the database (`_invokeWpSaveSubflow`). That single
- *   rule is why the grid carries so much state: `_lockedRows`, `_lockedSections`,
- *   `_editedRows`, `_deletedRows`, `_duplicateFlags`, `_existingSnapshots`.
- *
- * THE PIPELINE
- *   1. GENERATE  `handleGenerate` → `generateSummary` Apex → the wealth-plan Flow
- *   2. PARSE     `_parseResult` — defensive JSON extraction from AI prose
- *   3. NORMALISE FIELD_ALIASES maps friendly AI keys onto real API names
- *   4. MERGE     `_mergeExistingData` folds in records already in Salesforce, so
- *                the advisor sees proposals and reality side by side;
- *                `_detectDuplicates` flags an AI row that restates an existing one
- *   5. REVIEW    `_buildReviewSections` builds the whole render model; the advisor
- *                edits, locks, marks for deletion, undoes (command-pattern stack)
- *   6. SAVE      `handlePreviewSave` shows the impact preview →
- *                `_invokeWpSaveSubflow` routes rows into create/update/delete and
- *                calls `saveWealthPlan`
- *
- * SECTIONS is the schema for all of this: eight modules (goals, income, assets,
- * milestones, ownership, sustainability, greetings, todos), each declaring its
- * target SObject, its fields, widgets, requiredness and cross-field validation.
- * Adding a field means editing SECTIONS and FIELD_ALIASES — not the template.
- *
- * PUBLIC SURFACE (what advisorAssistant may call / listen to)
- *   Commands  regenerate() · triggerSave() · resetState()
- *   Events    wpgenerated {summary, sections} · flowoutput · flownext
- *
- * WHY flowoutput INSTEAD OF FlowAttributeChangeEvent
- *   A nested component cannot reach the Flow runtime. Every output goes through
- *   `_flowOut()`; advisorAssistant re-emits it as a real Flow event.
- *
- * BACKEND: MeetingSummaryController (org-resident, not in this repo).
- * SEE ALSO: DEFECTS.md at the repo root.
- */
-
 import { LightningElement, api, track, wire } from 'lwc';
-
-// ── Apex bridge — each method runs an admin-configured autolaunched Flow ────
 import generateSummary      from '@salesforce/apex/MeetingSummaryController.generateSummary';
 import generateMeetingTodos from '@salesforce/apex/MeetingSummaryController.generateMeetingTodos';
 import regenerateMeetingSummary from '@salesforce/apex/MeetingSummaryController.regenerateMeetingSummary';
@@ -58,6 +9,7 @@ import saveWealthPlan      from '@salesforce/apex/MeetingSummaryController.saveW
 import getMeetingNoteVersions from '@salesforce/apex/MeetingSummaryController.getMeetingNoteVersions';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import { NavigationMixin } from 'lightning/navigation';
+import { FlowAttributeChangeEvent, FlowNavigationNextEvent } from 'lightning/flowSupport';
 import { getObjectInfo, getPicklistValues } from 'lightning/uiObjectInfoApi';
 
 import GOAL_OBJECT from '@salesforce/schema/FinServ__FinancialGoal__c';
@@ -289,7 +241,7 @@ function _stripHtmlToText(html) {
     return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').trim();
 }
 
-export default class AdvisorWealthPlan extends NavigationMixin(LightningElement) {
+export default class WealthPlanHelper extends NavigationMixin(LightningElement) {
     // ── Inputs ───────────────────────────────────────────────────────────────
     @api recordId;
     @api flowApiName;                      // Wealth Plan structuring flow
@@ -394,72 +346,6 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
     @api saveFileToEventFlowApiName = '';  // autolaunched flow invoked when saving an uploaded file to the event record
     @api wealthPlanSaveFlowApiName  = '';  // autolaunched flow that handles WP DML via typed SObject record collections
     @api inputWhoId             = '';      // WhoId (Contact/Lead) to link to saved tasks — set from the parent Flow
-
-    // When true, parent hosts the shared left panel and footer action bar.
-    // Child skips its own internal left panel + full-width action bar.
-    @api embeddedLayout = false;
-
-    // ── Flow bridge ──────────────────────────────────────────────────────────
-    // This component is nested inside advisorAssistant and is NOT the component on
-    // the Flow screen, so it must not dispatch flow events itself — advisorAssistant
-    // owns the @api output* properties and re-emits them. Keep every flow output
-    // going through these two helpers.
-    _flowOut(attributeName, attributeValue) {
-        this.dispatchEvent(new CustomEvent('flowoutput', {
-            detail: { attributeName, attributeValue }
-        }));
-    }
-    _flowNext() {
-        this.dispatchEvent(new CustomEvent('flownext'));
-    }
-    @api get freeText() { return this._freeText; }
-    set freeText(v) { if (v !== undefined && v !== this._freeText) this._freeText = v || ''; }
-
-    // ── Parent-owned inputs (embedded layout) ────────────────────────────────
-    // In embedded layout the parent hosts the Configuration column, so it owns the
-    // file pool and the artifact selection. Without these setters the attributes the
-    // parent passes are silently ignored by LWC and generation runs with no documents.
-    @api get sharedFiles() { return this._sharedFiles; }
-    set sharedFiles(v) { this._sharedFiles = Array.isArray(v) ? [...v] : []; }
-
-    @api get artifactFileIds() { return this._selectedArtifactFileIds; }
-    set artifactFileIds(v) {
-        this._selectedArtifactFileIds = v instanceof Set ? new Set(v) : new Set(Array.isArray(v) ? v : []);
-    }
-
-    // The freshly generated summary HTML, so Wealth Plan generation can use it before
-    // it has been saved back to the MeetingNote__c record.
-    @api get currentNoteHtml() { return this._currentNoteHtml; }
-    set currentNoteHtml(v) { this._currentNoteHtml = v || null; }
-
-    get showInternalLeftPanel() { return !this.embeddedLayout; }
-    get showInternalActionBar() { return !this.embeddedLayout; }
-
-    // ═══════════════════════════════════════════════════════════════════════
-    // PUBLIC SURFACE — the contract advisorAssistant codes against
-    // ═══════════════════════════════════════════════════════════════════════
-    // Commands come DOWN as imperative @api methods; results go UP as
-    // `wpgenerated`. Each command aliases the internal handler, so the parent's
-    // footer and this component's own UI share one implementation.
-    // Changing a signature here breaks advisorAssistant.html and handlePrimaryAction
-    // / handleParentSaveToWealthPlan in advisorAssistant.js.
-
-    // Imperative entry point invoked by the parent's "Regenerate Wealth Plan" button.
-    @api regenerate() { return this.handleGenerate(); }
-    // Imperative entry point invoked by the parent's "Save to Wealth Plan" footer button.
-    @api triggerSave() { return this.handlePreviewSave(); }
-    // Parent calls this on disconnect to clear generated data between sessions.
-    @api resetState() {
-        this._sections = [];
-        this._lockedRows = {};
-        this._lockedSections = {};
-        this._editedRows = {};
-        this._deletedRows = {};
-        this._existingSnapshots = {};
-        this._diffVisibleRows = {};
-        this._duplicateFlags = {};
-        this._wpGenerating = false;
-    }
 
     // Track whether parent explicitly disabled a feature (string 'false' from Flow)
     _explicitlyDisabled = {};
@@ -660,6 +546,7 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
 
     // ── Event selection + meeting type modal ─────────────────────────────────
     @track _selectedEventId      = null;   // Id of the selected Salesforce Event
+    @track _showMeetingTypeModal = false;
     @track _selectedMeetingType  = null;   // 'whiteboard' | 'status' | 'annual'
     @track _hasTodos             = false;
     @track _eventsLoadedAt       = null;   // Date when events finished loading
@@ -717,31 +604,6 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
     @track _noteDeletedLocally      = false; // true after note deleted this session; cleared on event re-select
     @track _versionSavedLocally     = false; // true after version save; makes isNotePublished ignore selectedEventNote?.Published__c
     // _noNoteSelectedArtifactIds and _noNoteStagedFiles removed — now using shared _selectedArtifactFileIds and _sharedFiles
-
-    // ═══════════════════════════════════════════════════════════════════════
-    // @wire — PICKLIST METADATA (17 adapters). LIVE: this is the real consumer.
-    // ═══════════════════════════════════════════════════════════════════════
-    //
-    // These populate every `type: 'select'` field in the review grid, and unlike the
-    // orphaned copies in advisorAssistant.js and advisorMeetingSummary.js, THIS set
-    // is the one that matters — the grid renders from it.
-    //
-    // Two-stage chain: `getObjectInfo` yields each object's defaultRecordTypeId, and
-    // each `getPicklistValues` wire depends on it through the reactive string
-    // '$_xObjectInfo.data.defaultRecordTypeId', so the picklist wires stay dormant
-    // until the object info resolves. Each handler normalises to {label, value} and
-    // then pushes into the memoised render model via `_refreshSelectOptionsMap()`
-    // and `_refreshReviewSections()`.
-    //
-    // `_selectOptionsMap` also carries lists that are NOT picklists — ownerOptions,
-    // companyOptions, entityOptions, built from the Account collections the Flow
-    // passed in — so SECTIONS' `selectKey` resolves both kinds identically.
-    //
-    // FIXME (DEFECTS.md #5): every wire destructures `{ data }` only, with no error
-    // branch. A picklist that fails to load (FLS, renamed field, wrong record type)
-    // leaves an empty option list, and `_isValidOption` treats an empty list as
-    // "still loading, skip validation" — so the failure silently disables validation
-    // for that field instead of surfacing, and invalid values reach the save.
 
     // ── Picklist metadata (wired from Salesforce) ──────────────────────────
     @track _goalPicklistOptions = [];
@@ -902,17 +764,7 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
         };
     }
 
-    /**
-     * True if `value` is a legal choice for `selectKey`.
-     * Deliberately permissive: an option list of length <= 1 (only the
-     * "-- Select --" placeholder) means the picklist has not loaded, and every row
-     * would otherwise flash red during the wire round-trip. The cost of that
-     * leniency is DEFECTS.md #5 — a wire that ERRORED looks identical to one still
-     * loading, so a metadata failure silently disables validation for that field.
-     * @param {string} selectKey key into the option map
-     * @param {string} value stored field value
-     * @returns {boolean}
-     */
+    /** Check if a value exists in a given options list */
     _isValidOption(selectKey, value) {
         if (!value) return true; // empty is always valid (user hasn't chosen)
         const opts = this._cachedSelectOptionsMap[selectKey];
@@ -991,6 +843,9 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
 
     // ── Style / layout getters ───────────────────────────────────────────────
     get dynamicBgStyle() {
+        if (this._theme === 'standard') {
+            return '--component-bg-color: #f3f2f2; --component-bg-solid: #f3f2f2;';
+        }
         if (this._theme === 'corporate') {
             return '--component-bg-color: linear-gradient(165deg, #f8f4ee 0%, #ede8de 100%); --component-bg-solid: #f0ebe1;';
         }
@@ -1201,7 +1056,7 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
     get isSummaryTab()    { return this._activeTab === 'summary'; }
     get isWealthPlanTab() { return this._activeTab === 'wealthplan'; }
     get isExistingTab()   { return this._activeTab === 'existing'; }
-    // summaryTabClass is defined once, below — the parent owns the top tab bar now.
+    get summaryTabClass()       { return `wph-main-tab${this._activeTab === 'summary'    ? ' wph-main-tab-active' : ''}`; }
     get wealthPlanTabClass()    { return `wph-main-tab${this._activeTab === 'wealthplan' ? ' wph-main-tab-active' : ''}`; }
     get existingTabClass()      { return `wph-main-tab${this._activeTab === 'existing'   ? ' wph-main-tab-active' : ''}`; }
     get hasExistingWealthPlan() { return !!this.inputWealthPlanId; }
@@ -1209,9 +1064,9 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
     // Inline style for active tab — bypasses CSS scoping issues in Salesforce synthetic shadow DOM
     static _TAB_ACTIVE_STYLE   = 'background:#dce8f5;border-color:#1e3a5f;color:#0f2044;font-weight:700';
     static _TAB_INACTIVE_STYLE = '';
-    get summaryTabStyle()    { return this._activeTab === 'summary'    ? AdvisorWealthPlan._TAB_ACTIVE_STYLE : AdvisorWealthPlan._TAB_INACTIVE_STYLE; }
-    get wealthPlanTabStyle() { return this._activeTab === 'wealthplan' ? AdvisorWealthPlan._TAB_ACTIVE_STYLE : AdvisorWealthPlan._TAB_INACTIVE_STYLE; }
-    get existingTabStyle()   { return this._activeTab === 'existing'   ? AdvisorWealthPlan._TAB_ACTIVE_STYLE : AdvisorWealthPlan._TAB_INACTIVE_STYLE; }
+    get summaryTabStyle()    { return this._activeTab === 'summary'    ? WealthPlanHelper._TAB_ACTIVE_STYLE : WealthPlanHelper._TAB_INACTIVE_STYLE; }
+    get wealthPlanTabStyle() { return this._activeTab === 'wealthplan' ? WealthPlanHelper._TAB_ACTIVE_STYLE : WealthPlanHelper._TAB_INACTIVE_STYLE; }
+    get existingTabStyle()   { return this._activeTab === 'existing'   ? WealthPlanHelper._TAB_ACTIVE_STYLE : WealthPlanHelper._TAB_INACTIVE_STYLE; }
     get summaryLeftTabClass()    { return 'wph-left-tab' + (this._activeTab === 'summary' ? ' wph-left-tab--active' : ''); }
     get wealthPlanLeftTabClass() { return 'wph-left-tab' + (this._activeTab === 'wealthplan' ? ' wph-left-tab--active' : ''); }
 
@@ -1222,8 +1077,8 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
     get isRegenDisabled()      { return !this.regenerateSummaryFlowApiName || !this.hasRegenInstructions; }
     static _SUBTAB_ACTIVE   = 'wph-ms-subtab wph-ms-subtab-active';
     static _SUBTAB_INACTIVE = 'wph-ms-subtab';
-    get meetingSubtabClass() { return this._activeMsSection === 'meeting' ? AdvisorWealthPlan._SUBTAB_ACTIVE : AdvisorWealthPlan._SUBTAB_INACTIVE; }
-    get todosSubtabClass()   { return this._activeMsSection === 'todos'   ? AdvisorWealthPlan._SUBTAB_ACTIVE : AdvisorWealthPlan._SUBTAB_INACTIVE; }
+    get meetingSubtabClass() { return this._activeMsSection === 'meeting' ? WealthPlanHelper._SUBTAB_ACTIVE : WealthPlanHelper._SUBTAB_INACTIVE; }
+    get todosSubtabClass()   { return this._activeMsSection === 'todos'   ? WealthPlanHelper._SUBTAB_ACTIVE : WealthPlanHelper._SUBTAB_INACTIVE; }
 
     // Advanced section collapsible
     get advancedBodyClass()    { return this._advancedExpanded ? 'wph-advanced-body' : 'wph-advanced-body wph-zone-collapse-hidden'; }
@@ -1277,32 +1132,18 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
     }
     handleEventSelect(event) {
         event.stopPropagation();
-        const clickedId = event.currentTarget.dataset.id;
-        // Radio-style: clicking the selected event deselects it
-        const nextId = this._selectedEventId === clickedId ? null : clickedId;
-        this._applyEventSelection(nextId);
-    }
-
-    // Public entry point — parent (advisorAssistant) drives event selection via @api selectedEventId.
-    @api get selectedEventId() { return this._selectedEventId; }
-    set selectedEventId(v) {
-        const id = v || null;
-        if (id === this._selectedEventId) return;
-        this._applyEventSelection(id);
-    }
-
-    _applyEventSelection(newId) {
-        const id = newId || null;
+        const id = event.currentTarget.dataset.id;
         // Save current event's todos before switching
         if (this._selectedEventId) {
             this._meetingTodosCache = { ...this._meetingTodosCache, [this._selectedEventId]: this._meetingTodos };
         }
-        this._selectedEventId    = id;
+        // Radio-style: clicking the selected event deselects it
+        this._selectedEventId    = this._selectedEventId === id ? null : id;
         this._noteDeletedLocally  = false;
         this._versionSavedLocally = false;
         // Always keep the selected event Id output current
         this.outputSelectedEventId = this._selectedEventId || '';
-        this._flowOut('outputSelectedEventId', this.outputSelectedEventId);
+        this.dispatchEvent(new FlowAttributeChangeEvent('outputSelectedEventId', this.outputSelectedEventId));
         // Restore from save cache if this event was previously saved in this session,
         // otherwise reset all event-specific state
         const cached = this._savedNoteCache[this._selectedEventId];
@@ -1483,11 +1324,6 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
     async handleRegenerateSummary() {
         if (!this.regenerateSummaryFlowApiName) {
             this._showToast('Configuration Error', 'Regenerate Summary Flow API Name is not set.', 'error');
-            // Emit completion so advisorAssistant's _bgJobs.summary flag clears —
-            // otherwise the tab loader spins forever and the CTA becomes a no-op.
-            this.dispatchEvent(new CustomEvent('summarychange', {
-                bubbles: false, detail: { summaryHtml: this._currentNoteHtml || '' }
-            }));
             return;
         }
         this._summaryGenerating = true;
@@ -1502,7 +1338,7 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
             this._currentNoteHtml    = _stripStyleBlocks(result);
             this._noteDeletedLocally = false;
             this.outputMeetingSummary = this._currentNoteHtml;
-            this._flowOut('outputMeetingSummary', this._currentNoteHtml);
+            this.dispatchEvent(new FlowAttributeChangeEvent('outputMeetingSummary', this._currentNoteHtml));
             this._summaryInstructions = '';
             this._summarySaved        = false;
         } catch (error) {
@@ -1544,7 +1380,7 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
         this._noteDeletedLocally = false;
         this._currentNoteHtml    = this._summaryEditValue;
         this.outputMeetingSummary = this._currentNoteHtml;
-        this._flowOut('outputMeetingSummary', this._currentNoteHtml);
+        this.dispatchEvent(new FlowAttributeChangeEvent('outputMeetingSummary', this._currentNoteHtml));
         this._summaryEditMode = false;
         this._summarySaved    = false;
         this.handleSaveSummary();
@@ -1594,7 +1430,7 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
         }
         const html = this.summaryDisplayHtml || '';
         this.outputMeetingSummary = html;
-        this._flowOut('outputMeetingSummary', html);
+        this.dispatchEvent(new FlowAttributeChangeEvent('outputMeetingSummary', html));
     }
 
     // ── Private helper: record a successful background save in local state ───
@@ -1619,27 +1455,27 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
     // ── Private helper: push note data into flow output attributes ───────────
     _applyNoteOutputs(html, publishedFlag) {
         this.outputMeetingSummary = html;
-        this._flowOut('outputMeetingSummary', html);
+        this.dispatchEvent(new FlowAttributeChangeEvent('outputMeetingSummary', html));
         const md = _htmlToMd(html);
         this.outputNoteMarkdown = md;
-        this._flowOut('outputNoteMarkdown', md);
+        this.dispatchEvent(new FlowAttributeChangeEvent('outputNoteMarkdown', md));
         const noteId = (this._creatingNewVersion && this.createVersionFlowApiName)
             ? (this.selectedEventNote?.Id || this._backgroundSavedNoteId || null)
             : (this._creatingNewVersion ? null : (this.selectedEventNote?.Id || this._backgroundSavedNoteId || null));
         if (noteId) {
             const updated = { Id: noteId, Note__c: html, NoteMarkdown__c: md, ...(publishedFlag ? { Published__c: true } : {}) };
             this.outputMeetingNote = updated;
-            this._flowOut('outputMeetingNote', updated);
+            this.dispatchEvent(new FlowAttributeChangeEvent('outputMeetingNote', updated));
             this.outputMeetingNoteToCreate = null;
-            this._flowOut('outputMeetingNoteToCreate', null);
+            this.dispatchEvent(new FlowAttributeChangeEvent('outputMeetingNoteToCreate', null));
         } else {
             const newNote = { Note__c: html, NoteMarkdown__c: md, ...(publishedFlag ? { Published__c: true } : {}) };
             this.outputMeetingNoteToCreate = newNote;
-            this._flowOut('outputMeetingNoteToCreate', newNote);
+            this.dispatchEvent(new FlowAttributeChangeEvent('outputMeetingNoteToCreate', newNote));
             this.outputMeetingNote = null;
-            this._flowOut('outputMeetingNote', null);
+            this.dispatchEvent(new FlowAttributeChangeEvent('outputMeetingNote', null));
         }
-        this._flowOut('outputSelectedEventId', this._selectedEventId || '');
+        this.dispatchEvent(new FlowAttributeChangeEvent('outputSelectedEventId', this._selectedEventId || ''));
     }
 
     // Save & Review — persists draft in background, stays in modal
@@ -1708,7 +1544,7 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
         if (this.modalMode) {
             this.handleCloseModal();
         }
-        try { this._flowNext(); } catch (e) { /* not in a flow */ }
+        try { this.dispatchEvent(new FlowNavigationNextEvent()); } catch (e) { /* not in a flow */ }
     }
 
     handleMainTabSwitch(event) {
@@ -1835,7 +1671,7 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
         if (!this._publishExitPending) return;
         this._publishExitPending = false;
         if (this.modalMode) this.handleCloseModal();
-        try { this._flowNext(); } catch(e) { /* not in a flow */ }
+        try { this.dispatchEvent(new FlowNavigationNextEvent()); } catch(e) { /* not in a flow */ }
     }
 
     // ── Delete meeting note ──────────────────────────────────────────────────
@@ -1925,11 +1761,6 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
     async handleGenerateSummaryDirect() {
         if (!this.meetingSummaryFlowApiName) {
             this._showToast('Configuration Error', 'Meeting Summary Flow API Name is not set.', 'error');
-            // Emit completion so advisorAssistant's _bgJobs.summary flag clears —
-            // otherwise the tab loader spins forever and the CTA becomes a no-op.
-            this.dispatchEvent(new CustomEvent('summarychange', {
-                bubbles: false, detail: { summaryHtml: this._currentNoteHtml || '' }
-            }));
             return;
         }
         this._summaryGenerating = true;
@@ -1976,7 +1807,7 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
             this._meetingTodos       = [];
             this._panelEqualOverride = false;
             this.outputMeetingSummary = this._currentNoteHtml;
-            this._flowOut('outputMeetingSummary', this._currentNoteHtml);
+            this.dispatchEvent(new FlowAttributeChangeEvent('outputMeetingSummary', this._currentNoteHtml));
             this._summarySaved = false;
             // Fire brief and todos as separate async calls so summary is visible immediately
             if (this.briefEnabled === true || this.briefEnabled === 'true') {
@@ -2150,11 +1981,13 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
         this._recognition.interimResults = true;
 
         this._recognition.onresult = (event) => {
-            // Interim (non-final) results are ignored — only settled text is committed.
+            let interimTranscript = '';
             let finalTranscript = '';
             for (let i = event.resultIndex; i < event.results.length; ++i) {
                 if (event.results[i].isFinal) {
                     finalTranscript += event.results[i][0].transcript;
+                } else {
+                    interimTranscript += event.results[i][0].transcript;
                 }
             }
             // Append to existing text
@@ -2286,6 +2119,8 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
     }
 
     // ── Meeting type modal ───────────────────────────────────────────────────
+    handleOpenMeetingTypeModal()  { this._showMeetingTypeModal = true; }
+    handleCloseMeetingTypeModal() { this._showMeetingTypeModal = false; }
     handleMeetingTypeChange(event) {
         const btn = event.target.closest('[data-type]') || event.currentTarget;
         const type = btn?.dataset?.type;
@@ -2410,7 +2245,7 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
                 Related_Event__c: whatId
             }));
         this.outputTodos = accepted;
-        this._flowOut('outputTodos', accepted);
+        this.dispatchEvent(new FlowAttributeChangeEvent('outputTodos', accepted));
     }
     get showTodosSaveBar() {
         return this.isTodosSection && this._meetingTodos.length > 0 && !this._todosGenerating;
@@ -2418,10 +2253,6 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
     handleGenerateTodosDirect() {
         if (!this.meetingSummaryFlowApiName) {
             this._showToast('Configuration Error', 'Meeting Summary Flow API Name is not set.', 'error');
-            // Emit completion so advisorAssistant's _bgJobs.todos flag clears.
-            this.dispatchEvent(new CustomEvent('todoschange', {
-                bubbles: false, detail: { todos: this._meetingTodos, acceptedCount: this.acceptedTodosCount }
-            }));
             return;
         }
         const files = this.noNoteFilesForFlow;
@@ -2441,9 +2272,9 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
     _dispatchMeetingTypeOutputs() {
         const type = this._selectedMeetingType || '';
         this.outputMeetingType = type;
-        this._flowOut('outputMeetingType', type);
+        this.dispatchEvent(new FlowAttributeChangeEvent('outputMeetingType', type));
         this.outputHasTodos = this._hasTodos;
-        this._flowOut('outputHasTodos', this._hasTodos);
+        this.dispatchEvent(new FlowAttributeChangeEvent('outputHasTodos', this._hasTodos));
         if (this._selectedEventId) {
             this._meetingTypeCache = {
                 ...this._meetingTypeCache,
@@ -2513,12 +2344,11 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
         this._briefEditorNeedsInit = false;
     }
     // ── Two-column layout collapse / ratio ──────────────────────────────────
-    @track _theme               = 'corporate'; // 'classic' | 'corporate'
+    @track _theme               = 'corporate'; // 'classic' | 'corporate' | 'standard'
     @track _leftPanelCollapsed  = false;
     @track _panelEqualOverride  = false;
     @track _eventDropdownOpen   = false;
     get wpLayoutClass() {
-        if (this.embeddedLayout) return 'wph-summary-layout wph-layout-embedded';
         if (this._leftPanelCollapsed) return 'wph-summary-layout wph-layout-collapsed';
         if (this.isReviewStep && !this._panelEqualOverride) return 'wph-summary-layout wph-layout-wide';
         return 'wph-summary-layout';
@@ -2546,7 +2376,7 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
         return 'wph-summary-layout';
     }
     get showPanelRatioToggle()   { return !this._leftPanelCollapsed && this.hasSummaryForEvent; }
-    get showWpPanelRatioToggle() { return !this._leftPanelCollapsed && this.isReviewStep && !this.embeddedLayout; }
+    get showWpPanelRatioToggle() { return !this._leftPanelCollapsed && this.isReviewStep; }
     get panelRatioToggleTitle() { return this._panelEqualOverride ? 'Switch to 30/70 view' : 'Switch to 50/50 view'; }
     get panelRatioToggleClass() { return `wph-panel-ratio-btn${this._panelEqualOverride ? ' wph-panel-ratio-btn--equal' : ''}`; }
 
@@ -2612,26 +2442,6 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
         return 'background: #f1f5f9; color: #64748b;';
     }
 
-    /**
-     * STEP 1 of the pipeline — ask the AI for a structured wealth plan.
-     *
-     * Assembles `additionalContext` from everything the advisor supplied: free text,
-     * the selected Event's subject/date/description/category, and any Tasks ticked
-     * as relevant. The meeting note travels SEPARATELY as `meetingNoteText`, not
-     * inside the context blob, so the Flow can prompt on it distinctly.
-     *
-     * Documents: artifact selections first, then session uploads, capped at three —
-     * the Flow only accepts documentId1..3.
-     *
-     * Note it prefers `_currentNoteHtml` over the saved `Note__c`: a summary that
-     * was just generated but not yet saved must still feed the wealth plan.
-     *
-     * On completion (success, failure OR missing configuration) it emits
-     * `wpgenerated`. That event is what clears the parent's `_bgJobs.wealthplan`
-     * flag — omitting it on any path leaves the parent's loader spinning forever.
-     *
-     * @fires wpgenerated {sections, hasData, summary}
-     */
     // ── Generate ─────────────────────────────────────────────────────────────
     async handleGenerate() {
         // Wealth Plan tab always generates wealth plan only
@@ -2642,11 +2452,6 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
 
         if (!this.flowApiName) {
             this._showToast('Configuration Error', 'Wealth Plan Flow API Name is not set.', 'error');
-            // Emit completion so advisorAssistant's _bgJobs.wealthplan flag clears.
-            this.dispatchEvent(new CustomEvent('wpgenerated', {
-                bubbles: false,
-                detail: { sections: this._sections || [], hasData: false, summary: this._summary || '' }
-            }));
             return;
         }
 
@@ -2727,7 +2532,7 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
                     this._originalMeetingSummary = this._meetingSummaryResult; // Feature 12
                     this._isSummaryEditing = false;
                     this.outputMeetingSummary = this._meetingSummaryResult;
-                    this._flowOut('outputMeetingSummary', this._meetingSummaryResult);
+                    this.dispatchEvent(new FlowAttributeChangeEvent('outputMeetingSummary', this._meetingSummaryResult));
                 }
             });
 
@@ -2750,16 +2555,6 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
             this._activeTab = 'wealthplan';
         } finally {
             this._stopLoadingCycle();
-            // Always emit completion so the parent's bg-job flag reliably clears.
-            this.dispatchEvent(new CustomEvent('wpgenerated', {
-                bubbles: false,
-                detail: {
-                    sections: this._sections || [],
-                    hasData: (this._sections?.length || 0) > 0,
-                    // The parent reads detail.summary to populate outputSummary.
-                    summary: this._summary || ''
-                }
-            }));
         }
     }
 
@@ -2823,23 +2618,6 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
         }
     }
 
-    /**
-     * STEP 2 of the pipeline — turn the AI's raw response into `_sections`.
-     *
-     * The model is prompted for pure JSON but in practice wraps it in prose,
-     * ```json fences, smart quotes, zero-width characters or a BOM — often several
-     * at once. Rather than fail the generation, this walks a fixed ladder:
-     *   1. strip BOM / zero-width chars / smart quotes / markdown fences;
-     *   2. anything before the first `{` or `[` is kept as a prose summary;
-     *   3. truncate at the LAST matching bracket, dropping trailing commentary;
-     *   4. JSON.parse; on failure show the raw text as the summary and fall back to
-     *      empty sections, so the advisor sees what came back and can regenerate.
-     *
-     * Parsed keys are then normalised through FIELD_ALIASES (step 3), which is what
-     * lets the AI answer with "amount" or "dueDate" instead of API names.
-     *
-     * @param {string} raw response from generateSummary Apex
-     */
     // ── Parse AI result ──────────────────────────────────────────────────────
     _parseResult(raw) {
         let cleaned = (raw || '').trim();
@@ -2877,7 +2655,7 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
         try {
             parsed = JSON.parse(jsonStr);
         } catch (e) {
-            console.error('[AdvisorWealthPlan] JSON.parse failed:', e.message, '| Input:', jsonStr.substring(0, 300));
+            console.error('[WealthPlanHelper] JSON.parse failed:', e.message, '| Input:', jsonStr.substring(0, 300));
             this._summary = raw;
             this._sections = this._buildEmptySections();
             return;
@@ -3038,33 +2816,6 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
         return this._reviewSections;
     }
 
-    /**
-     * STEP 5 of the pipeline — build the entire render model for the review grid.
-     * The heart of this component, and the most expensive function in it.
-     *
-     * Joins five sources into one array the template renders with no logic of its
-     * own: `_sections` (AI + existing records), SECTIONS (field metadata), the
-     * resolved option lists, the per-row state maps (`_lockedRows`, `_editedRows`,
-     * `_deletedRows`, `_duplicateFlags`), and `_existingSnapshots` (for diffs).
-     *
-     * Precomputes, so the template never branches:
-     *   per field    widget flags (isSelect/isCheckbox/isTextarea/isNumber/isText),
-     *                the option list, isInvalid + invalidMsg (required, maxlength,
-     *                crossValidate, and unknown-picklist-value checks)
-     *   per row      _rowClass, _sourceLabel (AI / existing / manual), title,
-     *                subtitle, description, meta chips, diff fields, _canLock
-     *   per section  progressPct — how much of it is reviewed and locked
-     *
-     * TWO PASSES, deliberately: a cheap stats pass over ALL records so section
-     * headers and progress stay accurate, and the expensive display pass only for
-     * EXPANDED sections. Without the split, a household with hundreds of records
-     * would rebuild every collapsed row on each keystroke.
-     *
-     * MEMOISED into `_reviewSections` and refreshed explicitly by
-     * `_refreshReviewSections()` (not a plain getter, which would recompute per
-     * render). If a mutation does not appear in the UI, the usual cause is a
-     * missing `_refreshReviewSections()` call after it.
-     */
     _buildReviewSections() {
         const optMap = this._getFullOptMap();
         return this._sections.map((s, idx) => {
@@ -3276,19 +3027,6 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
             const completedCount = s.records.filter(r => r._completed).length;
             const progressPct = totalInSection > 0 ? Math.round(((completedCount + lockedCount) / totalInSection) * 100) : 0;
 
-            // Section status pill — quick-scan summary of section state.
-            let hasAi = false, hasModified = false, allExisting = true;
-            for (const r of s.records) {
-                if (r._source === 'ai' || r._source === 'manual') hasAi = true;
-                if ((r._source === 'ai' || r._source === 'existing') && this._editedRows[r._id]) hasModified = true;
-                if (r._source !== 'existing') allExisting = false;
-            }
-            let statusPillText = '', statusPillClass = '';
-            if (this._lockedSections[s.key])            { statusPillText = 'LOCKED';       statusPillClass = 'aa-sec-pill aa-sec-pill--locked'; }
-            else if (hasModified)                       { statusPillText = 'MODIFIED';     statusPillClass = 'aa-sec-pill aa-sec-pill--modified'; }
-            else if (hasAi)                             { statusPillText = 'AI GENERATED'; statusPillClass = 'aa-sec-pill aa-sec-pill--ai'; }
-            else if (allExisting && s.hasRecords)       { statusPillText = 'PUBLISHED';    statusPillClass = 'aa-sec-pill aa-sec-pill--published'; }
-
             return {
                 ...s,
                 isExpanded: !!this._expandedSections[s.key],
@@ -3309,8 +3047,6 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
                 progressStyle: `width: ${progressPct}%`,
                 progressLabel: (() => { const _p = []; if (completedCount > 0) _p.push(`${completedCount} saved`); if (lockedCount > 0) _p.push(`${lockedCount} selected`); return _p.length > 0 ? _p.join(' · ') : `${totalInSection} total`; })(),
                 hasLockableRows: lockableCount > 0 && !this._lockedSections[s.key],
-                statusPillText,
-                statusPillClass,
                 displayRecords
             };
         });
@@ -3325,22 +3061,13 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
     }
 
     // ── Empty-section filtering ──────────────────────────────────────────────
-    // Single-pass over reviewSections computes both the filtered list and the empty count.
     get filteredReviewSections() {
-        const showEmpty = this._showEmptySections;
-        const out = [];
-        for (const s of this.reviewSections) {
-            if (s.key === 'todos') continue;
-            if (showEmpty || s.hasRecords) out.push(s);
-        }
-        return out;
+        const sections = this.reviewSections.filter(s => s.key !== 'todos');
+        if (this._showEmptySections) return sections;
+        return sections.filter(s => s.hasRecords);
     }
     get emptySectionCount() {
-        let n = 0;
-        for (const s of this.reviewSections) {
-            if (s.key !== 'todos' && !s.hasRecords) n++;
-        }
-        return n;
+        return this.reviewSections.filter(s => s.key !== 'todos' && !s.hasRecords).length;
     }
     get hasEmptySections() { return this.emptySectionCount > 0; }
     get emptySectionToggleLabel() {
@@ -3730,22 +3457,6 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
         }
     }
 
-    /**
-     * STEP 4 of the pipeline — fold the records already in Salesforce into the grid
-     * alongside the AI's proposals, so the advisor reviews both in one place instead
-     * of guessing what already exists.
-     *
-     * Existing records are prepended (they are context; AI rows come after), deep
-     * cloned so edits never mutate the Flow's input collections, and tagged:
-     *   _source: 'existing'  → drives the row badge and the save routing
-     *   _sfId               → the real Salesforce Id, needed for update/delete
-     *   _id                 → a synthetic UI key, stable across reorders
-     * `_snapshotExistingRecords` records their original field values so the diff
-     * view can show exactly what the advisor changed, and `_detectDuplicates` then
-     * flags AI rows that merely restate something already on file.
-     *
-     * Reversible: `_removeExistingFromSections` strips them out again.
-     */
     _mergeExistingData() {
         const existingMap = this._existingDataMap;
         const sections = this._sections.map(s => {
@@ -4095,6 +3806,7 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
         this._redoStack = [];
         this._focusedRowId = null;
         this._focusedSectionKey = null;
+        this._showMeetingTypeModal = false;
         // _selectedEventId kept; meeting type is per-event via _meetingTypeCache
     }
     handleResumeDraft() {
@@ -4105,21 +3817,7 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
     }
 
     // ── Save to Flow ─────────────────────────────────────────────────────────
-    /**
-     * STEP 6a — the confirmation gate before any DML.
-     *
-     * Applies exactly the same LOCK-TO-SAVE routing as `_invokeWpSaveSubflow` and
-     * reports what it found: how many records will be created, updated and deleted,
-     * broken down per section, plus the net change in financial value (formatted in
-     * NOK) so the advisor sees the monetary consequence, not just record counts.
-     * Nothing is written here — it only opens the confirm modal.
-     *
-     * Because the routing logic is duplicated between this method and the save, any
-     * change to the rules must be made in BOTH or the preview will lie.
-     *
-     * Entry point for the parent's "Save to Wealth Plan" footer button, via
-     * `@api triggerSave()`.
-     */
+    // Show confirmation before saving
     handlePreviewSave() {
         const keys = ['goals','income','assets','milestones','ownership','sustainability','greetings','todos'];
         const isSectionLockedFn = (key) => !!this._lockedSections[key];
@@ -4297,11 +3995,14 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
     get rootWrapperClass() { return this.modalMode ? 'wph-overlay-root' : 'wph-inline-root'; }
     get containerClass() {
         const base = this.modalMode ? 'wph-container wph-overlay-panel' : 'wph-container';
-        return this._theme === 'corporate' ? `${base} wph-theme-corporate` : base;
+        if (this._theme === 'corporate') return `${base} wph-theme-corporate`;
+        if (this._theme === 'standard')  return `${base} wph-theme-standard`;
+        return base;
     }
-    get themeToggleClass()  { return this._theme === 'corporate' ? 'theme-pill-toggle theme-pill-dark' : 'theme-pill-toggle'; }
+    get themeToggleClass()  { return (this._theme === 'corporate' || this._theme === 'standard') ? 'theme-pill-toggle theme-pill-dark' : 'theme-pill-toggle'; }
     get classicBtnClass()   { return `segment-btn${this._theme === 'classic'   ? ' segment-active' : ''}`; }
     get corporateBtnClass() { return `segment-btn${this._theme === 'corporate' ? ' segment-active' : ''}`; }
+    get standardBtnClass()  { return `segment-btn${this._theme === 'standard'  ? ' segment-active' : ''}`; }
     handleThemeSwitch(event) { this._theme = event.currentTarget.dataset.theme; }
     get launcherStatusLabel() {
         if (this.isNotePublished)    return 'Meeting summary published';
@@ -4343,31 +4044,6 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
         }
     }
 
-    /**
-     * STEP 6b — the actual write. Routes every reviewed record into insert / update
-     * / delete buckets and hands them to `saveWealthPlan` Apex as JSON.
-     *
-     * THE ROUTING RULE, and the safety property of this whole component:
-     * **only LOCKED rows are saved.** Locking is the advisor's explicit "I have
-     * checked this", so an unreviewed AI suggestion can never reach the database.
-     *   existing + marked deleted           → delete
-     *   existing + edited + locked          → update
-     *   not existing (AI/manual) + locked   → create
-     *   anything else                       → skipped silently
-     * `clean()` projects each record down to the fields SECTIONS declares, dropping
-     * the internal `_id` / `_source` / `_rowClass` bookkeeping.
-     *
-     * Two sections get parent Ids stamped on from `recordId` (milestones →
-     * RelatedHousehold__c, greetings → FF_HouseholdId__c), and greeting bodies are
-     * flattened to plain text because the field is not rich text.
-     *
-     * PARTIAL FAILURE IS EXPECTED. Apex returns either the literal 'Saved' or a JSON
-     * envelope `{errors: [...], successSections: [...]}`. `_applySaveResult` then
-     * marks only the sections that actually succeeded as completed, so a retry
-     * re-sends just the failed ones rather than duplicating the successful records.
-     *
-     * @param {object} preview the confirm-modal preview from `handlePreviewSave`
-     */
     async _invokeWpSaveSubflow(preview) {
         this._wpSaving = true;
         this._wpSaveErrors = null;
@@ -4454,15 +4130,6 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
                 todos:          route('todos')
             };
 
-            // ┌─ FIXME (DEFECTS.md #2) — LIVE BUG ────────────────────────────────┐
-            // │ `inputAccountId` is declared NOWHERE in this class — not as @api,  │
-            // │ not as a field — so it is always undefined and Apex always gets    │
-            // │ accountId: ''. Unlike the identical lines in advisorAssistant and  │
-            // │ advisorMeetingSummary, this one IS reached: it runs on every       │
-            // │ wealth-plan save. Whether that matters depends on whether the save │
-            // │ Flow uses the parameter. The intended value is almost certainly    │
-            // │ `_resolvedPrimaryMemberId`, which this class does define.          │
-            // └───────────────────────────────────────────────────────────────────┘
             const resultStr = await saveWealthPlan({
                 flowApiName: this.wealthPlanSaveFlowApiName,
                 recordsJson: JSON.stringify(payload),
@@ -4573,7 +4240,7 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
             });
         }
         this.outputTodos = toCreate;
-        this._flowOut('outputTodos', toCreate);
+        this.dispatchEvent(new FlowAttributeChangeEvent('outputTodos', toCreate));
         this._showToast('To-dos Saved', `${toCreate.length} to-do${toCreate.length !== 1 ? 's' : ''} saved`, 'success');
     }
 
@@ -4685,7 +4352,7 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
             const val = this[name];
             const safeVal = (name === 'outputSummary') ? (val || '') : (Array.isArray(val) ? val : []);
             this[name] = safeVal;
-            this._flowOut(name, safeVal);
+            this.dispatchEvent(new FlowAttributeChangeEvent(name, safeVal));
         });
 
         const totalNew = goals.toCreate.length + income.toCreate.length + assets.toCreate.length +
@@ -4698,26 +4365,13 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
 
         this._showToast('Saved', `${totalNew} new, ${totalUpdated} updated, ${totalDeleted} deleted.`, 'success');
 
-        try { this._flowNext(); } catch (e) { /* not in flow */ }
+        try { this.dispatchEvent(new FlowNavigationNextEvent()); } catch (e) { /* not in flow */ }
     }
 
     // ══════════════════════════════════════════════════════════════════════════
     // FEATURE 10: UNDO / REDO
     // ══════════════════════════════════════════════════════════════════════════
-    //
-    // Command-pattern, not snapshots: the grid can hold thousands of records, so
-    // cloning `_sections` on every keystroke is not viable. Each mutation pushes a
-    // small descriptor { type, ...payload }, and `_applyUndoAction` both reverses it
-    // and RETURNS the inverse descriptor — which is what goes on the redo stack. So
-    // redo is simply undo applied to the inverse; there is one implementation.
-    //
-    // Action types: edit · lock · unlock · lockSection · unlockSection · add ·
-    //               delete · markDelete · unmarkDelete · batchLock · batchUnlock
-    //
-    // Capped at 50 entries. Any new action clears the redo stack, so the history is
-    // linear — you cannot branch off a partially undone sequence.
 
-    /** Push a reversible action, evicting the oldest past 50 and invalidating redo. */
     _pushUndo(action) {
         const stack = this._undoStack.length >= 50
             ? [...this._undoStack.slice(1), action]
@@ -4914,18 +4568,6 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
     // FEATURE 7: SMART CONFLICT DETECTION
     // ══════════════════════════════════════════════════════════════════════════
 
-    /**
-     * Flag AI rows that look like something already on file, so the advisor does not
-     * silently create a second copy of an existing goal or asset.
-     *
-     * Compares only each section's `role: 'title'` field, per section, AI rows
-     * against existing rows. Titles shorter than 3 characters are skipped as too
-     * ambiguous to judge. First match wins — the point is to raise a flag, not to
-     * enumerate every near-miss.
-     *
-     * This is ADVISORY ONLY: a flagged row is still fully editable and saveable. It
-     * changes the row's appearance, nothing else.
-     */
     _detectDuplicates() {
         const flags = {};
         this._sections.forEach(sec => {
@@ -4958,13 +4600,6 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
         this._refreshReviewSections();
     }
 
-    /**
-     * Cheap fuzzy title match, tuned to be forgiving rather than precise — a false
-     * positive costs a dismissible flag, a false negative costs a duplicate record.
-     * Three tiers: exact → substring either way → Jaccard word overlap above 0.5
-     * (only for titles of 2+ words, where single-word overlap would be noise).
-     * @returns {boolean}
-     */
     _simpleMatch(a, b) {
         if (a === b) return true;
         if (a.includes(b) || b.includes(a)) return true;
@@ -4998,7 +4633,7 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
     handleSummaryInput(event) {
         this._meetingSummaryResult = event.target.value;
         this.outputMeetingSummary = this._meetingSummaryResult;
-        this._flowOut('outputMeetingSummary', this._meetingSummaryResult);
+        this.dispatchEvent(new FlowAttributeChangeEvent('outputMeetingSummary', this._meetingSummaryResult));
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -5007,19 +4642,6 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
 
     _boundKeyHandler;
 
-    /**
-     * Row navigation for the review grid — the point is that an advisor can work
-     * through a long list without reaching for the mouse.
-     *   ↑ / ↓        move focus between rows, across section boundaries
-     *   Enter        edit the focused row
-     *   d / Delete   mark the focused row for deletion
-     *   Escape       cancel the current edit, else drop focus
-     *
-     * Registered on `document` (not the host) so it works wherever focus sits, and
-     * it deliberately ignores keys typed into inputs, textareas, selects and
-     * contenteditables. It is also gated on `_step === 'review'`, so it is inert
-     * unless the grid is actually on screen.
-     */
     _handleKeyDown(event) {
         if (this._step !== 'review') return;
         const tag = event.target.tagName;
