@@ -294,9 +294,17 @@
                                                 </button>
                                                 <div class={msRegenBodyClass}>
                                                     <div class="wph-zone-collapse-inner">
+                                                        <!-- lwc:ref so the three places that clear
+                                                             _summaryInstructions can clear the element
+                                                             too: a textarea's value is child text, which
+                                                             LWC applies only on the first render. The
+                                                             wph-textarea--regen modifier is gone — it
+                                                             carried no rules and .wph-textarea already
+                                                             styles this. -->
                                                         <textarea
-                                                            class="wph-textarea wph-textarea--regen"
+                                                            class="wph-textarea"
                                                             rows="3"
+                                                            lwc:ref="summaryInstructions"
                                                             placeholder="E.g. 'Focus on the retirement discussion and add action points…'"
                                                             oninput={handleSummaryInstructionsInput}>{_summaryInstructions}</textarea>
                                                         <button class="wph-action-bar-btn wph-action-bar-btn--regen wph-ms-regen-inner-btn"
@@ -390,16 +398,26 @@
 
                                             <!-- Published: read-only view -->
                                             <template lwc:if={isNotePublished}>
-                                                <div class="wph-summary-html-body">
-                                                    <lightning-formatted-rich-text value={summaryDisplayHtml}></lightning-formatted-rich-text>
-                                                </div>
+                                                <!-- Painted by _paintProse, not lightning-formatted-rich-text: that base
+                                                     component renders into its OWN shadow root, so the style
+                                                     compiler's scope token never reaches the h2/ul/table inside
+                                                     it and every typography rule we wrote was inert.
+                                                     lwc:dom="manual" is what makes the engine stamp tokens onto
+                                                     the nodes we inject, which is what makes .wph-prose work. -->
+                                                <div class="wph-summary-html-body wph-prose wph-prose--measured"
+                                                     lwc:dom="manual" lwc:ref="summaryBodyPublished"></div>
                                             </template>
 
                                             <!-- Historical version preview: read-only view -->
                                             <template lwc:elseif={isPreviewingHistoricalVersion}>
-                                                <div class="wph-summary-html-body">
-                                                    <lightning-formatted-rich-text value={summaryDisplayHtml}></lightning-formatted-rich-text>
-                                                </div>
+                                                <!-- Painted by _paintProse, not lightning-formatted-rich-text: that base
+                                                     component renders into its OWN shadow root, so the style
+                                                     compiler's scope token never reaches the h2/ul/table inside
+                                                     it and every typography rule we wrote was inert.
+                                                     lwc:dom="manual" is what makes the engine stamp tokens onto
+                                                     the nodes we inject, which is what makes .wph-prose work. -->
+                                                <div class="wph-summary-html-body wph-prose wph-prose--measured"
+                                                     lwc:dom="manual" lwc:ref="summaryBodyVersion"></div>
                                             </template>
 
                                             <!-- Unpublished: full edit UI -->
@@ -447,6 +465,15 @@
                                                             <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                                                             <b>Edit Summary</b>
                                                         </button>
+                                                        <!-- Sits beside Edit Summary rather than inside the
+                                                             brief accordion, so both editors are reachable
+                                                             from one row. See showBriefEditButton. -->
+                                                        <template lwc:if={showBriefEditButton}>
+                                                            <button class="wph-summary-action-btn" onclick={handleEditBrief}>
+                                                                <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                                                                <b>Edit Brief</b>
+                                                            </button>
+                                                        </template>
                                                         <template lwc:if={canRevertSummary}>
                                                             <button class="wph-summary-action-btn wph-summary-action-btn-danger" onclick={handleRevertSummary} title="Discard edits and restore the original note">
                                                                 <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 .49-3.5"></path></svg>
@@ -472,20 +499,10 @@
                                                                 </template>
                                                             </button>
                                                             <template lwc:if={_briefExpanded}>
-                                                                    <div class="wph-brief-body fade-in">
-                                                                        <lightning-formatted-rich-text value={briefDisplayHtml}></lightning-formatted-rich-text>
-                                                                        <template lwc:if={isPreviewingHistoricalVersion}>
-                                                                            <!-- no edit button when previewing a historical version -->
-                                                                        </template>
-                                                                        <template lwc:else>
-                                                                            <div class="wph-brief-edit-row">
-                                                                                <button class="wph-summary-action-btn" onclick={handleEditBrief}>
-                                                                                    <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                                                                                    <b>Edit Brief</b>
-                                                                                </button>
-                                                                            </div>
-                                                                        </template>
-                                                                    </div>
+                                                                    <!-- Edit Brief lives on the summary header row. Painted by
+                                                                         _paintProse — same reason as the summary above. -->
+                                                                    <div class="wph-brief-body wph-prose wph-prose--lede fade-in"
+                                                                         lwc:dom="manual" lwc:ref="briefBody"></div>
                                                             </template>
                                                         </div>
                                                     </template>
@@ -493,9 +510,12 @@
                                                          tabindex="-1"
                                                          onmouseup={handleSummaryMouseUp}
                                                          onmousedown={handleSelectionZoneMouseDown}>
-                                                        <div class="wph-summary-html-body">
-                                                            <lightning-formatted-rich-text value={summaryDisplayHtml}></lightning-formatted-rich-text>
-                                                        </div>
+                                                        <!-- See the note above. This one lives inside the selection zone, so
+                                                             _paintProse's change guard matters here: rewriting innerHTML
+                                                             on every render would wipe the user's text selection and
+                                                             break the "Add as Action Item" popup below. -->
+                                                        <div class="wph-summary-html-body wph-prose wph-prose--measured"
+                                                             lwc:dom="manual" lwc:ref="summaryBodyDraft"></div>
                                                         <template lwc:if={_selectionPopup}>
                                                             <div class="wph-convert-popup" style={selectionPopupStyle}>
                                                                 <button class="wph-convert-popup-btn" onmousedown={handleConvertToTask}>
@@ -689,20 +709,33 @@
                                         </template>
                                         <template lwc:elseif={hasMeetingTodos}>
                                             <div class="wph-zone-collapse-inner wph-zone-collapse-inner--flush">
+                                                <!-- The counts used to be decorative <span>s. They are
+                                                     buttons now: clicking one filters the list to that
+                                                     priority, clicking the active one clears it. -->
                                                 <template lwc:if={todoPriorityCounts.hasAny}>
                                                     <div class="wph-priority-net-strip">
                                                         <template lwc:if={todoPriorityCounts.high}>
-                                                            <span class="wph-pnet-chip wph-pnet-chip--high">{todoPriorityCounts.high} High</span>
+                                                            <button type="button" class={todoFilterHighClass} data-priority="High"
+                                                                    onclick={handleTodoPriorityFilter}
+                                                                    title="Show only high priority">{todoPriorityCounts.high} High</button>
                                                         </template>
                                                         <template lwc:if={todoPriorityCounts.normal}>
-                                                            <span class="wph-pnet-chip wph-pnet-chip--normal">{todoPriorityCounts.normal} Normal</span>
+                                                            <button type="button" class={todoFilterNormalClass} data-priority="Normal"
+                                                                    onclick={handleTodoPriorityFilter}
+                                                                    title="Show only normal priority">{todoPriorityCounts.normal} Normal</button>
                                                         </template>
                                                         <template lwc:if={todoPriorityCounts.low}>
-                                                            <span class="wph-pnet-chip wph-pnet-chip--low">{todoPriorityCounts.low} Low</span>
+                                                            <button type="button" class={todoFilterLowClass} data-priority="Low"
+                                                                    onclick={handleTodoPriorityFilter}
+                                                                    title="Show only low priority">{todoPriorityCounts.low} Low</button>
                                                         </template>
                                                     </div>
                                                 </template>
-                                                <template for:each={_meetingTodos} for:item="todo">
+                                                <!-- displayTodos = _meetingTodos decorated (formatted due
+                                                     date, overdue flag), ordered by priority then date, and
+                                                     filtered. Handlers still key off _key against
+                                                     _meetingTodos, which stays the data. -->
+                                                <template for:each={displayTodos} for:item="todo">
                                                     <div key={todo._key} class={todo._rowClass}>
                                                         <div class="wph-record-view">
                                                             <div class="wph-state-icon-col">
@@ -737,10 +770,17 @@
                                                                             <span class="wph-mc-value wph-mc-empty">Normal</span>
                                                                         </span>
                                                                     </template>
-                                                                    <template lwc:if={todo.ActivityDate}>
-                                                                        <span class="wph-meta-chip">
+                                                                    <!-- Was the raw ISO string. _dueLabel is
+                                                                         no-NO formatted; _isOverdue catches the
+                                                                         stale dates the model lifts out of
+                                                                         documents. -->
+                                                                    <template lwc:if={todo._hasDue}>
+                                                                        <span class={todo._dueChipClass}>
                                                                             <span class="wph-mc-label">Due:</span>
-                                                                            <span class="wph-mc-value">{todo.ActivityDate}</span>
+                                                                            <span class="wph-mc-value">{todo._dueLabel}</span>
+                                                                            <template lwc:if={todo._isOverdue}>
+                                                                                <span class="wph-mc-overdue">Overdue</span>
+                                                                            </template>
                                                                         </span>
                                                                     </template>
                                                                     <template lwc:else>
@@ -772,7 +812,7 @@
                                                                 <template lwc:elseif={todo._accepted}>
                                                                     <button class="wph-unlock-btn" data-key={todo._key} onclick={handleUndoTodo}>
                                                                         <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
-                                                                        Undo
+                                                                        Undo accept
                                                                     </button>
                                                                 </template>
                                                                 <template lwc:else>
@@ -839,6 +879,10 @@
                                                         <svg class="wph-sparkle" viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z"/></svg>
                                                         <b>Generate To-do's</b>
                                                     </button>
+                                                    <button class="wph-add-todo-btn" onclick={handleAddTodo}>
+                                                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                                        <b>Add manually</b>
+                                                    </button>
                                                 </div>
                                             </div>
                                         </template>
@@ -860,9 +904,13 @@
                                                 <b>{saveTodosLabel}</b>
                                             </button>
                                         </template>
-                                        <button class="wph-save-publish-btn" onclick={handleAcceptAllTodos}>
+                                        <button class="wph-add-todo-btn" onclick={handleAddTodo}>
+                                            <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2.5" fill="none"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                            <b>Add to-do</b>
+                                        </button>
+                                        <button class="wph-save-publish-btn" disabled={acceptAllDisabled} onclick={handleAcceptAllTodos}>
                                             <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2.5" fill="none"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                                            <b>Accept All</b>
+                                            <b>{acceptAllLabel}</b>
                                         </button>
                                     </div>
                                 </template>
@@ -925,17 +973,97 @@
                                     </button>
                                 </div>
                                 <div class="wph-edit-modal-body">
-                                    <div class="wph-rte-editable cke_editable"
+                                <!-- Formatting toolbar — see handleToolbarCommand -->
+                                <div class="wph-rte-toolbar">
+                                        <button type="button" class="wph-rte-tool" data-cmd="bold" data-target="summary"
+                                                title="Bold" aria-label="Bold"
+                                                onmousedown={handleToolbarMouseDown} onclick={handleToolbarCommand}><b>B</b></button>
+                                        <button type="button" class="wph-rte-tool" data-cmd="italic" data-target="summary"
+                                                title="Italic" aria-label="Italic"
+                                                onmousedown={handleToolbarMouseDown} onclick={handleToolbarCommand}><i>I</i></button>
+                                        <button type="button" class="wph-rte-tool" data-cmd="underline" data-target="summary"
+                                                title="Underline" aria-label="Underline"
+                                                onmousedown={handleToolbarMouseDown} onclick={handleToolbarCommand}><u>U</u></button>
+                                        <span class="wph-rte-tool-sep"></span>
+                                        <button type="button" class="wph-rte-tool" data-cmd="h2" data-target="summary"
+                                                title="Heading" aria-label="Heading"
+                                                onmousedown={handleToolbarMouseDown} onclick={handleToolbarCommand}><b>H2</b></button>
+                                        <button type="button" class="wph-rte-tool" data-cmd="h3" data-target="summary"
+                                                title="Subheading" aria-label="Subheading"
+                                                onmousedown={handleToolbarMouseDown} onclick={handleToolbarCommand}><b>H3</b></button>
+                                        <button type="button" class="wph-rte-tool" data-cmd="p" data-target="summary"
+                                                title="Normal text" aria-label="Normal text"
+                                                onmousedown={handleToolbarMouseDown} onclick={handleToolbarCommand}><span>&para;</span></button>
+                                        <span class="wph-rte-tool-sep"></span>
+                                        <button type="button" class="wph-rte-tool" data-cmd="ul" data-target="summary"
+                                                title="Bulleted list" aria-label="Bulleted list"
+                                                onmousedown={handleToolbarMouseDown} onclick={handleToolbarCommand}><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3.5" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="3.5" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="3.5" cy="18" r="1.5" fill="currentColor" stroke="none"/></svg></button>
+                                        <button type="button" class="wph-rte-tool" data-cmd="ol" data-target="summary"
+                                                title="Numbered list" aria-label="Numbered list"
+                                                onmousedown={handleToolbarMouseDown} onclick={handleToolbarCommand}><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/><line x1="10" y1="18" x2="21" y2="18"/><path d="M4 6h1V3H4M3 12h2.5L3 15h2.5M3 17h2v4H3" stroke-width="1.4"/></svg></button>
+                                        <button type="button" class="wph-rte-tool" data-cmd="outdent" data-target="summary"
+                                                title="Decrease indent" aria-label="Decrease indent"
+                                                onmousedown={handleToolbarMouseDown} onclick={handleToolbarCommand}><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polyline points="7 8 3 12 7 16"/><line x1="11" y1="6" x2="21" y2="6"/><line x1="11" y1="12" x2="21" y2="12"/><line x1="11" y1="18" x2="21" y2="18"/></svg></button>
+                                        <button type="button" class="wph-rte-tool" data-cmd="indent" data-target="summary"
+                                                title="Increase indent" aria-label="Increase indent"
+                                                onmousedown={handleToolbarMouseDown} onclick={handleToolbarCommand}><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polyline points="3 8 7 12 3 16"/><line x1="11" y1="6" x2="21" y2="6"/><line x1="11" y1="12" x2="21" y2="12"/><line x1="11" y1="18" x2="21" y2="18"/></svg></button>
+                                        <span class="wph-rte-tool-sep"></span>
+                                        <button type="button" class="wph-rte-tool" data-target="summary"
+                                                title="Insert link" aria-label="Insert link"
+                                                onmousedown={handleToolbarMouseDown} onclick={handleToggleLinkStrip}><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></button>
+                                        <button type="button" class="wph-rte-tool" data-cmd="unlink" data-target="summary"
+                                                title="Remove link" aria-label="Remove link"
+                                                onmousedown={handleToolbarMouseDown} onclick={handleToolbarCommand}><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M18.36 6.64a5 5 0 0 1 0 7.07l-1.72 1.71"/><path d="M5.64 17.36a5 5 0 0 1 0-7.07l1.72-1.71"/><line x1="2" y1="2" x2="22" y2="22"/></svg></button>
+                                        <button type="button" class="wph-rte-tool" data-cmd="removeFormat" data-target="summary"
+                                                title="Clear formatting" aria-label="Clear formatting"
+                                                onmousedown={handleToolbarMouseDown} onclick={handleToolbarCommand}><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M6 4h12M9 4l-2 16M15 4l2 16M4 20h16"/></svg></button>
+                                </div>
+                                <template lwc:if={showSummaryLinkStrip}>
+                                    <div class="wph-rte-link-strip">
+                                        <input class="wph-rte-link-input" type="url" placeholder="https://example.com"
+                                               oninput={handleLinkUrlInput} />
+                                        <button type="button" class="wph-rte-link-apply" disabled={linkApplyDisabled}
+                                                title="Select text in the editor, then enter a URL"
+                                                onmousedown={handleToolbarMouseDown} onclick={handleApplyLink}>Add link</button>
+                                        <button type="button" class="wph-rte-link-cancel" data-target="summary"
+                                                onmousedown={handleToolbarMouseDown} onclick={handleToggleLinkStrip}>Cancel</button>
+                                    </div>
+                                </template>
+                                    <div class="wph-rte-editable wph-prose cke_editable"
                                          contenteditable="true"
+                                         lwc:dom="manual"
                                          lwc:ref="summaryEditor"
                                          oninput={handleEditorInput}
                                          onkeydown={handleEditorKeyDown}
                                          onpaste={handleEditorPaste}>
                                     </div>
+                                <template lwc:if={_modalRegenerating}>
+                                    <div class="wph-rte-busy">
+                                        <div class="wph-rte-busy-inner">
+                                            <lightning-spinner alternative-text="Regenerating" size="small"></lightning-spinner>
+                                            <span>Regenerating…</span>
+                                        </div>
+                                    </div>
+                                </template>
+                                </div>
+                                <!-- Regenerate from inside the editor: the result replaces the editor content
+                                     only. Nothing is persisted until Apply & Save, and Cancel discards it.
+                                     Button appears only once there are instructions to send. -->
+                                <div class="wph-modal-regen">
+                                    <textarea class="wph-modal-regen-input" rows="2"
+                                              placeholder="Tell it what to change, e.g. ‘Focus on the retirement discussion and add action points…’"
+                                              disabled={_modalRegenerating}
+                                              oninput={handleModalInstructionsInput}>{_modalInstructions}</textarea>
+                                    <template lwc:if={canModalRegenerate}>
+                                        <button type="button" class="wph-modal-regen-btn" onclick={handleModalRegenerate}>
+                                            <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><polyline points="23 4 23 10 17 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                                            <b>Regenerate Meeting Summary with Instructions</b>
+                                        </button>
+                                    </template>
                                 </div>
                                 <div class="wph-edit-modal-footer">
                                     <button class="wph-summary-cancel-btn" onclick={handleCancelSummaryEdit}>Cancel</button>
-                                    <button class="wph-summary-save-btn" onclick={handleSaveSummaryEdit}>
+                                    <button class="wph-summary-save-btn" disabled={_modalRegenerating} onclick={handleSaveSummaryEdit}>
                                         <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none">
                                             <polyline points="20 6 9 17 4 12"></polyline>
                                         </svg>
@@ -971,14 +1099,73 @@
                                     </button>
                                 </div>
                                 <div class="wph-edit-modal-body">
-                                    <div class="wph-rte-editable cke_editable"
+                                <!-- Formatting toolbar — same handlers, data-target switches the editor -->
+                                <div class="wph-rte-toolbar">
+                                        <button type="button" class="wph-rte-tool" data-cmd="bold" data-target="brief"
+                                                title="Bold" aria-label="Bold"
+                                                onmousedown={handleToolbarMouseDown} onclick={handleToolbarCommand}><b>B</b></button>
+                                        <button type="button" class="wph-rte-tool" data-cmd="italic" data-target="brief"
+                                                title="Italic" aria-label="Italic"
+                                                onmousedown={handleToolbarMouseDown} onclick={handleToolbarCommand}><i>I</i></button>
+                                        <button type="button" class="wph-rte-tool" data-cmd="underline" data-target="brief"
+                                                title="Underline" aria-label="Underline"
+                                                onmousedown={handleToolbarMouseDown} onclick={handleToolbarCommand}><u>U</u></button>
+                                        <span class="wph-rte-tool-sep"></span>
+                                        <button type="button" class="wph-rte-tool" data-cmd="h2" data-target="brief"
+                                                title="Heading" aria-label="Heading"
+                                                onmousedown={handleToolbarMouseDown} onclick={handleToolbarCommand}><b>H2</b></button>
+                                        <button type="button" class="wph-rte-tool" data-cmd="h3" data-target="brief"
+                                                title="Subheading" aria-label="Subheading"
+                                                onmousedown={handleToolbarMouseDown} onclick={handleToolbarCommand}><b>H3</b></button>
+                                        <button type="button" class="wph-rte-tool" data-cmd="p" data-target="brief"
+                                                title="Normal text" aria-label="Normal text"
+                                                onmousedown={handleToolbarMouseDown} onclick={handleToolbarCommand}><span>&para;</span></button>
+                                        <span class="wph-rte-tool-sep"></span>
+                                        <button type="button" class="wph-rte-tool" data-cmd="ul" data-target="brief"
+                                                title="Bulleted list" aria-label="Bulleted list"
+                                                onmousedown={handleToolbarMouseDown} onclick={handleToolbarCommand}><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3.5" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="3.5" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="3.5" cy="18" r="1.5" fill="currentColor" stroke="none"/></svg></button>
+                                        <button type="button" class="wph-rte-tool" data-cmd="ol" data-target="brief"
+                                                title="Numbered list" aria-label="Numbered list"
+                                                onmousedown={handleToolbarMouseDown} onclick={handleToolbarCommand}><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/><line x1="10" y1="18" x2="21" y2="18"/><path d="M4 6h1V3H4M3 12h2.5L3 15h2.5M3 17h2v4H3" stroke-width="1.4"/></svg></button>
+                                        <button type="button" class="wph-rte-tool" data-cmd="outdent" data-target="brief"
+                                                title="Decrease indent" aria-label="Decrease indent"
+                                                onmousedown={handleToolbarMouseDown} onclick={handleToolbarCommand}><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polyline points="7 8 3 12 7 16"/><line x1="11" y1="6" x2="21" y2="6"/><line x1="11" y1="12" x2="21" y2="12"/><line x1="11" y1="18" x2="21" y2="18"/></svg></button>
+                                        <button type="button" class="wph-rte-tool" data-cmd="indent" data-target="brief"
+                                                title="Increase indent" aria-label="Increase indent"
+                                                onmousedown={handleToolbarMouseDown} onclick={handleToolbarCommand}><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polyline points="3 8 7 12 3 16"/><line x1="11" y1="6" x2="21" y2="6"/><line x1="11" y1="12" x2="21" y2="12"/><line x1="11" y1="18" x2="21" y2="18"/></svg></button>
+                                        <span class="wph-rte-tool-sep"></span>
+                                        <button type="button" class="wph-rte-tool" data-target="brief"
+                                                title="Insert link" aria-label="Insert link"
+                                                onmousedown={handleToolbarMouseDown} onclick={handleToggleLinkStrip}><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></button>
+                                        <button type="button" class="wph-rte-tool" data-cmd="unlink" data-target="brief"
+                                                title="Remove link" aria-label="Remove link"
+                                                onmousedown={handleToolbarMouseDown} onclick={handleToolbarCommand}><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M18.36 6.64a5 5 0 0 1 0 7.07l-1.72 1.71"/><path d="M5.64 17.36a5 5 0 0 1 0-7.07l1.72-1.71"/><line x1="2" y1="2" x2="22" y2="22"/></svg></button>
+                                        <button type="button" class="wph-rte-tool" data-cmd="removeFormat" data-target="brief"
+                                                title="Clear formatting" aria-label="Clear formatting"
+                                                onmousedown={handleToolbarMouseDown} onclick={handleToolbarCommand}><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M6 4h12M9 4l-2 16M15 4l2 16M4 20h16"/></svg></button>
+                                </div>
+                                <template lwc:if={showBriefLinkStrip}>
+                                    <div class="wph-rte-link-strip">
+                                        <input class="wph-rte-link-input" type="url" placeholder="https://example.com"
+                                               oninput={handleLinkUrlInput} />
+                                        <button type="button" class="wph-rte-link-apply" disabled={linkApplyDisabled}
+                                                title="Select text in the editor, then enter a URL"
+                                                onmousedown={handleToolbarMouseDown} onclick={handleApplyLink}>Add link</button>
+                                        <button type="button" class="wph-rte-link-cancel" data-target="brief"
+                                                onmousedown={handleToolbarMouseDown} onclick={handleToggleLinkStrip}>Cancel</button>
+                                    </div>
+                                </template>
+                                    <div class="wph-rte-editable wph-prose cke_editable"
                                          contenteditable="true"
+                                         lwc:dom="manual"
                                          lwc:ref="briefEditor"
                                          oninput={handleBriefEditorInput}
                                          onkeydown={handleEditorKeyDown}
                                          onpaste={handleEditorPaste}>
                                     </div>
                                 </div>
+                                <!-- No regenerate strip here, deliberately: the brief is adjusted by
+                                     hand. The Meeting Summary editor keeps its own. -->
                                 <div class="wph-edit-modal-footer">
                                     <button class="wph-summary-cancel-btn" onclick={handleCancelBriefEdit}>Cancel</button>
                                     <button class="wph-summary-save-btn" onclick={handleSaveBriefEdit}>

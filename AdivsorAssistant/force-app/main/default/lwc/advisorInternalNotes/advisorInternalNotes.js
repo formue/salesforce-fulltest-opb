@@ -86,6 +86,22 @@ export default class AdvisorInternalNotes extends LightningElement {
     /** API name of the internal-notes save Flow. Blank disables saving. */
     @api saveFlowApiName = '';
 
+    /**
+     * Character ceiling for MeetingNote__c.Internal_Notes__c.
+     *
+     * The field is a Rich Text Area of 32768 — a QUARTER of Note__c's 131072, which is easy to
+     * assume it matches. Rich text counts the MARKUP, so a formatted note gets closer to the
+     * ceiling than the visible text suggests, and crossing it fails the save with a raw
+     * STRING_TOO_LONG from Apex. Overridable because the length is org configuration.
+     */
+    @api maxNoteLength = 32768;
+
+    /**
+     * Milliseconds of quiet before autosaving. Set to 0 to disable autosave entirely and go
+     * back to save-on-demand.
+     */
+    @api autosaveDelayMs = 3000;
+
     // ═══════════════════════════════════════════════════════════════════════
     // TAB CONTRACT — IMPERATIVE
     // ═══════════════════════════════════════════════════════════════════════
@@ -100,17 +116,29 @@ export default class AdvisorInternalNotes extends LightningElement {
      *   Errors surface as a toast, never thrown — so callers that rely on persistence must
      *   check this rather than assume completion.
      */
-    @api async save() {
+    @api async save(options) {
+        // Autosave passes { silent: true }: a success toast every few seconds of typing would be
+        // unusable. Failures always toast — an autosave that fails quietly is worse than none.
+        const silent = !!(options && options.silent);
         if (this._isSaving) return false;                 // re-entry guard
         if (!this.saveFlowApiName) {
             this._toast('Configuration Error', 'Internal Notes Flow API Name is not set.', 'error');
             return false;
         }
         if (!this._selectedEventId) return false;
+        if (this.isOverLength) {
+            if (!silent) {
+                this._toast('Too Long', `Internal notes exceed the ${this.maxNoteLength} character limit.`, 'error');
+            }
+            return false;
+        }
 
         // Capture what we send: the advisor may keep typing while the call is in flight, and
         // marking that later text as saved would be a lie.
         const sent = this._notes || '';
+        // A pending countdown would keep ticking toward a save this one has just made
+        // unnecessary; canSave would refuse it, but the visible counter would look stuck.
+        this._cancelAutosave();
         this._isSaving = true;
         try {
             const savedId = await saveInternalNotes({
@@ -122,7 +150,7 @@ export default class AdvisorInternalNotes extends LightningElement {
             this._savedNotes = sent;
             this._savedAt    = new Date();
             if (savedId) this._createdNoteId = savedId;
-            this._toast('Saved', 'Internal notes saved.', 'success');
+            if (!silent) this._toast('Saved', 'Internal notes saved.', 'success');
             return true;
         } catch (e) {
             this._toast('Save Failed', e.body ? e.body.message : e.message, 'error');
@@ -132,8 +160,69 @@ export default class AdvisorInternalNotes extends LightningElement {
         }
     }
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // AUTOSAVE
+    // ═══════════════════════════════════════════════════════════════════════
+    //
+    // Before this, typed notes lived only in the in-memory `_cache` until the advisor pressed
+    // Save — so a page reload, a session timeout or a crash lost them. The meeting summary has
+    // had background autosave all along; this surface had none.
+    //
+    // Debounced rather than per-keystroke: one Flow invocation per typing pause, not per letter.
+
+    _autosaveTimerId = null;
+    /** Ticks the visible countdown once a second while a save is pending. */
+    _autosaveTickId = null;
+    /** Seconds until autosave fires. 0 = nothing pending. Drives the countdown in statusLabel. */
+    @track _autosaveIn = 0;
+
+    _cancelAutosave() {
+        if (this._autosaveTimerId) {
+            clearTimeout(this._autosaveTimerId);
+            this._autosaveTimerId = null;
+        }
+        this._stopAutosaveTick();
+    }
+
+    _stopAutosaveTick() {
+        if (this._autosaveTickId) {
+            clearInterval(this._autosaveTickId);
+            this._autosaveTickId = null;
+        }
+        this._autosaveIn = 0;
+    }
+
+    _scheduleAutosave() {
+        if (!this.autosaveDelayMs) return;                // explicitly disabled
+        this._cancelAutosave();
+
+        // Visible countdown. Without it the editor just sits there and then something happens;
+        // seeing "Saving in 3 s" also gives the advisor a moment to press Save themselves.
+        this._autosaveIn = Math.ceil(this.autosaveDelayMs / 1000);
+        // eslint-disable-next-line @lwc/lwc/no-async-operation
+        this._autosaveTickId = setInterval(() => {
+            this._autosaveIn = Math.max(0, this._autosaveIn - 1);
+            if (this._autosaveIn === 0) this._stopAutosaveTick();
+        }, 1000);
+
+        // eslint-disable-next-line @lwc/lwc/no-async-operation
+        this._autosaveTimerId = setTimeout(() => {
+            this._autosaveTimerId = null;
+            this._stopAutosaveTick();
+            // Re-check on fire, not on schedule: the advisor may have saved by hand, switched
+            // event, or pushed past the length limit while the timer was pending.
+            if (this.canSave) this.save({ silent: true });
+        }, this.autosaveDelayMs);
+    }
+
+    /** A pending save must never land against a component that is going away. */
+    disconnectedCallback() {
+        this._cancelAutosave();
+    }
+
     /** Called by the parent on teardown so a fresh open starts clean. */
     @api resetState() {
+        this._cancelAutosave();
         this._notes = '';
         this._savedNotes = '';
         this._savedAt = null;
@@ -188,6 +277,9 @@ export default class AdvisorInternalNotes extends LightningElement {
      * over the record so switching events never silently discards typing.
      */
     _applyEventChange(nextId) {
+        // Critical ordering: a timer armed for the OUTGOING event would fire after
+        // _selectedEventId has already moved on, saving the wrong text to the wrong note.
+        this._cancelAutosave();
         if (this._selectedEventId) {
             this._cache = { ...this._cache, [this._selectedEventId]: this._notes };
         }
@@ -220,10 +312,37 @@ export default class AdvisorInternalNotes extends LightningElement {
     // ═══════════════════════════════════════════════════════════════════════
 
     get isDirty()  { return (this._notes || '') !== (this._savedNotes || ''); }
-    get canSave()  { return !!this._selectedEventId && this.isDirty && !this._isSaving; }
+    get canSave()  {
+        return !!this._selectedEventId && this.isDirty && !this._isSaving && !this.isOverLength;
+    }
     get isSaving() { return this._isSaving; }
 
+    // ── Length ──────────────────────────────────────────────────────────────
+    // Counts the HTML, because that is what the field's 32768 measures. The label says so:
+    // the number looks wrong beside the visible text otherwise.
+
+    get noteLength()   { return (this._notes || '').length; }
+    get isOverLength() { return this.noteLength > this.maxNoteLength; }
+    /** Only surfaced near the ceiling — a permanent counter on a scratch field is noise. */
+    get showLengthCounter() { return this.noteLength > this.maxNoteLength * 0.75; }
+    get lengthLabel() {
+        const fmt = n => n.toLocaleString('no-NO');
+        return `${fmt(this.noteLength)} / ${fmt(this.maxNoteLength)} characters (incl. formatting)`;
+    }
+    /** How much has to go. More actionable than the raw pair of numbers. */
+    get overBy() {
+        return Math.max(0, this.noteLength - this.maxNoteLength).toLocaleString('no-NO');
+    }
+    get lengthClass() {
+        return this.isOverLength ? 'ain-length ain-length--over' : 'ain-length';
+    }
+
     get statusLabel() {
+        // Autosave is invisible without this — the advisor stops typing and something happens.
+        if (this._isSaving) return 'Saving…';
+        if (this.isOverLength) return 'Too long to save';
+        // Outranks 'Unsaved changes': it says the same thing and adds when.
+        if (this._autosaveIn > 0) return `Saving in ${this._autosaveIn} s…`;
         if (this.isDirty) return 'Unsaved changes';
         if (this._savedAt) {
             return `Saved ${this._savedAt.toLocaleTimeString('no-NO', { hour: '2-digit', minute: '2-digit' })}`;
@@ -231,6 +350,9 @@ export default class AdvisorInternalNotes extends LightningElement {
         return '';
     }
     get statusClass() {
+        if (this.isOverLength) return 'ain-status ain-status--over';
+        // Counting down is not a warning — something is about to happen on its own.
+        if (this._autosaveIn > 0) return 'ain-status ain-status--pending';
         return this.isDirty
             ? 'ain-status ain-status--unsaved'
             : 'ain-status';
@@ -250,6 +372,7 @@ export default class AdvisorInternalNotes extends LightningElement {
     handleNotesChange(event) {
         this._notes = event.target.value || '';
         this._hasLocalEdit = true;
+        this._scheduleAutosave();
     }
 
     _toast(title, message, variant) {

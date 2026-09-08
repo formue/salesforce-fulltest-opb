@@ -131,7 +131,7 @@
                                 </template>
                                 <template lwc:if={hasSelectedEventParticipants}>
                                     <span class="aa-event-info-dot">·</span>
-                                    <span class="aa-event-info-item aa-event-info-participants">
+                                    <span class="aa-event-info-item">
                                         <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                                         <span class="aa-event-participants-text">{selectedEventParticipantLabel}</span>
                                     </span>
@@ -205,7 +205,7 @@
                         <template lwc:else>
                             <ul class="aa-event-list">
                                 <template for:each={eventItems} for:item="ev">
-                                    <li key={ev.id} class="aa-event-list-item">
+                                    <li key={ev.id}>
                                         <button class={ev.aaEventRowClass} data-id={ev.id} onclick={handleEventSelect}>
                                             <span class="aa-event-row-icon">
                                                 <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
@@ -266,15 +266,15 @@
                             <div class="wph-guide-item">
                                 <span class="wph-guide-swatch wph-gs-green"></span>
                                 <div>
-                                    <span class="wph-guide-label"><b>Green — Locked</b></span>
-                                    <span class="wph-guide-desc">Saved and ready to send to Salesforce</span>
+                                    <span class="wph-guide-label"><b>Green — Accepted</b></span>
+                                    <span class="wph-guide-desc">Confirmed and ready to send to Salesforce</span>
                                 </div>
                             </div>
                             <div class="wph-guide-item">
                                 <span class="wph-guide-swatch wph-gs-yellow"></span>
                                 <div>
                                     <span class="wph-guide-label"><b>Yellow — Edited</b></span>
-                                    <span class="wph-guide-desc">Changes made but not yet locked</span>
+                                    <span class="wph-guide-desc">Changes made but not yet accepted</span>
                                 </div>
                             </div>
                             <div class="wph-guide-item">
@@ -327,15 +327,15 @@
                             </div>
                             <div class="wph-guide-item">
                                 <span class="wph-guide-num">2</span>
-                                <span class="wph-guide-desc"><b>Lock</b> a row with the green checkmark to confirm it for save</span>
+                                <span class="wph-guide-desc"><b>Accept</b> a row with the green checkmark to confirm it for save</span>
                             </div>
                             <div class="wph-guide-item">
                                 <span class="wph-guide-num">3</span>
-                                <span class="wph-guide-desc">Use <b>Lock All Valid</b> or <b>Lock Section</b> to lock multiple at once</span>
+                                <span class="wph-guide-desc">Use <b>Accept all</b> to confirm every valid row at once. <b>Accept section</b> appears instead once no individual rows are left.</span>
                             </div>
                             <div class="wph-guide-item">
                                 <span class="wph-guide-num">4</span>
-                                <span class="wph-guide-desc">Click <b>Save to Wealth Plan</b> — only locked records are saved</span>
+                                <span class="wph-guide-desc">Click <b>Save to Wealth Plan</b> — only accepted records are saved</span>
                             </div>
                         </div>
                     </div>
@@ -363,7 +363,7 @@
                                 </div>
                                 <div>
                                     <span class="wph-feat-title"><b>Meeting Summary</b></span>
-                                    <span class="wph-guide-desc">The <b>Meeting Summary</b> tab has two sub-sections: <b>Meeting</b> (view, edit, regenerate the AI note) and <b>To-do's</b> (generate and accept action items). Choose <b>Save &amp; Review</b> to keep editing, or <b>Save &amp; Publish</b> to lock and share the summary permanently.</span>
+                                    <span class="wph-guide-desc">View, edit and regenerate the AI note. <b>Edit Summary</b> and <b>Edit Brief</b> open a full editor with a formatting toolbar, and you can regenerate from inside it. Choose <b>Save &amp; Review</b> to keep editing, or <b>Save &amp; Publish</b> to lock and share the summary permanently. To-Do's are their own tab.</span>
                                 </div>
                             </div>
                         </div>
@@ -381,12 +381,112 @@
                                 </div>
                             </div>
                             <div class="wph-feat-item">
+                                <div class="wph-feat-icon wph-fi-green">
+                                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                                </div>
+                                <div>
+                                    <span class="wph-feat-title"><b>Save to Wealth Plan</b></span>
+                                    <span class="wph-guide-desc">Before anything is written you get a confirmation showing how many records will be <b>created</b>, <b>updated</b> and <b>deleted</b>, along with the financial impact of the change.</span>
+                                </div>
+                            </div>
+                            <div class="wph-feat-item">
+                                <div class="wph-feat-icon wph-fi-red">
+                                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                                </div>
+                                <div>
+                                    <span class="wph-feat-title"><b>Duplicates and changes</b></span>
+                                    <span class="wph-guide-desc">A suggestion that looks like something already on the plan is flagged <b>Duplicate?</b>. On existing records, the diff view shows exactly which fields the AI wants to change.</span>
+                                </div>
+                            </div>
+                            <div class="wph-feat-item">
                                 <div class="wph-feat-icon wph-fi-amber">
                                     <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
                                 </div>
                                 <div>
                                     <span class="wph-feat-title"><b>Undo / Redo</b></span>
-                                    <span class="wph-guide-desc">Use the undo and redo buttons in the Wealth Plan review toolbar to reverse any action. Expand All and Collapse All sit alongside them.</span>
+                                    <span class="wph-guide-desc">Undo and redo sit on the right of the Wealth Plan <b>status band</b> — the card showing how many suggestions you have accepted — together with Expand All and Collapse All.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="wph-feat-group">
+                        <h4 class="wph-guide-section-title">Finding &amp; Context</h4>
+                        <div class="wph-feat-list">
+                            <div class="wph-feat-item">
+                                <div class="wph-feat-icon wph-fi-blue">
+                                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                                </div>
+                                <div>
+                                    <span class="wph-feat-title"><b>Event date range</b></span>
+                                    <span class="wph-guide-desc">In the event picker, <b>Range</b> switches between the usual list and the last 3, 6 or 12 months, or everything. Only the ranges your admin has supplied appear.</span>
+                                </div>
+                            </div>
+                            <div class="wph-feat-item">
+                                <div class="wph-feat-icon wph-fi-teal">
+                                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                </div>
+                                <div>
+                                    <span class="wph-feat-title"><b>Preview attached files</b></span>
+                                    <span class="wph-guide-desc">Click the eye icon on any Meeting File or uploaded document to open it without leaving the component.</span>
+                                </div>
+                            </div>
+                            <div class="wph-feat-item">
+                                <div class="wph-feat-icon wph-fi-purple">
+                                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                </div>
+                                <div>
+                                    <span class="wph-feat-title"><b>Generation runs in the background</b></span>
+                                    <span class="wph-guide-desc">You can leave a tab while it works. A banner names what is still running, and a dot on each tab shows where. Results are waiting when you come back.</span>
+                                </div>
+                            </div>
+                            <div class="wph-feat-item">
+                                <div class="wph-feat-icon wph-fi-amber">
+                                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><polyline points="12 7 12 12 15 14"/></svg>
+                                </div>
+                                <div>
+                                    <span class="wph-feat-title"><b>Version history</b></span>
+                                    <span class="wph-guide-desc">Earlier saved versions of a meeting note are kept. Open one to read it side by side with the current draft &mdash; historical versions are read-only.</span>
+                                </div>
+                            </div>
+                            <div class="wph-feat-item">
+                                <div class="wph-feat-icon wph-fi-green">
+                                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                                </div>
+                                <div>
+                                    <span class="wph-feat-title"><b>Turn text into an action item</b></span>
+                                    <span class="wph-guide-desc">Select any sentence in the meeting summary and choose <b>Add as Action Item</b> to send it straight to the To-Do's tab.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="wph-feat-group">
+                        <h4 class="wph-guide-section-title">To-Do's &amp; Internal Notes</h4>
+                        <div class="wph-feat-list">
+                            <div class="wph-feat-item">
+                                <div class="wph-feat-icon wph-fi-teal">
+                                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                                </div>
+                                <div>
+                                    <span class="wph-feat-title"><b>To-Do's</b></span>
+                                    <span class="wph-guide-desc">Generate action items from the summary, or add your own with <b>Add to-do</b>. <b>Accept</b> the ones you want, then <b>Save to-do's</b> to create the Tasks. Filter by clicking the High / Normal / Low counts, and watch for the <b>Overdue</b> flag on dates already in the past.</span>
+                                </div>
+                            </div>
+                            <div class="wph-feat-item">
+                                <div class="wph-feat-icon wph-fi-amber">
+                                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+                                </div>
+                                <div>
+                                    <span class="wph-feat-title"><b>Internal Notes</b></span>
+                                    <span class="wph-guide-desc">Private notes that are <b>never</b> shared with the client and never reach the meeting summary. They save themselves a few seconds after you stop typing — the countdown tells you when — and the tab shows a dot while anything is unsaved.</span>
+                                </div>
+                            </div>
+                            <div class="wph-feat-item">
+                                <div class="wph-feat-icon wph-fi-purple">
+                                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                                </div>
+                                <div>
+                                    <span class="wph-feat-title"><b>Brief Summary</b></span>
+                                    <span class="wph-guide-desc">The short <b>At a Glance</b> version, in its own bordered block at the top of the summary. Edit it with <b>Edit Brief</b>, next to Edit Summary.</span>
                                 </div>
                             </div>
                         </div>
@@ -398,7 +498,122 @@
                 <template lwc:if={isGuideWhatsNewTab}>
                 <div class="wph-guide-whatsnew">
                     <div class="wph-whatsnew-release">
-                        <span class="wph-whatsnew-version">v2026.05 · Latest</span>
+                        <span class="wph-whatsnew-version">v2026.09 · Latest</span>
+                        <span class="wph-whatsnew-label">Formatting, Reliability &amp; Autosave</span>
+                    </div>
+                    <div class="wph-whatsnew-list">
+                        <div class="wph-feat-item">
+                            <div class="wph-feat-icon wph-fi-green">
+                                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                            </div>
+                            <div>
+                                <span class="wph-feat-title"><b>Wealth Plan no longer comes back empty</b></span>
+                                <span class="wph-guide-desc">Generation sometimes withheld the meeting summary from the AI, so the plan came back with no sections and the model&rsquo;s own apology where the summary should be. Fixed. If a generation genuinely returns nothing usable you now get a clear message and a <b>Try Again</b>, instead of an empty plan that looked finished.</span>
+                            </div>
+                        </div>
+                        <div class="wph-feat-item">
+                            <div class="wph-feat-icon wph-fi-blue">
+                                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+                            </div>
+                            <div>
+                                <span class="wph-feat-title"><b>Summaries are properly formatted</b></span>
+                                <span class="wph-guide-desc">Headings, bullet lists, bold text and tables in the meeting summary and brief are now styled &mdash; and identical whether you are reading or editing. The summary fills the card, with a line-length cap that only kicks in on a very wide screen.</span>
+                            </div>
+                        </div>
+                        <div class="wph-feat-item">
+                            <div class="wph-feat-icon wph-fi-blue">
+                                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/></svg>
+                            </div>
+                            <div>
+                                <span class="wph-feat-title"><b>A formatting toolbar when you edit</b></span>
+                                <span class="wph-guide-desc"><b>Edit Summary</b> and <b>Edit Brief</b> now have bold, italic, underline, headings, bulleted and numbered lists, indent, links and clear formatting &mdash; instead of needing keyboard shortcuts you had to already know.</span>
+                            </div>
+                        </div>
+                        <div class="wph-feat-item">
+                            <div class="wph-feat-icon wph-fi-purple">
+                                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.13-9.36L23 10"/></svg>
+                            </div>
+                            <div>
+                                <span class="wph-feat-title"><b>Regenerate without leaving the editor</b></span>
+                                <span class="wph-guide-desc"><b>Edit Summary</b> has an instructions box at the bottom. Type what you want changed and the fresh version replaces what is in the editor, so you can read it before committing &mdash; <b>Cancel</b> throws it away, only <b>Apply &amp; Save</b> keeps it. Anything you had already typed is carried in. The brief is adjusted by hand.</span>
+                            </div>
+                        </div>
+                        <div class="wph-feat-item">
+                            <div class="wph-feat-icon wph-fi-teal">
+                                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                            </div>
+                            <div>
+                                <span class="wph-feat-title"><b>Brief Summary stands on its own</b></span>
+                                <span class="wph-guide-desc">The <b>At a Glance</b> brief is now a distinct bordered block at the top of the summary, and <b>Edit Brief</b> sits next to <b>Edit Summary</b> on the same row &mdash; you no longer have to expand the brief first.</span>
+                            </div>
+                        </div>
+                        <div class="wph-feat-item">
+                            <div class="wph-feat-icon wph-fi-purple">
+                                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                            </div>
+                            <div>
+                                <span class="wph-feat-title"><b>The Wealth Plan review is simpler</b></span>
+                                <span class="wph-guide-desc">Three stacked bars became one <b>status band</b>: progress ring, how many suggestions you have accepted, errors, and the Expand / Collapse / Undo / Redo tools. Two identically-worded Accept buttons no longer appear together, and everything says <b>Accept</b> now rather than a mix of Accept, Lock and Selected.</span>
+                            </div>
+                        </div>
+                        <div class="wph-feat-item">
+                            <div class="wph-feat-icon wph-fi-teal">
+                                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                            </div>
+                            <div>
+                                <span class="wph-feat-title"><b>To-Do's you can actually control</b></span>
+                                <span class="wph-guide-desc">Add an action item the AI missed with <b>Add to-do</b>. Due dates read as dates rather than raw text, anything already past is flagged <b>Overdue</b>, the list sorts by priority then date, and clicking the High / Normal / Low counts filters it.</span>
+                            </div>
+                        </div>
+                        <div class="wph-feat-item">
+                            <div class="wph-feat-icon wph-fi-amber">
+                                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            </div>
+                            <div>
+                                <span class="wph-feat-title"><b>Internal Notes save themselves</b></span>
+                                <span class="wph-guide-desc">Private notes now save a few seconds after you stop typing, with a countdown so you can see it coming &mdash; a reload or a timeout no longer loses them. You are also warned before you exceed the field&rsquo;s limit, rather than getting a save error afterwards.</span>
+                            </div>
+                        </div>
+                        <div class="wph-feat-item">
+                            <div class="wph-feat-icon wph-fi-amber">
+                                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                            </div>
+                            <div>
+                                <span class="wph-feat-title"><b>Internal Notes is a new tab</b></span>
+                                <span class="wph-guide-desc">Somewhere to keep private notes, reminders and things to follow up on. They are <b>never</b> shared with the client and never reach the meeting summary &mdash; which is why the tab is amber throughout.</span>
+                            </div>
+                        </div>
+                        <div class="wph-feat-item">
+                            <div class="wph-feat-icon wph-fi-purple">
+                                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+                            </div>
+                            <div>
+                                <span class="wph-feat-title"><b>Pre-Meeting is gone</b></span>
+                                <span class="wph-guide-desc">Its content moved into the <b>Configuration</b> column on the left, where you were already working. <b>To-Do's</b> and <b>Internal Notes</b> are now full tabs of their own instead of sub-sections.</span>
+                            </div>
+                        </div>
+                        <div class="wph-feat-item">
+                            <div class="wph-feat-icon wph-fi-blue">
+                                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                            </div>
+                            <div>
+                                <span class="wph-feat-title"><b>Choose how far back to look for events</b></span>
+                                <span class="wph-guide-desc">The event picker has a <b>Range</b> selector &mdash; the usual list, or the last 3, 6 or 12 months, or everything. Options only appear for the ranges your admin has supplied.</span>
+                            </div>
+                        </div>
+                        <div class="wph-feat-item">
+                            <div class="wph-feat-icon wph-fi-blue">
+                                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                            </div>
+                            <div>
+                                <span class="wph-feat-title"><b>Smaller fixes</b></span>
+                                <span class="wph-guide-desc">The <b>Internal Notes</b> tab now shows a dot while notes are unsaved or saving. The regeneration instructions box clears after you use it, so the same instructions cannot be sent twice by accident. Attached files can be previewed.</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="wph-whatsnew-release wph-whatsnew-release--past">
+                        <span class="wph-whatsnew-version">v2026.05</span>
                         <span class="wph-whatsnew-label">Save to WP, Meeting Type Persistence &amp; Smarter Generation</span>
                     </div>
                     <div class="wph-whatsnew-list">
@@ -695,20 +910,29 @@
                         </button>
                         <template lwc:if={isRegenOpen}>
                         <div class="aa-card-body">
-                            <!-- FIXME (DEFECTS.md #3): uncontrolled, same as the notes
-                                 textarea above. handleRunRegenerateInstructions clears
-                                 `_regenInstructions` after sending, but the text stays
-                                 visible to the user because the DOM is never updated. -->
+                            <!-- LWC writes a textarea's value as CHILD TEXT, which is only
+                                 applied on the first render — so clearing `_regenInstructions`
+                                 in JS never reached the DOM. The old instructions sat here
+                                 looking pending, and pressing Regenerate again silently
+                                 re-sent them (DEFECTS.md #3). The lwc:ref lets
+                                 handleRunRegenerateInstructions clear the element itself. -->
                             <textarea class="aa-textarea"
                                 rows="3"
+                                lwc:ref="regenInstructions"
                                 placeholder="Add context or corrections for the next regeneration…"
                                 oninput={handleRegenInstructionsInput}>{_regenInstructions}</textarea>
-                            <button class="aa-primary-cta aa-primary-cta--compact"
-                                    disabled={_bgJobs.summary}
-                                    onclick={handleRunRegenerateInstructions}>
-                                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><polyline points="23 4 23 10 17 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
-                                <span>Regenerate Summary</span>
-                            </button>
+                            <!-- Appears only once there are instructions to send: an always-on
+                                 button that can do nothing until you type reads as broken.
+                                 Amber, not the navy of the main Generate CTA — regenerating an
+                                 existing summary is a secondary, destructive-ish action. -->
+                            <template lwc:if={canRegenerateInstructions}>
+                                <button class="aa-primary-cta aa-primary-cta--compact aa-primary-cta--regen"
+                                        disabled={_bgJobs.summary}
+                                        onclick={handleRunRegenerateInstructions}>
+                                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><polyline points="23 4 23 10 17 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                                    <span>Regenerate Meeting Summary with Instructions</span>
+                                </button>
+                            </template>
                         </div>
                         </template>
                     </section>
@@ -759,6 +983,8 @@
                                 <button type="button" role="tab" data-tab="internalnotes" onclick={handleAaTabClick} class="aa-tab-btn"
                                         aria-selected={isInternalNotesTabSelected} aria-controls="aaTabPanel" id="aaTab-internalnotes">
                                     Internal Notes
+                                    <span class={internalNotesTabPillClass}
+                                          title={internalNotesTabPillTitle}></span>
                                 </button>
                             </li>
                         </ul>
@@ -1168,24 +1394,10 @@
 
             </div><!-- /wph-overlay-panel-wrap (opened line 80) -->
             </div><!-- /rootWrapperClass (opened line 69) -->
-        <!-- ┌─ FIXME (DEFECTS.md #1) — STRAY CLOSING TAG ────────────────────────┐
-             │ The </div> below has no matching <div>. By this point every div is  │
-             │ already closed: line 1090 closed containerClass, and the two above  │
-             │ closed the panel wrap and the root wrapper. The open element here   │
-             │ is <template lwc:if={showMainContent}> from line 68.                │
-             │                                                                    │
-             │ It does NOT break the build — the LWC compiler parses this file     │
-             │ with zero warnings and silently drops the tag. The real effect is   │
-             │ structural: the save-before-generate modal and the tour overlay     │
-             │ above end up as SIBLINGS of containerClass inside the panel wrap,   │
-             │ rather than inside containerClass. Both are positioned overlays, so │
-             │ they look correct today, but they no longer inherit containerClass's│
-             │ stacking and scroll context.                                        │
-             │                                                                    │
-             │ The fix is to DELETE this line — left in place deliberately, since  │
-             │ this pass is documentation-only.                                    │
-             └────────────────────────────────────────────────────────────────────┘ -->
-        </div>
+        <!-- The stray </div> that used to sit here (DEFECTS.md #1) is gone. It had no
+             matching <div> — everything was already closed by this point — and although the
+             LWC compiler dropped it silently with zero warnings, Prettier refused to parse
+             the file, so nobody could format it. -->
     </template><!-- /showMainContent (opened line 68) -->
     <!-- Global drag overlay — captures mousemove/mouseup during modal resize drag -->
     <template lwc:if={_modalDragging}>

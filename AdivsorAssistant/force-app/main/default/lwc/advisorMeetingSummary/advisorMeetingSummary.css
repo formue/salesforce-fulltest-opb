@@ -854,9 +854,11 @@ b, strong { font-weight: 800; color: var(--text-main); }
     display: flex; flex-direction: column; flex: 1;
 }
 .wph-preloaded-summary-header {
-    display: flex; align-items: center; gap: 10px; padding: 16px 20px;
+    display: flex; align-items: center; gap: 10px; padding: 14px 20px;
     border-bottom: 1px solid var(--border-color);
-    background: linear-gradient(135deg, #f0f4f9, #f6f8fa); flex-wrap: wrap;
+    /* Was a 135deg gradient. Flat now: the brief band directly below is also tinted, and two
+       gradients stacked read as two unrelated cards rather than one document. */
+    background: var(--bg-subtle); flex-wrap: wrap;
 }
 .wph-preloaded-summary-header b { font-size: 0.92rem; color: var(--text-main); }
 .wph-summary-actions { display: flex; gap: 8px; margin-left: auto; }
@@ -2730,13 +2732,10 @@ b, strong { font-weight: 800; color: var(--text-main); }
     font-family: 'Salesforce Sans', system-ui, sans-serif;
     word-break: break-word;
 }
-.wph-rte-editable h1 { font-size: 1.6rem; font-weight: 700; margin: 0 0 12px; color: var(--text-main); }
-.wph-rte-editable h2 { font-size: 1.3rem; font-weight: 700; margin: 16px 0 8px; color: var(--text-main); }
-.wph-rte-editable h3 { font-size: 1.1rem; font-weight: 700; margin: 12px 0 6px; color: var(--text-main); }
-.wph-rte-editable p  { margin: 0 0 10px; }
-.wph-rte-editable ul, .wph-rte-editable ol { padding-left: 24px; margin: 8px 0 12px; }
-.wph-rte-editable li { margin-bottom: 4px; }
-.wph-rte-editable strong, .wph-rte-editable b { font-weight: 800; }
+/* The h1/h2/h3/p/ul/li/strong rules that used to live here moved to .wph-prose at the
+   bottom of this file — both editors now carry that class, and one type scale shared with
+   the read view is the point. They were inert here anyway: without lwc:dom="manual" the
+   injected nodes carried no scope token, so `.wph-rte-editable[tok] h2[tok]` never matched. */
 .wph-edit-modal-footer {
     display: flex; justify-content: flex-end; gap: 10px;
     padding: 12px 24px;
@@ -2909,7 +2908,9 @@ b, strong { font-weight: 800; color: var(--text-main); }
 .wph-summary-edit-btn:hover { background: #f4f7fb; border-color: var(--brand-accent); color: var(--brand-accent); }
 .wph-summary-edit-btn:hover b { color: var(--brand-accent); }
 .wph-summary-edited-badge {
-    background: #fffbeb; color: #b45309; border: 1px solid #fde68a;
+    /* Quieter: a status marker, not a warning. Amber is reserved for advisor-private and
+       caution now (internal notes, the regenerate CTA). */
+    background: var(--bg-subtle); color: var(--text-muted); border: 1px solid var(--border-color);
     font-size: 0.6rem; padding: 2px 8px; border-radius: 99px;
     font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
 }
@@ -3787,27 +3788,45 @@ b, strong { font-weight: 800; color: var(--text-main); }
 }
 
 /* ── At a Glance section ─────────────────────────────────── */
+/* ── Brief summary, as the document's lede ──────────────────────────────────
+   It already sat between the summary header and the summary body; it just looked like a
+   warning banner — #fffbeb inside a #fde68a border under an 11.5px bold amber header, which
+   is the same amber that now means internal notes and the regenerate CTA. Restyled as the
+   opening block of one document: no border of its own, a quiet small-caps label, and a navy
+   accent rule. Still a <button>, so briefOpenByDefault and handleToggleBrief keep working. */
+/* A self-contained block: 1px border all round plus a 3px navy left edge, on a light blue
+   wash. It needs to be obviously not-the-summary at a glance — the summary body is white and
+   the header above it is --bg-subtle (#f6f8fa), so the tint is the bluer --brand-gold-light
+   (#eff6ff) rather than another grey, which would have read as the same surface.
+   Still not amber: that means advisor-private and caution (internal notes, regenerate CTA). */
 .wph-brief-section {
-    border: 1px solid #e0e7ef; border-radius: 8px;
-    margin-bottom: 10px; overflow: clip; flex-shrink: 0;
+    /* 24px matches .wph-summary-html-body's horizontal padding, so the brief box and the
+       summary text below it sit on the same edge. */
+    margin: 14px 24px;
+    border: 1px solid var(--brand-purple-light);
+    border-left: 3px solid var(--brand-purple);
+    border-radius: var(--radius-md);
+    background: var(--brand-gold-light);
+    overflow: clip; flex-shrink: 0;
 }
 .wph-brief-toggle {
     display: flex; align-items: center; gap: 7px; width: 100%;
-    padding: 8px 12px; background: linear-gradient(135deg, #fef9ec 0%, #fef3c7 100%);
-    border: none; cursor: pointer; font-size: 11.5px; font-weight: 700;
-    color: #92400e; text-align: left; transition: background 0.15s;
+    padding: 10px 14px 4px; background: transparent;
+    border: none; cursor: pointer;
+    font-size: 0.66rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.09em;
+    /* Slightly stronger than --text-muted: it sits on a tint now, not on white. */
+    color: var(--brand-purple); text-align: left; transition: color 0.15s;
 }
-.wph-brief-toggle:hover { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); }
-.wph-brief-toggle svg:first-child { color: #d97706; flex-shrink: 0; }
+.wph-brief-toggle:hover { color: var(--brand-dark); background: transparent; }
+.wph-brief-toggle svg:first-child { color: var(--brand-teal); flex-shrink: 0; }
 .wph-brief-toggle span { flex: 1; }
 .wph-brief-body {
-    padding: 10px 14px 12px;
-    background: #fffbeb;
-    font-size: 0.82rem; color: #44403c; line-height: 1.65;
-    border-top: 1px solid #fde68a;
-}
-.wph-brief-edit-row {
-    display: flex; justify-content: flex-end; margin-top: 8px;
+    /* Inherits the section's tint; no inner accent rule, since the block's own border and
+       left edge already mark it out and a second rule inside would just be noise. */
+    padding: 0 14px 12px;
+    background: transparent;
+    color: var(--text-main);
 }
 
 /* ── Service Toggle ─────────────────────────────────────── */
@@ -3995,3 +4014,292 @@ b, strong { font-weight: 800; color: var(--text-main); }
 .aa-radio-label:has(input:checked) {
     background: #e8f4ff; border-color: #0176d3; color: #032d60; font-weight: 600;
 }
+/* ═══════════════════════════════════════════════════════════════════════════
+   EDIT-MODAL RICH-TEXT CHROME
+   Toolbar, link strip, regenerate strip and busy overlay, shared by the
+   Meeting Summary and Brief Summary edit modals.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* The busy overlay is positioned against the body. Re-declared rather than
+   edited in place so the original rule stays intact; later in source order,
+   same specificity, so `position` lands. */
+.wph-edit-modal-body { position: relative; }
+
+/* ── Formatting toolbar ──────────────────────────────────────────────────── */
+.wph-rte-toolbar {
+    display: flex; align-items: center; flex-wrap: wrap; gap: 2px;
+    flex-shrink: 0;
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--bg-subtle);
+}
+.wph-rte-tool {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 30px; height: 30px; padding: 0 7px;
+    border: 1px solid transparent; border-radius: var(--radius-sm);
+    background: transparent; color: var(--text-secondary);
+    font-family: inherit; font-size: 0.82rem; line-height: 1;
+    cursor: pointer; transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.wph-rte-tool:hover {
+    background: var(--bg-surface);
+    border-color: var(--border-color);
+    color: var(--brand-accent);
+}
+.wph-rte-tool:active { background: var(--brand-navy-light); }
+.wph-rte-tool u { text-decoration: underline; }
+.wph-rte-tool-sep {
+    width: 1px; height: 18px; margin: 0 5px;
+    background: var(--border-color); flex-shrink: 0;
+}
+
+/* ── Link strip ──────────────────────────────────────────────────────────── */
+.wph-rte-link-strip {
+    display: flex; align-items: center; gap: 8px;
+    flex-shrink: 0;
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--brand-gold-light);
+}
+.wph-rte-link-input {
+    flex: 1; min-width: 0;
+    padding: 6px 10px;
+    border: 1px solid var(--border-color); border-radius: var(--radius-sm);
+    background: var(--bg-surface);
+    font-family: inherit; font-size: 0.82rem; color: var(--text-main);
+}
+.wph-rte-link-input:focus { outline: none; border-color: var(--brand-accent); }
+.wph-rte-link-apply, .wph-rte-link-cancel {
+    padding: 6px 12px; border-radius: var(--radius-sm);
+    font-family: inherit; font-size: 0.8rem; cursor: pointer;
+    flex-shrink: 0; transition: all 0.15s;
+}
+.wph-rte-link-apply {
+    border: none; background: var(--brand-accent); color: #fff; font-weight: 600;
+}
+.wph-rte-link-apply:hover:not(:disabled) { background: var(--brand-accent-dark); }
+.wph-rte-link-apply:disabled { opacity: 0.5; cursor: not-allowed; }
+.wph-rte-link-cancel {
+    border: 1px solid var(--border-color); background: var(--bg-surface); color: var(--text-secondary);
+}
+.wph-rte-link-cancel:hover { border-color: var(--text-muted); color: var(--text-main); }
+
+/* ── Busy overlay ────────────────────────────────────────────────────────── */
+/* Covers the toolbar as well as the editor, so the whole body is inert while
+   a regeneration is in flight — cheaper than disabling twelve buttons. */
+.wph-rte-busy {
+    position: absolute; inset: 0; z-index: 2;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(255, 255, 255, 0.82);
+}
+.wph-rte-busy-inner {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 22px;
+    border: 1px solid var(--border-color); border-radius: var(--radius-md);
+    background: var(--bg-surface);
+    box-shadow: var(--shadow-card);
+    font-size: 0.85rem; font-weight: 600; color: var(--text-secondary);
+}
+
+/* ── Regenerate strip ────────────────────────────────────────────────────── */
+.wph-modal-regen {
+    display: flex; flex-direction: column; gap: 8px;
+    flex-shrink: 0;
+    padding: 12px 24px;
+    border-top: 1px solid var(--border-color);
+    background: #fffbeb;
+}
+.wph-modal-regen-input {
+    width: 100%; box-sizing: border-box; resize: vertical;
+    padding: 8px 10px;
+    border: 1px solid #fcd34d; border-radius: var(--radius-sm);
+    background: var(--bg-surface);
+    font-family: inherit; font-size: 0.84rem; line-height: 1.5; color: var(--text-main);
+}
+.wph-modal-regen-input:focus { outline: none; border-color: #d97706; }
+.wph-modal-regen-input::placeholder { color: #b45309; opacity: 0.7; }
+.wph-modal-regen-input:disabled { opacity: 0.6; }
+/* Amber, matching the Configuration card's regenerate CTA — a secondary action,
+   visually distinct from the blue Apply & Save in the footer below it. */
+.wph-modal-regen-btn {
+    align-self: flex-start;
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 8px 16px;
+    border: none; border-radius: var(--radius-md);
+    background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+    color: #fff; font-family: inherit; font-size: 0.83rem;
+    cursor: pointer; transition: background 0.15s, box-shadow 0.15s;
+    box-shadow: 0 2px 6px rgba(180, 83, 9, 0.22);
+}
+.wph-modal-regen-btn:hover {
+    background: linear-gradient(135deg, #c2660a 0%, #96430b 100%);
+    box-shadow: 0 4px 10px rgba(180, 83, 9, 0.30);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   .wph-prose — ONE type scale for AI-authored rich text
+   ═══════════════════════════════════════════════════════════════════════════
+
+   Applied to the three summary read views, the brief lede, and both edit-modal
+   editors, so a summary looks the same whether you are reading it or editing it.
+
+   These rules only reach the content because every container carries
+   lwc:dom="manual". The style compiler emits `.wph-prose[tok] h2[tok]`, and
+   only the manual-DOM directive makes the engine stamp that token onto nodes
+   we inject. That is why the previous .wph-rte-editable element rules never
+   did anything, and why lightning-formatted-rich-text can never be styled
+   from here — its content lives in another component's shadow root.
+
+   The model's own <style> blocks are stripped (_stripStyleBlocks) and the
+   sanitiser drops style attributes, so this file is the only thing deciding
+   how a summary reads. */
+
+.wph-prose {
+    font-size: 0.9rem;
+    line-height: 1.7;
+    color: var(--text-main);
+    /* A wide table scrolls itself rather than the page. */
+    overflow-x: auto;
+}
+/* Reading measure, deliberately generous.
+   74ch centred was too aggressive: at the panel's real width it produced a
+   narrow column with ~230px of dead space on BOTH sides, which read as broken
+   next to the full-width brief above it. 120ch is roughly 900px, so at normal
+   widths this is inert and the summary fills the card like the brief does; it
+   only engages on a very wide monitor or console, where a 1600px line really
+   is unreadable. Left-aligned, never centred — the summary must start on the
+   same edge as everything else in the card. */
+.wph-prose--measured { max-width: 120ch; }
+/* The lede is short by definition, so it gets size instead of measure. */
+.wph-prose--lede { font-size: 0.95rem; line-height: 1.65; }
+
+.wph-prose h1,
+.wph-prose h2,
+.wph-prose h3,
+.wph-prose h4,
+.wph-prose h5,
+.wph-prose h6 { color: var(--text-main); font-weight: 700; line-height: 1.35; }
+.wph-prose h1 { font-size: 1.25rem; margin: 0 0 10px; letter-spacing: -0.01em; }
+/* Hairline above h2 — the model uses it for section breaks (Discussion,
+   Decisions, Next steps), and a rule reads as a break where margin alone does
+   not. Suppressed on the first one so the card padding stays even. */
+.wph-prose h2 {
+    font-size: 1.05rem; margin: 24px 0 8px;
+    padding-top: 14px; border-top: 1px solid var(--border-color);
+}
+.wph-prose h3 { font-size: 0.95rem; margin: 18px 0 6px; color: var(--text-secondary); }
+.wph-prose h4,
+.wph-prose h5,
+.wph-prose h6 { font-size: 0.9rem; margin: 14px 0 4px; color: var(--text-secondary); }
+
+.wph-prose p { margin: 0 0 12px; }
+.wph-prose ul,
+.wph-prose ol { padding-left: 20px; margin: 8px 0 14px; }
+.wph-prose li { margin-bottom: 5px; }
+.wph-prose li > ul,
+.wph-prose li > ol { margin: 5px 0 0; }
+.wph-prose strong,
+.wph-prose b { font-weight: 700; color: var(--text-main); }
+.wph-prose em, .wph-prose i { font-style: italic; }
+.wph-prose a { color: var(--brand-accent); text-decoration: none; }
+.wph-prose a:hover { text-decoration: underline; }
+.wph-prose blockquote {
+    margin: 14px 0; padding: 2px 0 2px 14px;
+    border-left: 3px solid var(--brand-navy-light);
+    color: var(--text-secondary); font-style: italic;
+}
+.wph-prose hr { border: none; border-top: 1px solid var(--border-color); margin: 20px 0; }
+.wph-prose code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.85em; background: var(--bg-subtle);
+    padding: 1px 5px; border-radius: 4px;
+}
+.wph-prose pre {
+    background: var(--bg-subtle); border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm); padding: 12px 14px; margin: 12px 0;
+    overflow-x: auto; font-size: 0.82rem; line-height: 1.55;
+}
+.wph-prose pre code { background: none; padding: 0; }
+
+.wph-prose table {
+    width: 100%; border-collapse: collapse;
+    margin: 14px 0; font-size: 0.85rem;
+}
+.wph-prose th {
+    text-align: left; font-weight: 700;
+    font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em;
+    color: var(--text-secondary); background: var(--bg-subtle);
+    padding: 8px 10px; border-bottom: 1px solid var(--border-color);
+}
+.wph-prose td {
+    padding: 8px 10px; border-bottom: 1px solid var(--border-color);
+    vertical-align: top;
+}
+.wph-prose tr:last-child td { border-bottom: none; }
+
+/* Even card padding regardless of what the model leads or ends with. */
+.wph-prose > :first-child { margin-top: 0; }
+.wph-prose > h2:first-child { padding-top: 0; border-top: none; }
+.wph-prose > :last-child { margin-bottom: 0; }
+
+/* The editors keep their own box model (flex child, scrolling, padding) and take
+   only the type scale from .wph-prose. */
+.wph-rte-editable.wph-prose { font-size: 0.92rem; line-height: 1.75; }
+
+/* The brief's "Generating…" badge had no rule at all — it inherited the toggle's
+   uppercase letter-spacing and sat flush against the label. Now that the toggle is a
+   quiet small-caps row, an unstyled badge in it is conspicuous. */
+.wph-brief-loading-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    margin-left: 8px; padding: 1px 8px;
+    border-radius: 99px;
+    background: var(--brand-gold-light); color: var(--brand-accent);
+    font-size: 0.62rem; font-weight: 700;
+    text-transform: none; letter-spacing: 0.02em;
+}
+.wph-brief-loading-badge .wph-phase-dot { width: 5px; height: 5px; }
+
+/* ── To-Do's: filter chips, overdue, manual add ─────────────────────────────
+   The count chips are <button>s now, so they need the button reset the plain
+   <span> rule never had: no border, inherited font, a pointer. */
+.wph-pnet-chip {
+    border: 1px solid transparent;
+    font-family: inherit;
+    cursor: pointer;
+    transition: box-shadow 0.15s, border-color 0.15s, opacity 0.15s;
+}
+.wph-pnet-chip:hover { border-color: currentColor; }
+/* The active filter reads as pressed rather than merely hovered — a border alone
+   is too easy to miss on a 10px chip. */
+.wph-pnet-chip--active {
+    border-color: currentColor;
+    box-shadow: inset 0 0 0 1px currentColor;
+}
+.wph-pnet-chip--active::after { content: ' ×'; font-weight: 700; }
+
+/* A due date the model lifted out of a document that has already passed. Amber, and
+   labelled — never colour alone. */
+.wph-meta-chip--overdue .wph-mc-value { color: #b45309; font-weight: 700; }
+.wph-mc-overdue {
+    margin-left: 4px; padding: 1px 5px;
+    border-radius: 3px; background: #fef3c7; color: #92400e;
+    font-size: 0.62rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.04em;
+}
+
+/* Secondary to the navy Accept All beside it: adding a row is a smaller act than
+   accepting the whole list. */
+.wph-add-todo-btn {
+    display: inline-flex; align-items: center; gap: 7px; padding: 9px 16px;
+    border-radius: var(--radius-md);
+    background: var(--bg-surface); color: var(--text-main);
+    border: 1.5px solid var(--border-color);
+    font-size: 0.85rem; font-family: inherit; font-weight: 600;
+    cursor: pointer; transition: all 0.2s;
+}
+.wph-add-todo-btn:hover {
+    border-color: var(--brand-accent); color: var(--brand-accent);
+    background: #f4f7fb;
+}
+/* The empty state stacks Generate and Add on one row. */
+.wph-generate-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }

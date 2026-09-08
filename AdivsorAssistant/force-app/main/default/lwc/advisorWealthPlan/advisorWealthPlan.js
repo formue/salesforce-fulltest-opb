@@ -305,6 +305,8 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
     @api get inputMeetingNotes() { return this._inputMeetingNotes; }
     set inputMeetingNotes(val) {
         this._inputMeetingNotes = val || [];
+        // Arrives after selectedEventId on mount — re-derive the summary default.
+        this._syncIncludeMeetingSummary();
     }
 
     // Meeting_Artifact__c records — matched to selected event via Event.MeetingArtifacts__c
@@ -342,6 +344,8 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
     @api get inputEvents() { return this._inputEvents; }
     set inputEvents(val) {
         this._inputEvents = val || [];
+        // Arrives after selectedEventId on mount — re-derive the summary default.
+        this._syncIncludeMeetingSummary();
         if (this._inputEvents.length > 0) {
             // Events arrived — immediately clear loading and cancel the fallback timer
             this._inputEventsLoading = false;
@@ -444,7 +448,7 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
     // Changing a signature here breaks advisorAssistant.html and handlePrimaryAction
     // / handleParentSaveToWealthPlan in advisorAssistant.js.
 
-    // Imperative entry point invoked by the parent's "Regenerate Wealth Plan" button.
+    // Imperative entry point invoked by the parent's footer button.
     @api regenerate() { return this.handleGenerate(); }
     // Imperative entry point invoked by the parent's "Save to Wealth Plan" footer button.
     @api triggerSave() { return this.handlePreviewSave(); }
@@ -565,6 +569,15 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
     @api outputGreetingsToDelete     = [];
 
     // ── Local state ──────────────────────────────────────────────────────────
+    /**
+     * True when generation came back with no parseable JSON — the model answered in prose
+     * instead of the requested structure (typically because nothing was actually sent to it).
+     * Without this the failure rendered as a SUCCESS: prose in the summary box and zero
+     * sections, with no hint that anything went wrong. Cleared on any successful parse,
+     * on event change and on the next generation attempt.
+     */
+    @track _noStructuredData = false;
+
     @track _step = 'input';         // 'input' | 'loading' | 'review'
     @track _wpGenerating = false;   // wealth plan generation in-progress (loading shown inline in right panel)
     @track _freeText = '';
@@ -687,7 +700,29 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
     @track _currentNoteHtml         = null;  // regenerated HTML; null = read from original note
     @track _summarySaved            = false; // true after handleSaveSummary; reset when content changes
     @track _selectedArtifactFileIds = new Set(); // ContentDocumentIds of selected artifact files (multi-select, Artifacts zone)
-    @track _includeMeetingSummary   = false; // whether to include the event's meeting summary as input to Wealth Plan generation
+    /**
+     * Whether the event's existing meeting summary is fed into generation as MeetingNoteText.
+     *
+     * Defaults from the data, but must NOT be latched at event-selection time. LWC sets @api
+     * properties in template attribute order, and in advisorAssistant.html `selected-event-id`
+     * is attribute 3 while `input-events` and `input-meeting-notes` are 24 and 25 — so when
+     * _applyEventSelection ran, `selectedEventNote` was still null and this froze to false.
+     * The summary was then silently withheld from the prompt, and the model answered "the user
+     * did not provide any text from which to extract information". It only looked intermittent
+     * because changing the event while the component was already open resolved correctly.
+     *
+     * So: re-derive from `_syncIncludeMeetingSummary()` on every setter that can change the
+     * answer, and stop once the advisor has made the choice themselves.
+     */
+    @track _includeMeetingSummary   = false;
+    /** True once the advisor has toggled it; their choice then outranks the derived default. */
+    _includeMeetingSummaryTouched = false;
+
+    /** Re-derive the default. No-op after the advisor has overridden it. */
+    _syncIncludeMeetingSummary() {
+        if (this._includeMeetingSummaryTouched) return;
+        this._includeMeetingSummary = !!this.selectedEventNote;
+    }
     @track _saveFileModal           = null;  // { index, name, documentId } when open, null when closed
     @track _sessionSavedFiles       = [];    // files saved to event this session — shown optimistically in Meeting Files
     @track _summarySaving           = false; // true while background-saving via saveSummaryFlowApiName
@@ -1335,7 +1370,10 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
         this._advancedExpanded       = false;
         this._activeTab              = 'summary';
         // Auto-include meeting summary in Wealth Plan context if one exists for this event
-        this._includeMeetingSummary  = !!this.selectedEventNote;
+        // Per-event: the advisor's override does not carry across events.
+        this._includeMeetingSummaryTouched = false;
+        this._syncIncludeMeetingSummary();
+        this._noStructuredData = false;
         // Auto-select up to 3 artifact files for the new event (shared across both tabs)
         Promise.resolve().then(() => {
             const ids = (this.artifactFiles || []).slice(0, 3).map(f => f.id);
@@ -1385,6 +1423,7 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
     }
 
     handleToggleMeetingSummary() {
+        this._includeMeetingSummaryTouched = true;
         this._includeMeetingSummary = !this._includeMeetingSummary;
     }
 
@@ -2693,6 +2732,25 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
         const docId2 = allDocIds[1] || '';
         const docId3 = allDocIds[2] || '';
 
+        // ── Pre-flight ──────────────────────────────────────────────────────
+        // Apex guards every input with String.isNotBlank, so blank ones are never injected
+        // into the Flow. With all of them blank the model is handed an empty prompt and
+        // replies in prose ("The user did not provide any text..."), which used to render as
+        // a completed-but-empty wealth plan. Say so here instead of spending the invocation.
+        if (!docId1 && !context.trim() && !meetingNoteText.trim()) {
+            this._showToast(
+                'Nothing to Generate From',
+                'Select a document, add context, or include the meeting summary before generating.',
+                'warning'
+            );
+            this.dispatchEvent(new CustomEvent('wpgenerated', {
+                bubbles: false,
+                detail: { sections: this._sections || [], hasData: (this._sections?.length || 0) > 0, summary: this._summary || '' }
+            }));
+            return;
+        }
+
+        this._noStructuredData = false;   // clear any previous failure state
         this._cancelled = false;
         this._wpGenerating = true;
         this._leftPanelCollapsed = true;
@@ -2878,10 +2936,16 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
             parsed = JSON.parse(jsonStr);
         } catch (e) {
             console.error('[AdvisorWealthPlan] JSON.parse failed:', e.message, '| Input:', jsonStr.substring(0, 300));
-            this._summary = raw;
+            // Keep the raw response for debugging, but do NOT present it as a summary — it is
+            // the model explaining itself, not advisor-facing content. The template renders
+            // the _noStructuredData state instead.
+            console.error('[AdvisorWealthPlan] Raw response was:', raw);
+            this._summary = '';
+            this._noStructuredData = true;
             this._sections = this._buildEmptySections();
             return;
         }
+        this._noStructuredData = false;
 
         // ── Normalize to { sectionKey: [...records] } ────────────────────────
         const KEY_ALIASES = {
@@ -3262,7 +3326,7 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
                     _stateIsEdited:    !rec._completed && !isMarkedForDeletion && !isRowLocked && !hasRowErrors && wasEdited,
                     _stateIconTitle:   rec._completed         ? 'Saved to Wealth Plan'
                                    : isMarkedForDeletion     ? 'Marked for deletion'
-                                   : isRowLocked             ? 'Locked — will be saved to Salesforce'
+                                   : isRowLocked             ? 'Accepted — will be saved to Salesforce'
                                    : hasRowErrors            ? 'Has validation errors — edit to fix'
                                    : wasEdited               ? 'Edited since last load'
                                    : '',
@@ -3307,7 +3371,7 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
                 totalInSection,
                 progressPct,
                 progressStyle: `width: ${progressPct}%`,
-                progressLabel: (() => { const _p = []; if (completedCount > 0) _p.push(`${completedCount} saved`); if (lockedCount > 0) _p.push(`${lockedCount} selected`); return _p.length > 0 ? _p.join(' · ') : `${totalInSection} total`; })(),
+                progressLabel: (() => { const _p = []; if (completedCount > 0) _p.push(`${completedCount} saved`); if (lockedCount > 0) _p.push(`${lockedCount} accepted`); return _p.length > 0 ? _p.join(' · ') : `${totalInSection} total`; })(),
                 hasLockableRows: lockableCount > 0 && !this._lockedSections[s.key],
                 statusPillText,
                 statusPillClass,
@@ -3355,7 +3419,7 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
         if (!this._ownerPropagationPrompt) return '';
         const { fieldLabel, ownerLabel, count } = this._ownerPropagationPrompt;
         const name = ownerLabel.replace(' (Primary)', '');
-        return `Apply "${name}" as ${fieldLabel} to ${count} other unlocked record${count !== 1 ? 's' : ''} in this section?`;
+        return `Apply "${name}" as ${fieldLabel} to ${count} other record${count !== 1 ? 's' : ''} not yet accepted in this section?`;
     }
 
     // ── Error / validation stats ─────────────────────────────────────────────
@@ -3426,6 +3490,10 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
     get wpSaveNoticeVisible()   { return !!this._wpSaveNotice; }
     get isWpSaving()            { return this._wpSaving; }
     get showWpSaveBar() {
+        // Embedded in advisorAssistant, To-Do's are their own tab (rendered by
+        // advisorMeetingSummary) and filteredReviewSections skips key === 'todos' — so this bar
+        // was offering to save a section the Wealth Plan tab does not display.
+        if (this.embeddedLayout) return false;
         return this.isReviewStep && this.isWealthPlanEnabled && this.showSaveButton && this.hasTodosToSave;
     }
 
@@ -4144,7 +4212,7 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
         });
 
         if (totalCreate + totalUpdate + totalDelete === 0) {
-            this._showToast('Nothing to Save', 'Lock records before saving to Salesforce.', 'warning');
+            this._showToast('Nothing to Save', 'Accept records before saving to Salesforce.', 'warning');
             return;
         }
 

@@ -48,6 +48,22 @@
                     onchange={handleNotesChange}>
                 </lightning-input-rich-text>
             </div>
+
+            <!-- Only near the ceiling. Internal_Notes__c is a Rich Text Area of 32768 — a
+                 quarter of Note__c's 131072 — and rich text counts the MARKUP, so a formatted
+                 note runs closer to the limit than the visible text suggests. Crossing it used
+                 to surface as a raw STRING_TOO_LONG from Apex. -->
+            <template lwc:if={showLengthCounter}>
+                <div class={lengthClass}>
+                    <template lwc:if={isOverLength}>
+                        <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2.5" fill="none"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        <span>Too long to save — trim about {overBy} characters. {lengthLabel}</span>
+                    </template>
+                    <template lwc:else>
+                        <span>{lengthLabel}</span>
+                    </template>
+                </div>
+            </template>
         </template>
     </div>
 </template>

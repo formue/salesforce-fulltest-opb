@@ -5346,3 +5346,32 @@ b, strong { font-weight: 800; color: var(--text-main); }
 .aa-radio-row--wip .aa-radio-label { cursor: not-allowed; }
 .aa-radio-row--wip:hover { border-color: #e5eaf3; background: #f8fafc; box-shadow: none; }
 
+
+/* ── Regenerate CTA ─────────────────────────────────────────────────────────
+   Amber instead of the navy `.aa-primary-cta` gradient, so regenerating an
+   existing summary does not read as the primary Generate action. Matches the
+   card's own `.aa-icon-amber` header icon. Declared last: same specificity as
+   `.aa-primary-cta` / `:hover`, so source order is what wins. */
+.aa-primary-cta--regen {
+    background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+    box-shadow: 0 4px 10px rgba(180, 83, 9, 0.22);
+}
+.aa-primary-cta--regen:hover {
+    background: linear-gradient(135deg, #c2660a 0%, #96430b 100%);
+    box-shadow: 0 6px 14px rgba(180, 83, 9, 0.30);
+}
+
+/* Internal Notes pill: amber for unsaved, matching what amber means everywhere else in this
+   component (advisor-private, needs attention). The other tabs only ever show --running,
+   because they signal a generation job rather than a save state. */
+.aa-tab-pill--unsaved { background: #d97706; }
+
+/* Older releases in What's New: a rule and muted badge so history reads as history
+   rather than as a second "Latest". */
+.wph-whatsnew-release--past {
+    margin-top: 22px; padding-top: 16px;
+    border-top: 1px solid var(--border-color);
+}
+.wph-whatsnew-release--past .wph-whatsnew-version {
+    color: var(--text-muted); background: var(--bg-subtle); border-color: var(--border-color);
+}

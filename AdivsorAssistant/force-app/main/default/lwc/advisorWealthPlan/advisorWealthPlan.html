@@ -330,6 +330,29 @@
                                         <span>Wealth Plan — {inputPrimaryMember.Name}</span>
                                     </div>
                                 </template>
+                                <!-- No structured data ------------------------------------------------
+                                     Generation returned prose instead of JSON. Previously this
+                                     rendered as a completed-but-empty plan; now it says what
+                                     happened and what to do about it. See _noStructuredData. -->
+                                <template lwc:if={_noStructuredData}>
+                                    <div class="wph-nodata fade-in">
+                                        <svg class="wph-nodata-icon" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                                        <div class="wph-nodata-body">
+                                            <b class="wph-nodata-title">No wealth plan data was returned</b>
+                                            <p class="wph-nodata-text">
+                                                The analysis did not come back in the expected format, so there is
+                                                nothing to review. This usually means it had too little to work from.
+                                            </p>
+                                            <ul class="wph-nodata-list">
+                                                <li>Select a document under Meeting Files</li>
+                                                <li>Add context in the input field</li>
+                                                <li>Include the meeting summary, or generate one first</li>
+                                            </ul>
+                                            <button class="wph-nodata-retry" onclick={handleGenerate}>Try Again</button>
+                                        </div>
+                                    </div>
+                                </template>
+
                                 <!-- Draft preservation banner -->
                                 <template lwc:if={hasSavedDraft}>
                                     <template lwc:if={_modeExistingOnly}>
@@ -342,90 +365,88 @@
                                     </template>
                                 </template>
 
-                                <!-- Stats bar -->
-                                <div class="wph-review-stats-bar">
-                                    <div class="wph-review-stats">
-                                        <span class="wph-stat-chip"><b>{sectionsWithData}</b> sections</span>
-                                        <span class="wph-stat-chip"><b>{totalRecordCount}</b> suggestions</span>
-                                        <template lwc:if={isDetailedStatsOn}>
-                                            <span class="wph-stat-chip wph-stat-green"><b>{lockedRecordCount}</b> locked</span>
-                                            <template lwc:if={hasErrors}>
-                                                <span class="wph-stat-chip wph-stat-red"><b>{totalErrors}</b> errors</span>
-                                            </template>
-                                        </template>
-                                    </div>
-                                    <template lwc:if={hasExistingData}>
-                                        <button class="wph-existing-btn" onclick={handleToggleExistingData} aria-label="Toggle existing data">
-                                            <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
-                                            <b>{existingDataLabel}</b>
-                                        </button>
-                                    </template>
-                                </div>
-
-                                <!-- Meeting Summary tab (top, collapsible) -->
-                                <template lwc:if={hasMeetingSummary}>
-                                    <div class={summaryTabClass}>
-                                        <div class="wph-summary-tab-header-row">
-                                            <button class="wph-summary-tab-header" onclick={handleToggleSummaryTab} aria-label="Toggle meeting summary">
-                                                <div class="wph-summary-tab-left">
-                                                    <div class="wph-summary-tab-icon">
-                                                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
-                                                    </div>
-                                                    <span class="wph-summary-tab-title"><b>Meeting Summary</b></span>
-                                                </div>
-                                                <svg class={summaryChevronClass} viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                                            </button>
-                                            <button class="wph-summary-edit-btn" onclick={handleToggleSummaryEdit} aria-label="Edit summary">
-                                                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                                                <b>{summaryEditBtnLabel}</b>
-                                            </button>
-                                            <template lwc:if={isSummaryEdited}>
-                                                <span class="wph-summary-edited-badge">Edited</span>
-                                            </template>
-                                            <button class={summaryCopyClass} onclick={handleCopySummary} aria-label="Copy summary">
-                                                <template lwc:if={_summaryCopied}>
-                                                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                                                </template>
-                                                <template lwc:else>
-                                                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                                                </template>
-                                                <b>{summaryCopyLabel}</b>
-                                            </button>
-                                        </div>
-                                        <div class="wph-summary-tab-body">
-                                            <template lwc:if={_isSummaryEditing}>
-                                                <textarea class="wph-summary-textarea" oninput={handleSummaryInput}>{_meetingSummaryResult}</textarea>
-                                            </template>
-                                            <template lwc:else>
-                                                <lightning-formatted-rich-text value={_meetingSummaryResult}></lightning-formatted-rich-text>
-                                            </template>
-                                        </div>
-                                    </div>
-                                </template>
+                                <!-- The Meeting Summary tab that used to sit here is gone.
+                                     It was gated on hasMeetingSummary <- _meetingSummaryResult,
+                                     which only fills from the `r.kind === 'summary'` branch of
+                                     handleGenerate. That task is queued only when
+                                     _modeMeetingSummary is true, and handleGenerate — the sole
+                                     generate entry point, since regenerate() aliases it — sets it
+                                     false on its second line. The mode toggles that once flipped
+                                     it (handleModeToggle / data-mode) are no longer in this
+                                     template at all. So the getter was permanently false and the
+                                     band could never appear. The JS members behind it are
+                                     deliberately left in place: markup guarded by a false getter
+                                     is safe to delete, but stripping members and pruning CSS is
+                                     what broke this bundle last time. Separate slice.
+                                     The meeting summary itself lives on its own tab in
+                                     advisorAssistant, rendered by advisorMeetingSummary. -->
 
                                 <!-- Wealth Plan content -->
                                 <template lwc:if={isWealthPlanEnabled}>
                                 <div class="wph-wp-review-wrap">
 
-                                <!-- Review toolbar — Undo/Redo and Expand/Collapse All.
-                                     These live here, next to the undo stack and the section
-                                     state they operate on, rather than in the parent header. -->
-                                <div class="aa-review-toolbar">
-                                    <template lwc:if={isExpandCollapseAllOn}>
-                                        <button class="aa-review-tool-btn" onclick={handleExpandAll} aria-label="Expand all sections" title="Expand all">
-                                            <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
+                                <!-- ── Review status band ─────────────────────────────────────────
+                                     ONE band. It replaces three that used to stack here: the
+                                     stats bar, this toolbar, and the validation dashboard below
+                                     the save notice. Those rendered totalRecordCount,
+                                     lockedRecordCount and totalErrors twice each in different
+                                     words ("9 locked" above "9 accepted") and the percentage
+                                     three times. validationLabel already states the counts as a
+                                     sentence, so the duplicate chips are gone; what was unique to
+                                     the stats bar — the section count and the existing-data
+                                     toggle — moved in here.
+
+                                     Kept inside wph-wp-review-wrap so the tools stay under the
+                                     same isWealthPlanEnabled gate they had before. -->
+                                <div class="wph-review-status fade-in">
+                                    <div class="wph-val-ring-area">
+                                        <svg class="wph-val-ring" viewBox="0 0 48 48">
+                                            <circle cx="24" cy="24" r="20" fill="none" stroke="#f1f5f9" stroke-width="4"/>
+                                            <circle cx="24" cy="24" r="20" fill="none" stroke-width="4"
+                                                stroke-dasharray={validationDashArray} stroke-dashoffset="31.4"
+                                                stroke-linecap="round" class={validationRingClass}
+                                                transform="rotate(-90 24 24)"/>
+                                        </svg>
+                                        <span class="wph-val-ring-pct"><b>{validationProgressPct}</b></span>
+                                    </div>
+                                    <div class="wph-val-info">
+                                        <span class="wph-val-title"><b>{validationLabel}</b></span>
+                                        <div class="wph-val-track">
+                                            <div class={validationBarClass} style={validationBarStyle}></div>
+                                        </div>
+                                        <div class="wph-val-chips">
+                                            <span class="wph-val-chip wph-vc-total">{sectionsWithData} sections</span>
+                                            <template lwc:if={isDetailedStatsOn}>
+                                                <template lwc:if={hasErrors}>
+                                                    <span class="wph-val-chip wph-vc-err" onclick={handleScrollToError}>{totalErrors} errors</span>
+                                                </template>
+                                            </template>
+                                        </div>
+                                    </div>
+                                    <div class="wph-review-status-tools">
+                                        <template lwc:if={isExpandCollapseAllOn}>
+                                            <button class="aa-review-tool-btn" onclick={handleExpandAll} aria-label="Expand all sections" title="Expand all">
+                                                <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
+                                            </button>
+                                            <button class="aa-review-tool-btn" onclick={handleCollapseAll} aria-label="Collapse all sections" title="Collapse all">
+                                                <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><polyline points="4 14 10 14 10 20"></polyline><polyline points="20 10 14 10 14 4"></polyline><line x1="14" y1="10" x2="21" y2="3"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
+                                            </button>
+                                            <span class="aa-review-tool-sep"></span>
+                                        </template>
+                                        <button class="aa-review-tool-btn" disabled={cantUndo} onclick={handleUndo} aria-label="Undo" title="Undo">
+                                            <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
                                         </button>
-                                        <button class="aa-review-tool-btn" onclick={handleCollapseAll} aria-label="Collapse all sections" title="Collapse all">
-                                            <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><polyline points="4 14 10 14 10 20"></polyline><polyline points="20 10 14 10 14 4"></polyline><line x1="14" y1="10" x2="21" y2="3"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
+                                        <button class="aa-review-tool-btn" disabled={cantRedo} onclick={handleRedo} aria-label="Redo" title="Redo">
+                                            <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.13-9.36L23 10"></path></svg>
                                         </button>
-                                        <span class="aa-review-tool-sep"></span>
-                                    </template>
-                                    <button class="aa-review-tool-btn" disabled={cantUndo} onclick={handleUndo} aria-label="Undo" title="Undo">
-                                        <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
-                                    </button>
-                                    <button class="aa-review-tool-btn" disabled={cantRedo} onclick={handleRedo} aria-label="Redo" title="Redo">
-                                        <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.13-9.36L23 10"></path></svg>
-                                    </button>
+                                        <template lwc:if={hasExistingData}>
+                                            <span class="aa-review-tool-sep"></span>
+                                            <button class="wph-existing-btn" onclick={handleToggleExistingData} aria-label="Toggle existing data">
+                                                <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
+                                                <b>{existingDataLabel}</b>
+                                            </button>
+                                        </template>
+                                    </div>
                                 </div>
 
                                 <!-- Compact save notice banner (shown after subflow save, dismissible) -->
@@ -467,38 +488,15 @@
 
                                 <!-- sections always visible so user can do multiple save actions -->
 
-                                <!-- Validation dashboard -->
-                                <div class="wph-val-dashboard fade-in">
-                                    <div class="wph-val-ring-area">
-                                        <svg class="wph-val-ring" viewBox="0 0 48 48">
-                                            <circle cx="24" cy="24" r="20" fill="none" stroke="#f1f5f9" stroke-width="4"/>
-                                            <circle cx="24" cy="24" r="20" fill="none" stroke-width="4"
-                                                stroke-dasharray={validationDashArray} stroke-dashoffset="31.4"
-                                                stroke-linecap="round" class={validationRingClass}
-                                                transform="rotate(-90 24 24)"/>
-                                        </svg>
-                                        <span class="wph-val-ring-pct"><b>{validationProgressPct}</b></span>
-                                    </div>
-                                    <div class="wph-val-info">
-                                        <span class="wph-val-title"><b>{validationLabel}</b></span>
-                                        <div class="wph-val-track">
-                                            <div class={validationBarClass} style={validationBarStyle}></div>
-                                        </div>
-                                        <div class="wph-val-chips">
-                                            <span class="wph-val-chip wph-vc-total">{totalRecordCount} suggestions</span>
-                                            <span class="wph-val-chip wph-vc-ok">{lockedRecordCount} accepted</span>
-                                            <template lwc:if={hasErrors}>
-                                                <span class="wph-val-chip wph-vc-err" onclick={handleScrollToError}>{totalErrors} errors</span>
-                                            </template>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Meeting Summary -->
+                                <!-- Analysis Notes — `_summary` is the model's prose AROUND the
+                                     wealth-plan JSON (parsed.summary, or the text before the first
+                                     brace), not the meeting summary. It was titled "Meeting
+                                     Summary", which put a second summary surface on this tab and
+                                     competed with the real one on its own tab. -->
                                 <template lwc:if={hasSummary}>
                                     <div class="wph-summary-card fade-in">
                                         <div class="wph-summary-header">
-                                            <h2 class="wph-section-title"><b>Meeting Summary</b></h2>
+                                            <h2 class="wph-section-title"><b>Analysis Notes</b></h2>
                                         </div>
                                         <div class="wph-summary-body">
                                             <lightning-formatted-rich-text value={_summary}></lightning-formatted-rich-text>
@@ -530,7 +528,7 @@
                                                 <template lwc:if={sec.isSectionLocked}>
                                                     <span class="wph-locked-badge">
                                                         <svg viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" stroke-width="2.5" fill="none"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                                                        Locked
+                                                        Accepted
                                                     </span>
                                                 </template>
                                                 <template lwc:if={sec.hasRecords}>
@@ -544,19 +542,28 @@
                                             </div>
                                             <div class="wph-section-header-right">
                                                 <template lwc:if={sec.isSectionLocked}>
-                                                    <button class="wph-unlock-btn" data-key={sec.key} onclick={handleUnlockSection} aria-label="Unlock section">
+                                                    <button class="wph-unlock-btn" data-key={sec.key} onclick={handleUnlockSection} aria-label="Undo accept for section">
                                                         <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg>
-                                                        Unlock
+                                                        Undo accept
                                                     </button>
                                                 </template>
                                                 <template lwc:else>
+                                                    <!-- These two used to render side by side and read
+                                                         identically. They differ — "Accept all" confirms
+                                                         first and skips rows with errors, "Accept section"
+                                                         seals the whole section in one flag — but nothing
+                                                         on screen said so. Now mutually exclusive: the
+                                                         section-level accept only appears once no
+                                                         individual rows are left to accept, which keeps
+                                                         both handlers (and so the Accepted badge and Undo
+                                                         accept) reachable. -->
                                                     <template lwc:if={sec.hasLockableRows}>
                                                         <button class="wph-bulk-lock-btn" data-key={sec.key} onclick={handleBulkLockSection} aria-label="Accept all valid suggestions">
                                                             <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2.5" fill="none"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                                                            Accept all suggestions
+                                                            Accept all
                                                         </button>
                                                     </template>
-                                                    <template lwc:if={sec.canLockSection}>
+                                                    <template lwc:elseif={sec.canLockSection}>
                                                         <button class="wph-lock-section-btn" data-key={sec.key} onclick={handleLockSection} aria-label="Accept section">
                                                             <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2.5" fill="none"><polyline points="20 6 9 17 4 12"></polyline></svg>
                                                             Accept section
@@ -731,9 +738,9 @@
                                                                                 </button>
                                                                             </template>
                                                                             <template lwc:elseif={rec._isLocked}>
-                                                                                <button class="wph-unlock-btn" data-id={rec._id} data-section={rec._sectionKey} onclick={handleUnlockRow} aria-label="Unlock record" title="Unlock record">
+                                                                                <button class="wph-unlock-btn" data-id={rec._id} data-section={rec._sectionKey} onclick={handleUnlockRow} aria-label="Undo accept" title="Undo accept — returns this suggestion to unreviewed">
                                                                                     <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg>
-                                                                                    Unlock
+                                                                                    Undo accept
                                                                                 </button>
                                                                             </template>
                                                                             <template lwc:else>
@@ -973,13 +980,13 @@
             <div class="wph-modal-card fade-in-up">
                 <div class="wph-confirm-header">
                     <svg viewBox="0 0 24 24" width="24" height="24" stroke="#10b981" stroke-width="2" fill="none"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                    <h3><b>Lock All Valid — {_bulkLockPreview.sectionLabel}</b></h3>
+                    <h3><b>Accept All Valid — {_bulkLockPreview.sectionLabel}</b></h3>
                 </div>
                 <div class="wph-confirm-body">
                     <div class="wph-confirm-stats">
                         <div class="wph-confirm-stat wph-cs-create">
                             <span class="wph-cs-num"><b>{_bulkLockPreview.toLock}</b></span>
-                            <span class="wph-cs-label">To Lock</span>
+                            <span class="wph-cs-label">To accept</span>
                         </div>
                         <div class="wph-confirm-stat wph-cs-skip">
                             <span class="wph-cs-num"><b>{_bulkLockPreview.toSkipErrors}</b></span>
@@ -987,7 +994,7 @@
                         </div>
                         <div class="wph-confirm-stat wph-cs-skip">
                             <span class="wph-cs-num"><b>{_bulkLockPreview.alreadyLocked}</b></span>
-                            <span class="wph-cs-label">Already Locked</span>
+                            <span class="wph-cs-label">Already accepted</span>
                         </div>
                     </div>
                 </div>
@@ -995,7 +1002,7 @@
                     <button class="wph-confirm-cancel" onclick={handleCancelBulkLock}>Cancel</button>
                     <button class="wph-confirm-go" onclick={handleConfirmBulkLock}>
                         <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                        <b>Lock Suggestions</b>
+                        <b>Accept Suggestions</b>
                     </button>
                 </div>
             </div>

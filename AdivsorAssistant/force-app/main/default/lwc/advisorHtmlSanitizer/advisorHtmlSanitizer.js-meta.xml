@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>66.0</apiVersion>
+    <isExposed>false</isExposed>
+    <masterLabel>Advisor HTML Sanitizer</masterLabel>
+    <description>Allowlist sanitiser for AI-authored rich text painted via lwc:dom="manual". Not a UI component — a shared utility module.</description>
+</LightningComponentBundle>

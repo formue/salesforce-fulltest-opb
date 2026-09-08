@@ -107,3 +107,54 @@
     overflow-y: visible;
     resize: none;
 }
+
+/* ── Length counter ─────────────────────────────────────────────────────────
+   Hidden until 75% of the limit; the numbers only matter near the ceiling. */
+.ain-length {
+    display: flex; align-items: center; gap: 6px;
+    margin-top: 6px; padding: 0 2px;
+    font-size: 0.7rem; color: #5a6a7e;
+    font-variant-numeric: tabular-nums;
+}
+.ain-length--over {
+    padding: 7px 10px;
+    border: 1px solid #fca5a5; border-radius: 6px;
+    background: #fef2f2; color: #b91c1c; font-weight: 600;
+}
+.ain-length--over svg { flex-shrink: 0; }
+
+/* Over-length status pill in the header — red, not the amber of "unsaved changes",
+   because this one is blocking rather than merely pending. */
+.ain-status--over {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 2px 10px;
+    background: #fef2f2;
+    border: 1px solid #fca5a5;
+    border-radius: 99px;
+    color: #b91c1c; font-weight: 600;
+}
+.ain-status--over::before {
+    content: ''; width: 6px; height: 6px; border-radius: 50%;
+    background: #dc2626; flex-shrink: 0;
+}
+
+/* Autosave countdown — blue rather than the amber of "unsaved changes": nothing is
+   wrong, a save is simply about to happen without the advisor doing anything. */
+.ain-status--pending {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 2px 10px;
+    background: var(--brand-gold-light);
+    border: 1px solid var(--brand-purple-light);
+    border-radius: 99px;
+    color: var(--brand-accent); font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+.ain-status--pending::before {
+    content: ''; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--brand-accent); flex-shrink: 0;
+    animation: ainPendingPulse 1s ease-in-out infinite;
+}
+@keyframes ainPendingPulse {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.3; }
+}

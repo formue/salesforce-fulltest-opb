@@ -4110,3 +4110,66 @@ b, strong { font-weight: 800; color: var(--text-main); }
     width: 1px; height: 18px; margin: 0 2px;
     background: var(--border-color, #dde4ed);
 }
+/* ── No structured data ─────────────────────────────────────────────────────
+   Shown in the review step when generation returned prose instead of JSON
+   (_noStructuredData). Amber rather than red: nothing is broken and nothing
+   was lost — the analysis simply had too little to work from. */
+.wph-nodata {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 14px 16px;
+    margin: 0 0 16px;
+    border: 1px solid #fcd34d;
+    border-left: 3px solid #f59e0b;
+    border-radius: 8px;
+    background: #fffbeb;
+}
+.wph-nodata-icon  { flex: 0 0 auto; color: #b45309; margin-top: 1px; }
+.wph-nodata-body  { min-width: 0; }
+.wph-nodata-title { display: block; font-size: 13px; color: #78350f; }
+.wph-nodata-text  { margin: 4px 0 8px; font-size: 12px; line-height: 1.5; color: #92400e; }
+.wph-nodata-list  { margin: 0 0 10px; padding-left: 18px; font-size: 12px; line-height: 1.6; color: #92400e; }
+.wph-nodata-retry {
+    padding: 6px 14px;
+    border: 1px solid #d97706;
+    border-radius: 6px;
+    background: #fff;
+    color: #b45309;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+.wph-nodata-retry:hover { background: #d97706; color: #fff; }
+
+/* ── Review status band ─────────────────────────────────────────────────────
+   The single band that replaced the stats bar, the review toolbar and the
+   validation dashboard. Same card treatment as the old .wph-val-dashboard, and
+   the inner .wph-val-* rules above are reused untouched — only the container
+   and the right-hand tools group are new.
+
+   Nothing is deleted from this stylesheet: .wph-val-dashboard,
+   .wph-review-stats-bar, .wph-review-stats, .wph-stat-chip* and
+   .aa-review-toolbar are now unreferenced, but pruning CSS is what broke this
+   bundle before, so that stays a separate slice. */
+.wph-review-status {
+    display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+    background: var(--bg-surface); border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg); padding: 14px 20px; margin-bottom: 16px;
+    box-shadow: var(--shadow-card);
+}
+/* Pushed right, and allowed to drop to its own line on a narrow panel rather
+   than squeezing the label and progress bar. */
+.wph-review-status-tools {
+    display: flex; align-items: center; gap: 6px;
+    margin-left: auto; flex-shrink: 0;
+}
+/* The existing-data toggle was sized for a bar of its own; scale it to sit in a
+   row of 28px icon buttons. */
+.wph-review-status-tools .wph-existing-btn {
+    padding: 5px 12px;
+    font-size: 0.75rem;
+    box-shadow: none;
+}
+.wph-review-status-tools .wph-existing-btn:hover { transform: none; }

@@ -57,6 +57,7 @@ import { LightningElement, api, track, wire } from 'lwc';
 import generateSummary      from '@salesforce/apex/MeetingSummaryController.generateSummary';
 import generateMeetingTodos from '@salesforce/apex/MeetingSummaryController.generateMeetingTodos';
 import regenerateMeetingSummary from '@salesforce/apex/MeetingSummaryController.regenerateMeetingSummary';
+import { sanitizeRichText } from 'c/advisorHtmlSanitizer';
 import saveMeetingNote from '@salesforce/apex/MeetingSummaryController.saveMeetingNote';
 import saveTodos           from '@salesforce/apex/MeetingSummaryController.saveTodos';
 import saveFileToEvent     from '@salesforce/apex/MeetingSummaryController.saveFileToEvent';
@@ -183,6 +184,25 @@ const SECTIONS = [
 
 // Fields that use owner options — eligible for smart propagation
 const OWNER_FIELD_APIS = new Set(['FinServ__PrimaryOwner__c', 'FF_Account__c']);
+
+/**
+ * Edit-modal toolbar: `document.execCommand` name (+ optional argument) per `data-cmd`.
+ * See handleToolbarCommand for why execCommand rather than lightning-input-rich-text.
+ */
+const TOOLBAR_COMMANDS = {
+    bold:         ['bold'],
+    italic:       ['italic'],
+    underline:    ['underline'],
+    h2:           ['formatBlock', '<h2>'],
+    h3:           ['formatBlock', '<h3>'],
+    p:            ['formatBlock', '<p>'],
+    ul:           ['insertUnorderedList'],
+    ol:           ['insertOrderedList'],
+    outdent:      ['outdent'],
+    indent:       ['indent'],
+    unlink:       ['unlink'],
+    removeFormat: ['removeFormat']
+};
 
 // ── AI-friendly → Salesforce API name mappings per section ───────────────────
 // The AI prompt may return human-readable keys; we normalize them here.
@@ -311,6 +331,8 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
     @api get inputMeetingNotes() { return this._inputMeetingNotes; }
     set inputMeetingNotes(val) {
         this._inputMeetingNotes = val || [];
+        // Arrives after selectedEventId on mount — re-derive the summary default.
+        this._syncIncludeMeetingSummary();
     }
 
     // Meeting_Artifact__c records — matched to selected event via Event.MeetingArtifacts__c
@@ -348,6 +370,8 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
     @api get inputEvents() { return this._inputEvents; }
     set inputEvents(val) {
         this._inputEvents = val || [];
+        // Arrives after selectedEventId on mount — re-derive the summary default.
+        this._syncIncludeMeetingSummary();
         if (this._inputEvents.length > 0) {
             // Events arrived — immediately clear loading and cancel the fallback timer
             this._inputEventsLoading = false;
@@ -498,6 +522,7 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
         this._meetingTodos = [];
         this._selectedTaskIds = {};
         this._summaryInstructions = '';
+        this._syncTextarea('summaryInstructions', '');
         this._summarySaved = false;
         this._backgroundSavedNoteId = null;
         this._notePublishedLocally = false;
@@ -619,9 +644,49 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
 
     }
 
+    /**
+     * What each prose container currently holds: { [refName]: { el, html } }.
+     *
+     * Keyed on the ELEMENT as well as the html. A ref is destroyed and recreated whenever its
+     * branch remounts (publish, version preview, event change); without the element check, the
+     * same html painted into a fresh element would be skipped as unchanged and the container
+     * would render empty.
+     */
+    _prosePainted = {};
+
+    /**
+     * Paint sanitised rich text into an lwc:dom="manual" container.
+     *
+     * The change guard is not an optimisation. renderedCallback runs on every render, and
+     * rewriting innerHTML collapses the document selection — which would break
+     * handleSummaryMouseUp and the "Add as Action Item" popup that reads it.
+     *
+     * @param {string} refName lwc:ref of the target container
+     * @param {string} html    untrusted rich text; sanitised before injection
+     */
+    _paintProse(refName, html) {
+        const el = this.refs?.[refName];
+        if (!el) return;                       // that branch is not currently rendered
+        const next = html || '';
+        const prev = this._prosePainted[refName];
+        if (prev && prev.el === el && prev.html === next) return;
+        this._prosePainted[refName] = { el, html: next };
+        // Untrusted: the summary comes back from a Flow prompt template that reads client
+        // documents. sanitizeRichText is allowlist-based and unit-tested.
+        // eslint-disable-next-line @lwc/lwc/no-inner-html
+        el.innerHTML = sanitizeRichText(next);
+    }
+
     renderedCallback() {
         // Notify parent when publish/delete pre-conditions change so its footer can react
         this._emitMsState();
+
+        // Paint the read views. Only one of the three summary branches is mounted at a time,
+        // so the other two calls no-op on a missing ref.
+        this._paintProse('summaryBodyPublished', this.summaryDisplayHtml);
+        this._paintProse('summaryBodyVersion',   this.summaryDisplayHtml);
+        this._paintProse('summaryBodyDraft',     this.summaryDisplayHtml);
+        this._paintProse('briefBody',            this.briefDisplayHtml);
         // Focus the absorber when the component overlay first opens
         if (this._modalOpen && !this._prevModalOpen) {
             this._prevModalOpen = true;
@@ -633,7 +698,9 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
         if (this._editorNeedsInit && this._summaryEditMode) {
             const el = this.refs.summaryEditor;
             if (el) {
-                el.innerHTML = this._summaryEditValue || '';
+                // Same untrusted source as the read view — scrub before injecting.
+                // eslint-disable-next-line @lwc/lwc/no-inner-html
+                el.innerHTML = sanitizeRichText(this._summaryEditValue || '');
                 this._editorNeedsInit = false;
                 el.focus();
             }
@@ -641,7 +708,9 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
         if (this._briefEditorNeedsInit && this._briefEditMode) {
             const el = this.refs.briefEditor;
             if (el) {
-                el.innerHTML = this._briefEditValue || '';
+                // Same untrusted source as the read view — scrub before injecting.
+                // eslint-disable-next-line @lwc/lwc/no-inner-html
+                el.innerHTML = sanitizeRichText(this._briefEditValue || '');
                 this._briefEditorNeedsInit = false;
                 el.focus();
             }
@@ -813,7 +882,29 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
     @track _currentNoteHtml         = null;  // regenerated HTML; null = read from original note
     @track _summarySaved            = false; // true after handleSaveSummary; reset when content changes
     @track _selectedArtifactFileIds = new Set(); // ContentDocumentIds of selected artifact files (multi-select, Artifacts zone)
-    @track _includeMeetingSummary   = false; // whether to include the event's meeting summary as input to Wealth Plan generation
+    /**
+     * Whether the event's existing meeting summary is fed into generation as MeetingNoteText.
+     *
+     * Defaults from the data, but must NOT be latched at event-selection time. LWC sets @api
+     * properties in template attribute order, and in advisorAssistant.html `selected-event-id`
+     * is attribute 3 while `input-events` and `input-meeting-notes` are 24 and 25 — so when
+     * _applyEventSelection ran, `selectedEventNote` was still null and this froze to false.
+     * The summary was then silently withheld from the prompt, and the model answered "the user
+     * did not provide any text from which to extract information". It only looked intermittent
+     * because changing the event while the component was already open resolved correctly.
+     *
+     * So: re-derive from `_syncIncludeMeetingSummary()` on every setter that can change the
+     * answer, and stop once the advisor has made the choice themselves.
+     */
+    @track _includeMeetingSummary   = false;
+    /** True once the advisor has toggled it; their choice then outranks the derived default. */
+    _includeMeetingSummaryTouched = false;
+
+    /** Re-derive the default. No-op after the advisor has overridden it. */
+    _syncIncludeMeetingSummary() {
+        if (this._includeMeetingSummaryTouched) return;
+        this._includeMeetingSummary = !!this.selectedEventNote;
+    }
     @track _saveFileModal           = null;  // { index, name, documentId } when open, null when closed
     @track _sessionSavedFiles       = [];    // files saved to event this session — shown optimistically in Meeting Files
     @track _summarySaving           = false; // true while background-saving via saveSummaryFlowApiName
@@ -1220,6 +1311,134 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
     get showTodosSection()     { return this._todosGenerating || this._meetingTodos.length > 0; }
     get acceptedTodosCount()   { return this._meetingTodos.filter(t => t._accepted).length; }
     get todosBadgeLabel()      { return `${this.acceptedTodosCount} / ${this._meetingTodos.length}`; }
+    // ═══════════════════════════════════════════════════════════════════════
+    // TO-DO'S — display model, ordering, filtering, manual add
+    // ═══════════════════════════════════════════════════════════════════════
+
+    /** Active priority filter: 'High' | 'Normal' | 'Low' | null (all). */
+    @track _todoPriorityFilter = null;
+    /** Counter for hand-added rows. Deliberately NOT `todo-N`: a later regeneration
+     *  renumbers from todo-0, and a colliding _key would make two rows respond to one click. */
+    _manualTodoSeq = 0;
+
+    /**
+     * The rendered to-do list: `_meetingTodos` decorated, ordered and filtered.
+     *
+     * `_meetingTodos` stays the data — every handler still mutates it by `_key`, so nothing
+     * else had to change. Getters over it are already the pattern here (todoPriorityCounts,
+     * acceptedTodosCount).
+     *
+     * Not memoised. The list is a handful of rows, and the hazard worth checking — fresh row
+     * objects per render stomping the uncontrolled `<input value={todo.Subject}>` mid-typing —
+     * does not apply: LWC diffs the attribute VALUE, not object identity, and Subject does not
+     * change while typing because the input is uncontrolled and only read on save.
+     */
+    get displayTodos() {
+        const rows = (this._meetingTodos || []).map(t => this._decorateTodo(t));
+        const filtered = this._todoPriorityFilter
+            ? rows.filter(t => (t.Priority || 'Normal') === this._todoPriorityFilter)
+            : rows;
+        return this._orderTodos(filtered);
+    }
+
+    /** Rows the advisor can currently see — what Accept All must act on. */
+    get visibleTodoKeys() {
+        return new Set(this.displayTodos.map(t => t._key));
+    }
+
+    /** Formatted due date + overdue state. The raw ISO string used to render as-is. */
+    _decorateTodo(t) {
+        const raw = t.ActivityDate || '';
+        let dueLabel = 'No date';
+        let isOverdue = false;
+        if (raw) {
+            const due = new Date(`${raw}T00:00:00`);
+            if (!isNaN(due.getTime())) {
+                dueLabel = due.toLocaleDateString('no-NO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                // Only unsaved rows: once the Task exists, its date is Salesforce's business.
+                isOverdue = due < today && !t._saved;
+            } else {
+                dueLabel = raw;   // the model returned something unparseable — show it verbatim
+            }
+        }
+        return {
+            ...t,
+            _dueLabel:    dueLabel,
+            _isOverdue:   isOverdue,
+            _dueChipClass: isOverdue
+                ? 'wph-meta-chip wph-meta-chip--overdue'
+                : 'wph-meta-chip',
+            _hasDue: !!raw
+        };
+    }
+
+    /**
+     * High → Normal → Low → unset, then earliest due date with undated last.
+     *
+     * A row being edited holds its position: re-sorting under an open form would move the
+     * inputs out from under the cursor.
+     */
+    _orderTodos(rows) {
+        const RANK = { High: 0, Normal: 1, Low: 2 };
+        const withIndex = rows.map((t, i) => ({ t, i }));
+        withIndex.sort((a, b) => {
+            if (a.t._isEditing || b.t._isEditing) return a.i - b.i;
+            const pr = (RANK[a.t.Priority] ?? 3) - (RANK[b.t.Priority] ?? 3);
+            if (pr !== 0) return pr;
+            const ad = a.t.ActivityDate || '';
+            const bd = b.t.ActivityDate || '';
+            if (ad && bd) return ad.localeCompare(bd);   // ISO strings sort chronologically
+            if (ad) return -1;
+            if (bd) return 1;
+            return a.i - b.i;
+        });
+        return withIndex.map(x => x.t);
+    }
+
+    /** Priority count chips double as filters. Clicking the active one clears it. */
+    handleTodoPriorityFilter(event) {
+        const next = event.currentTarget.dataset.priority || null;
+        this._todoPriorityFilter = (this._todoPriorityFilter === next) ? null : next;
+    }
+    get todoFilterHighClass()   { return this._todoChipClass('High',   'high'); }
+    get todoFilterNormalClass() { return this._todoChipClass('Normal', 'normal'); }
+    get todoFilterLowClass()    { return this._todoChipClass('Low',    'low'); }
+    _todoChipClass(priority, variant) {
+        const base = `wph-pnet-chip wph-pnet-chip--${variant}`;
+        return this._todoPriorityFilter === priority ? `${base} wph-pnet-chip--active` : base;
+    }
+
+    /**
+     * Add a to-do by hand.
+     *
+     * The tab could only ever show what the AI produced — anything the model missed was
+     * unrecoverable, while the Wealth Plan has this per section.
+     *
+     * Opens straight into the existing edit form, so handleSaveTodoEdit needs no changes. The
+     * `_priorityIs*` flags are normally set by handleEditTodo on entry; a manual row skips that
+     * handler, so it carries them itself or the Priority select renders with nothing chosen.
+     */
+    handleAddTodo() {
+        const key = `manual-${this._manualTodoSeq++}`;
+        this._meetingTodos = [
+            {
+                Subject: '', Description: '', ActivityDate: '', Priority: 'Normal',
+                Status: 'Not Started',
+                _key: key, _accepted: false, _saved: false,
+                _rowClass: 'wph-record-row', _hasMeta: false,
+                _isEditing: true,
+                _priorityIsBlank: false, _priorityIsHigh: false,
+                _priorityIsNormal: true, _priorityIsLow: false
+            },
+            ...this._meetingTodos
+        ];
+        this._msTodosExpanded = true;
+        // A hand-added row clears any filter that would hide it.
+        this._todoPriorityFilter = null;
+    }
+
     get todoPriorityCounts() {
         // Single-pass reduce — was three filter() calls over the same array.
         let high = 0, normal = 0, low = 0;
@@ -1474,6 +1693,7 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
         this._briefExpanded = !!(this.selectedEventNote?.Brief_Summary__c) &&
             (this.briefOpenByDefault === true || this.briefOpenByDefault === 'true');
         this._summaryInstructions    = '';
+        this._syncTextarea('summaryInstructions', '');
         this._summaryEditMode        = false;
         this._briefEditMode          = false;
         this._briefEditValue         = '';
@@ -1485,7 +1705,9 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
         this._advancedExpanded       = false;
         this._activeTab              = 'summary';
         // Auto-include meeting summary in Wealth Plan context if one exists for this event
-        this._includeMeetingSummary  = !!this.selectedEventNote;
+        // Per-event: the advisor's override does not carry across events.
+        this._includeMeetingSummaryTouched = false;
+        this._syncIncludeMeetingSummary();
         // Auto-select up to 3 artifact files for the new event (shared across both tabs)
         Promise.resolve().then(() => {
             const ids = (this.artifactFiles || []).slice(0, 3).map(f => f.id);
@@ -1535,6 +1757,7 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
     }
 
     handleToggleMeetingSummary() {
+        this._includeMeetingSummaryTouched = true;
         this._includeMeetingSummary = !this._includeMeetingSummary;
     }
 
@@ -1626,8 +1849,42 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
     handleCancelSaveToEvent() { this._saveFileModal = null; }
 
     // ── Summary step handlers ────────────────────────────────────────────────
+    /**
+     * Push a value into a native <textarea> that LWC cannot update on its own.
+     *
+     * A textarea's value comes from child text, which LWC applies only on the first render, so
+     * assigning the backing field in JS leaves the visible text stale. Every place that sets
+     * such a field PROGRAMMATICALLY has to write the element too.
+     *
+     * Note the two _modalInstructions textareas need no such call: their modals sit inside
+     * lwc:if, so the element is destroyed and recreated around every clear and the first render
+     * already picks up the empty value.
+     *
+     * @param {string} refName lwc:ref of the textarea
+     * @param {string} value   value to show
+     */
+    _syncTextarea(refName, value) {
+        const el = this.refs?.[refName];
+        if (el) el.value = value || '';       // absent while that accordion is collapsed
+    }
+
     handleSummaryInstructionsInput(event) {
         this._summaryInstructions = event.target.value;
+    }
+
+    /**
+     * The one place the regeneration Flow is invoked. Shared by the Configuration-card
+     * regeneration (which commits straight to the draft) and by the two in-modal ones (which
+     * only fill the editor). Returns the cleaned HTML, or throws for the caller to report.
+     */
+    async _callRegenerate({ flowApiName, currentSummary, instructions }) {
+        const result = await regenerateMeetingSummary({
+            flowApiName,
+            currentSummary: currentSummary || '',
+            instructions:   instructions   || '',
+            documentId:     [...this._selectedArtifactFileIds][0] || (this._stagedFile ? this._stagedFile.documentId : '') || ''
+        });
+        return _stripStyleBlocks(result);
     }
 
     async handleRegenerateSummary() {
@@ -1643,17 +1900,17 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
         this._summaryGenerating = true;
         this._startSummaryLoadingCycle();
         try {
-            const result = await regenerateMeetingSummary({
+            const result = await this._callRegenerate({
                 flowApiName:    this.regenerateSummaryFlowApiName,
                 currentSummary: this.summaryDisplayHtml || '',
-                instructions:   this._summaryInstructions || '',
-                documentId:     [...this._selectedArtifactFileIds][0] || (this._stagedFile ? this._stagedFile.documentId : '') || ''
+                instructions:   this._summaryInstructions || ''
             });
-            this._currentNoteHtml    = _stripStyleBlocks(result);
+            this._currentNoteHtml    = result;
             this._noteDeletedLocally = false;
             this.outputMeetingSummary = this._currentNoteHtml;
             this._flowOut('outputMeetingSummary', this._currentNoteHtml);
             this._summaryInstructions = '';
+            this._syncTextarea('summaryInstructions', '');
             this._summarySaved        = false;
         } catch (error) {
             const msg = error.body ? error.body.message : error.message;
@@ -1673,6 +1930,10 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
         this._summaryEditValue = this.summaryDisplayHtml || '';
         this._summaryEditMode  = true;
         this._editorNeedsInit  = true;
+        // Modal-local scratch state does not carry between openings.
+        this._modalInstructions = '';
+        this._linkStripFor      = null;
+        this._linkUrl           = '';
     }
 
     handleEditorInput(event) {
@@ -1694,6 +1955,187 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
         document.execCommand('insertHTML', false, html || text);
     }
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // EDIT-MODAL FORMATTING TOOLBAR
+    // ═══════════════════════════════════════════════════════════════════════
+    //
+    // Both edit modals are plain `contenteditable` divs, so without a toolbar the only way to
+    // bold a word or make a list is a keyboard shortcut the advisor has to already know.
+    //
+    // `document.execCommand` rather than `lightning-input-rich-text`: the base component
+    // sanitises to its own allowed tag set and would silently drop structure the prompt
+    // template emits (tables, inline styles) from client-facing summaries. execCommand edits
+    // the existing markup in place and changes nothing it is not asked to. It is deprecated
+    // but universally implemented, and `handleEditorPaste` above already depends on it in this
+    // very editor — so selection inside the shadow root is known to work here.
+    //
+    // One toolbar markup block per modal, distinguished by `data-target`.
+
+    /** Which editor the open link strip belongs to: 'summary' | 'brief' | null. */
+    @track _linkStripFor = null;
+    @track _linkUrl      = '';
+
+    /** The live `contenteditable` for a target, or null if that modal is not open. */
+    _editorRef(target) {
+        return target === 'brief' ? (this.refs.briefEditor || null) : (this.refs.summaryEditor || null);
+    }
+
+    /** Read the DOM back into the tracked value — programmatic commands do not fire `input`. */
+    _syncEditorValue(target) {
+        const el = this._editorRef(target);
+        if (!el) return;
+        // Reading a contenteditable's markup is the whole point here; there is no
+        // sanctioned alternative for this rule.
+        // eslint-disable-next-line @lwc/lwc/no-inner-html
+        if (target === 'brief') this._briefEditValue   = el.innerHTML;
+        // eslint-disable-next-line @lwc/lwc/no-inner-html
+        else                    this._summaryEditValue = el.innerHTML;
+    }
+
+    /**
+     * REQUIRED on every toolbar control. Without it the button takes focus on mousedown, the
+     * caret selection inside the editor is discarded, and every command silently does nothing.
+     */
+    handleToolbarMouseDown(event) {
+        event.preventDefault();
+    }
+
+    handleToolbarCommand(event) {
+        const { cmd, target } = event.currentTarget.dataset;
+        const spec = TOOLBAR_COMMANDS[cmd];
+        const el   = this._editorRef(target);
+        if (!spec || !el) return;
+
+        el.focus();
+        // Emit <b>/<i> rather than <span style="…">, keeping the saved HTML in the same shape
+        // the prompt template produces.
+        try { document.execCommand('styleWithCSS', false, false); } catch { /* not supported — harmless */ }
+        document.execCommand(spec[0], false, spec.length > 1 ? spec[1] : null);
+        this._syncEditorValue(target);
+    }
+
+    // ── Link strip — an inline URL field, not window.prompt ─────────────────
+
+    /**
+     * The selected text at the moment the link strip opened.
+     *
+     * Typing into the URL field moves focus out of the editor and collapses the selection, so
+     * by the time Add link is pressed there is nothing left for `createLink` to wrap. Stash the
+     * Range on open and put it back before running the command.
+     */
+    _savedLinkRange = null;
+
+    handleToggleLinkStrip(event) {
+        const { target } = event.currentTarget.dataset;
+        const closing = this._linkStripFor === target;
+        if (!closing) {
+            const sel = window.getSelection();
+            const range = (sel && sel.rangeCount > 0) ? sel.getRangeAt(0) : null;
+            // A collapsed caret has nothing for createLink to wrap, so treat "no selection"
+            // as no range — Add link then stays disabled instead of silently doing nothing.
+            this._savedLinkRange = (range && !range.collapsed) ? range.cloneRange() : null;
+        } else {
+            this._savedLinkRange = null;
+        }
+        this._linkStripFor = closing ? null : target;
+        this._linkUrl      = '';
+    }
+
+    handleLinkUrlInput(event) {
+        this._linkUrl = event.target.value || '';
+    }
+
+    handleApplyLink() {
+        const url    = (this._linkUrl || '').trim();
+        const target = this._linkStripFor;
+        const el     = this._editorRef(target);
+        const range  = this._savedLinkRange;
+        if (!url || !el || !range) return;
+        // A bare domain would otherwise become a same-origin relative link.
+        const href = /^(https?:|mailto:)/i.test(url) ? url : `https://${url}`;
+
+        el.focus();
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+
+        document.execCommand('createLink', false, href);
+        this._syncEditorValue(target);
+        this._linkStripFor   = null;
+        this._linkUrl        = '';
+        this._savedLinkRange = null;
+    }
+
+    get showSummaryLinkStrip() { return this._linkStripFor === 'summary'; }
+    get showBriefLinkStrip()   { return this._linkStripFor === 'brief'; }
+    /** Nothing to link with an empty URL, or if the selection was lost before opening. */
+    get linkApplyDisabled()    { return (this._linkUrl || '').trim().length === 0 || !this._savedLinkRange; }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // REGENERATE FROM INSIDE AN EDIT MODAL
+    // ═══════════════════════════════════════════════════════════════════════
+    //
+    // Deliberately NOT `handleRegenerateSummary`. That one commits to `_currentNoteHtml` and
+    // dispatches `summarychange`, which drives the parent's autosave and bg-job flags — i.e.
+    // it publishes. Here the result must land in the EDITOR only, so the advisor reviews it and
+    // then chooses Apply & Save or Cancel. Cancel has to be able to throw it away.
+    //
+    // The busy flag is also separate: `_summaryGenerating` drives the loading skeleton in the
+    // panel behind the modal and the parent's footer, neither of which should react to this.
+
+    /** Instructions typed in whichever modal is open. Only one can be open at a time. */
+    @track _modalInstructions  = '';
+    @track _modalRegenerating  = false;
+
+    handleModalInstructionsInput(event) {
+        this._modalInstructions = event.target.value || '';
+    }
+
+    get canModalRegenerate() {
+        return (this._modalInstructions || '').trim().length > 0 && !this._modalRegenerating;
+    }
+
+    /**
+     * Regenerate the open editor's content in place.
+     *
+     * `currentSummary` is the LIVE editor value, not the saved note — so anything the advisor
+     * has already typed in the modal is carried into the regeneration rather than discarded.
+     */
+    async handleModalRegenerate() {
+        // Summary editor only. The brief is adjusted by hand, so its modal has no instructions
+        // box and no button that could reach here — this guard states the invariant rather than
+        // defending a live path.
+        if (this._briefEditMode) return;
+
+        const instructions = (this._modalInstructions || '').trim();
+        if (!instructions || this._modalRegenerating) return;
+
+        const flowApiName = this.regenerateSummaryFlowApiName;
+        if (!flowApiName) {
+            this._showToast('Configuration Error', 'Regenerate Summary Flow API Name is not set.', 'error');
+            return;
+        }
+
+        // Take the DOM as truth — the caret may be mid-word with no `input` yet dispatched.
+        this._syncEditorValue('summary');
+
+        this._modalRegenerating = true;
+        try {
+            const result = await this._callRegenerate({
+                flowApiName,
+                currentSummary: this._summaryEditValue || '',
+                instructions
+            });
+            this._summaryEditValue = result;
+            // Repaint the contenteditable via renderedCallback's existing init block.
+            this._editorNeedsInit = true;
+        } catch (error) {
+            this._showToast('Regeneration Failed', error.body ? error.body.message : error.message, 'error');
+        } finally {
+            this._modalRegenerating = false;
+        }
+    }
+
     handleSaveSummaryEdit() {
         this._modalHeightPx      = null;
         this._noteDeletedLocally = false;
@@ -1710,6 +2152,10 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
         this._summaryEditMode  = false;
         this._summaryEditValue = '';
         this._editorNeedsInit  = false;
+        // Modal-local scratch state does not carry between openings.
+        this._modalInstructions = '';
+        this._linkStripFor      = null;
+        this._linkUrl           = '';
     }
 
     get _modalCardStyle() {
@@ -2588,12 +3034,34 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
                 ActivityDate: activityDate, IsPublic__c: isPublic, _hasMeta: hasMeta, _isEditing: false };
         });
     }
+    /**
+     * Accept every row the advisor can SEE. Scoped to the visible set because accepting rows a
+     * filter is hiding — and then saving them as Tasks — would be a silent surprise.
+     */
     handleAcceptAllTodos() {
+        const visible = this.visibleTodoKeys;
         this._meetingTodos = this._meetingTodos.map(t =>
-            t._saved ? t : { ...t, _accepted: true, _rowClass: 'wph-record-row wph-row-locked' }
+            (t._saved || !visible.has(t._key))
+                ? t
+                : { ...t, _accepted: true, _rowClass: 'wph-record-row wph-row-locked' }
         );
         this._dispatchAcceptedTodos();
     }
+    /**
+     * Rows Accept All would actually change: visible, not already saved, not already accepted.
+     * Counting merely-visible rows overstated it — a filtered view showing one accepted and one
+     * pending row would have promised to accept two.
+     */
+    get acceptableTodoCount() {
+        return this.displayTodos.filter(t => !t._saved && !t._accepted).length;
+    }
+    /** Says what it will actually do once a filter narrows the list. */
+    get acceptAllLabel() {
+        const n = this.acceptableTodoCount;
+        if (!this._todoPriorityFilter) return 'Accept All';
+        return n > 0 ? `Accept ${n}` : 'Nothing to accept';
+    }
+    get acceptAllDisabled() { return this.acceptableTodoCount === 0; }
     async handleSaveTodos() {
         this._dispatchAcceptedTodos();
         if (!this.saveTodosFlowApiName) {
@@ -2733,12 +3201,24 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
         if (this._previewingVersionId) return !!this.previewingVersion?.BriefSummary__c;
         return this._briefGenerating || !!this._meetingBrief;
     }
+    /**
+     * Edit Brief lives on the summary header row next to Edit Summary, not inside the brief
+     * accordion body — so it does NOT depend on `_briefExpanded`. The brief can be edited
+     * without expanding it first, which is the point of putting the button up there.
+     */
+    get showBriefEditButton() {
+        return this.showBriefSection && !this._briefGenerating && !this.isPreviewingHistoricalVersion;
+    }
     get briefChevronClass() { return `wph-chevron${this._briefExpanded ? ' wph-chevron-up' : ''}`; }
     handleToggleBrief()     { this._briefExpanded = !this._briefExpanded; }
     handleEditBrief() {
         this._briefEditValue       = this._meetingBrief || '';
         this._briefEditMode        = true;
         this._briefEditorNeedsInit = true;
+        // Modal-local scratch state does not carry between openings.
+        this._modalInstructions = '';
+        this._linkStripFor      = null;
+        this._linkUrl           = '';
     }
     handleSaveBriefEdit() {
         this._modalHeightPx = null;
@@ -2751,6 +3231,10 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
         this._briefEditMode        = false;
         this._briefEditValue       = '';
         this._briefEditorNeedsInit = false;
+        // Modal-local scratch state does not carry between openings.
+        this._modalInstructions = '';
+        this._linkStripFor      = null;
+        this._linkUrl           = '';
     }
     // ── Two-column layout collapse / ratio ──────────────────────────────────
     @track _theme               = 'corporate'; // 'classic' | 'corporate'

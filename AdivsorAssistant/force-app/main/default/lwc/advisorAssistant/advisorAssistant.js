@@ -2641,10 +2641,14 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
     }
     /**
      * Meeting Notes textarea.
-     * FIXME (DEFECTS.md #3): the template writes the value as textarea child text
-     * (`>{_freeText}</textarea>`), which LWC only applies on the FIRST render. This
-     * handler keeps `_freeText` correct, but assigning `_freeText` in JS will not
-     * update what the user sees. Same defect on the regen-instructions textarea.
+     *
+     * The value is written as textarea child text (`>{_freeText}</textarea>`), which LWC only
+     * applies on the FIRST render — so assigning `_freeText` in JS would not update what the
+     * user sees. That is LATENT rather than a live bug: this handler and handleParentNotesInput
+     * both read FROM the DOM, and the only programmatic writers (handleWpTemplate,
+     * handleMsTemplate, handleToggleMicrophone) are not referenced in this template. If one of
+     * them is ever wired up, it must call _syncTextarea like
+     * handleRunRegenerateInstructions does.
      */
     handleParentNotesTextarea(event) {
         this._freeText = event.target.value || '';
@@ -3022,6 +3026,22 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
     get summaryTabPillClass() { return this.isSummaryGenerating ? 'aa-tab-pill aa-tab-pill--running' : 'aa-tab-pill aa-tab-pill--hidden'; }
     get wpTabPillClass()      { return this.isWpGenerating      ? 'aa-tab-pill aa-tab-pill--running' : 'aa-tab-pill aa-tab-pill--hidden'; }
     get todosTabPillClass()   { return this.isTodosGenerating   ? 'aa-tab-pill aa-tab-pill--running' : 'aa-tab-pill aa-tab-pill--hidden'; }
+    /**
+     * Internal Notes was the only tab with no indicator, so from another tab there was no way to
+     * tell notes were unsaved. Unlike the other three this is not about a generation job — there
+     * is none — it reflects the save state the child already reports via `tabstatechange`.
+     */
+    get internalNotesTabPillClass() {
+        if (this._internalNotesState.isSaving) return 'aa-tab-pill aa-tab-pill--running';
+        if (this._internalNotesState.isDirty)  return 'aa-tab-pill aa-tab-pill--unsaved';
+        return 'aa-tab-pill aa-tab-pill--hidden';
+    }
+    /** Spelt out for the title attribute, since a coloured dot alone says nothing. */
+    get internalNotesTabPillTitle() {
+        if (this._internalNotesState.isSaving) return 'Saving internal notes…';
+        if (this._internalNotesState.isDirty)  return 'Internal notes have unsaved changes';
+        return '';
+    }
     get hasBackgroundBanner() {
         // Show a banner if a job is running on a tab OTHER than the active one.
         const active = this.activeTabValue;
@@ -3085,12 +3105,33 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
     // Regenerate-with-instructions state for the Configuration card
     @track _regenInstructions = '';
     handleRegenInstructionsInput(event) { this._regenInstructions = event.target.value || ''; }
+    /** Meeting Summary tab only — the Wealth Plan has no regenerate-with-instructions. */
     get showRegenerateInstructions() {
         return this.activeTabValue === 'summary' && this.hasSummaryForEvent && !this.isNotePublished;
     }
+    /**
+     * Gates the CTA's very existence, not just its disabled state — an action that cannot do
+     * anything yet should not be on screen. See the template.
+     */
     get canRegenerateInstructions() {
         return (this._regenInstructions || '').trim().length > 0;
     }
+    /**
+     * Push a value into a native <textarea> that LWC cannot update on its own.
+     *
+     * A textarea's value comes from child text, which LWC applies only on the first render, so
+     * assigning the backing field in JS leaves the visible text stale. Anywhere such a field is
+     * set PROGRAMMATICALLY (as opposed to from the user's own input event) has to write the
+     * element too.
+     *
+     * @param {string} refName lwc:ref of the textarea
+     * @param {string} value   value to show
+     */
+    _syncTextarea(refName, value) {
+        const el = this.refs?.[refName];
+        if (el) el.value = value || '';       // absent when that card is collapsed or hidden
+    }
+
     handleRunRegenerateInstructions() {
         const instructions = (this._regenInstructions || '').trim();
         if (!instructions) return;
@@ -3100,6 +3141,7 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
         }
         // Optimistic: clear the textarea and mark bg job running
         this._regenInstructions = '';
+        this._syncTextarea('regenInstructions', '');
         this._bgJobs = { ...this._bgJobs, summary: true };
     }
 
@@ -5044,15 +5086,41 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
     // c-advisor-wealth-plan shadow roots. Steps are ordered top-to-bottom, and the
     // step number lives only in the badge ({tourStepNum} / {tourStepTotal}) so that
     // conditionally-rendered steps being skipped never desyncs the numbering.
+    /**
+     * The guided tour, in the order the advisor works: pick an event, give it context, generate,
+     * then the four tabs where results land.
+     *
+     * Every selector is resolved with `this.template.querySelector`, so it can only reach THIS
+     * component's template — the `data-tour` anchors inside advisorMeetingSummary belong to that
+     * component's own separate tour and are unreachable from here.
+     *
+     * `_positionTour` SILENTLY SKIPS any step whose target is not in the DOM, so a stale selector
+     * shrinks the tour with no error. Two consequences worth knowing:
+     *
+     *  - Step 6 must be `.aa-footer-left .aa-primary-cta`, not `.aa-primary-cta`. That class
+     *    matches five elements and querySelector takes the first in document order; on a fresh
+     *    start `showSummaryHero` is true, so a bare selector highlighted the hero's "Generate
+     *    Meeting Summary" button mid-page while this text described the footer's persistent CTA.
+     *  - `_positionTour` places the bubble against a fixed assumed height (BH = 180), so `text`
+     *    stays short. Keep it under ~170 characters or the bubble overflows its own box.
+     *
+     * The tour deliberately does NOT switch tabs as it advances: pointing at a tab button while
+     * describing what is behind it has no side effects, and it avoids leaving the advisor parked
+     * on Internal Notes when the tour finishes. `tourStepTotal` derives from this array's length,
+     * so the "Step n of N" counter looks after itself.
+     */
     _tourDefs = [
-        { selector: '.aa-header-event-zone',    title: 'Select an Event',     text: 'Start here. Choose the meeting event you want to document. This anchors all context for the AI.',                                     position: 'bottom' },
-        { selector: '[data-card="category"]',   title: 'Meeting Category',    text: 'Tell the AI what kind of meeting this is. This shapes how the summary is structured — Whiteboard, Status, or Annual Review.',         position: 'right'  },
-        { selector: '[data-card="notes"]',      title: 'Manual Notes',        text: 'Type your own free-text notes from the meeting here. The richer and more detailed your notes, the better the AI summary.',           position: 'right'  },
-        { selector: '[data-card="files"]',      title: 'Meeting Files',       text: 'Pick documents already attached to the event. These are sent to the AI as additional context alongside your notes.',                  position: 'right'  },
-        { selector: '[data-card="docs"]',       title: 'Document Upload',     text: 'Upload supporting documents from your machine to give the AI extra material to work from.',                                          position: 'right'  },
-        { selector: '[data-tab="wealthplan"]',  title: 'Wealth Plan',         text: 'Switch to the Wealth Plan tab to structure client portfolio updates. Each tab generates independently and keeps its own results.',    position: 'bottom' },
-        { selector: '.aa-primary-cta',          title: 'Generate',            text: 'When you\'re ready, click Generate. The button targets whichever tab you\'re on, and jobs can run in parallel across tabs.',          position: 'top'    },
-        { selector: '.aa-guide-trigger',        title: 'User Guide',          text: 'Click the ? button at any time to open the User Guide — tips, feature descriptions, and what\'s new are all in there.',              position: 'bottom' }
+        { selector: '.aa-header-event-zone',            title: 'Select an Event',    text: 'Start here. Choose the meeting event you want to document. This anchors all context for the AI. Use Range to look further back.',             position: 'bottom' },
+        { selector: '[data-card="category"]',           title: 'Meeting Category',   text: 'Tell the AI what kind of meeting this is. This shapes how the summary is structured — Whiteboard, Status, or Annual Review.',                  position: 'right'  },
+        { selector: '[data-card="notes"]',              title: 'Manual Notes',       text: 'Type your own free-text notes from the meeting here. The richer and more detailed your notes, the better the AI summary.',                     position: 'right'  },
+        { selector: '[data-card="files"]',              title: 'Meeting Files',      text: 'Pick documents already attached to the event. These are sent to the AI as context, and the eye icon previews one without leaving.',            position: 'right'  },
+        { selector: '[data-card="docs"]',               title: 'Document Upload',    text: 'Upload supporting documents from your machine to give the AI extra material to work from.',                                                    position: 'right'  },
+        { selector: '.aa-footer-left .aa-primary-cta',  title: 'Generate',           text: 'When you\'re ready, click Generate. It targets whichever tab you\'re on, and jobs keep running if you switch away.',                            position: 'top'    },
+        { selector: '[data-tab="summary"]',             title: 'Meeting Summary',    text: 'The AI note lands here, with a short At a Glance brief above it. Edit either one, regenerate with instructions, then Save & Publish.',         position: 'bottom' },
+        { selector: '[data-tab="wealthplan"]',          title: 'Wealth Plan',        text: 'Structured portfolio suggestions to review row by row. Accept the ones you want, then Save to Wealth Plan writes only those.',                 position: 'bottom' },
+        { selector: '[data-tab="todos"]',               title: 'To-Do\'s',            text: 'Action items pulled from the summary. Accept the ones you want and save them as Tasks — or add one yourself if the AI missed it.',             position: 'bottom' },
+        { selector: '[data-tab="internalnotes"]',       title: 'Internal Notes',     text: 'Your private notes. Never shared with the client and never part of the summary. They save themselves a few seconds after you stop typing.',    position: 'bottom' },
+        { selector: '.aa-guide-trigger',                title: 'User Guide',         text: 'Click the ? button at any time to open the User Guide — tips, feature descriptions, and what\'s new are all in there.',                          position: 'bottom' }
     ];
 
     get tourStepNum()       { return this._tourStep + 1; }
