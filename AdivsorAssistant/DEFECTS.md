@@ -817,3 +817,45 @@ editor keeps its own instructions box unchanged.
   replaced by seven proving the brief path is unreachable (nothing sent, editor and record
   untouched, no busy state left behind) while the summary path still regenerates through the
   summary Flow with the raw instructions. 32 assertions, all passing.
+
+## Investigated — "Wealth Plan generation is slower than wealthPlanHelper" (2026-09-08)
+
+**Not a regression. Advisor Assistant had been skipping work, and the fix restored it.**
+
+Measured directly against `WealthPlan_AL_AI_Helper_Trigger` in `fulltest`, varying only
+`MeetingNoteText`:
+
+| Run | Input | Time | Output |
+|---|---|---|---|
+| A | context only | **4.7 s** | 164 chars |
+| B | context + 4,884-char summary | **7.8 s** | 2,130 chars |
+
+The 3.1 s difference is the cost of the summary actually reaching the prompt. Run A is what
+"fast" looked like: 164 characters, i.e. the empty-wealth-plan bug.
+
+**Mechanism.** `_includeMeetingSummary` latched `false` because of template attribute order —
+`selected-event-id` is attribute 3 while `input-events` is 24 and `input-meeting-notes` is 25 — so
+`selectedEventNote` was still null when the child decided. `wealthPlanHelper` was never exposed to
+this: it has **no** `@api selectedEventId` and **no** `_applyEventSelection`, because it owns the
+event picker internally, so its data has always loaded before the user picks an event. It has
+always sent the summary and always paid the ~7.8 s.
+
+**Ruled out, by comparison rather than assumption:**
+
+- Same Apex method and byte-identical arguments — the two `handleGenerate` bodies differ only in
+  client-side bookkeeping (the `wpgenerated` event, the pre-flight check, the `_flowOut` helper)
+- Same Flow — both host Flow screens configure `flowApiName = WealthPlan_AL_AI_Helper_Trigger`
+- Same documents — `artifactFiles` derives identically in both (`selectedEventArtifact` →
+  `_inputContentDocumentLinks` → `_inputContentDocuments`), and both `slice(0, 3)`
+- Same progress cycle — identical 2,800 ms interval
+
+**Expect parity now**, not an improvement. If advisors still report a difference with identical
+inputs, the next step is a browser performance profile — code comparison is exhausted.
+
+**The real lever is documents, not the summary.** The Flow runs `ConvertBlobToString` *per
+document* and feeds the full text to the prompt template. Deselecting irrelevant documents saves
+more than anything else available. Per-document cost was not measured.
+
+**Client-side weight is a separate matter.** Advisor Assistant mounts four children to
+`wealthPlanHelper`'s one, 72 wires against 18. That affects page load and responsiveness, not the
+generation round trip.
