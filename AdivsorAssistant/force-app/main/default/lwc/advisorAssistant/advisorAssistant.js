@@ -386,6 +386,29 @@ function _stripHtmlToText(html) {
     return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').trim();
 }
 
+// ── File kinds ──────────────────────────────────────────────────────────────
+/**
+ * `ContentDocument.FileType` is NOT the file extension, which is easy to assume
+ * and wrong: a .txt is `TEXT`, a .docx is `WORD_X`, a .doc is `WORD`, a .xlsx is
+ * `EXCEL_X`. Only PDF/PNG/JPG/JPEG/GIF happen to match their extension.
+ *
+ * Rows reach this component from two sources with two spellings — Flow-supplied
+ * files carry `ContentDocument.FileType`, session-uploaded ones carry the raw
+ * filename extension — so both are normalised here to one small token set, and
+ * every icon, tag and transcript test reads the token rather than either raw value.
+ */
+const FILE_KINDS = {
+    TXT: 'txt',  TEXT: 'txt',
+    PDF: 'pdf',
+    DOC: 'doc',  DOCX: 'doc',  WORD: 'doc',  WORD_X: 'doc',
+    PNG: 'img',  JPG: 'img',   JPEG: 'img',  GIF: 'img',
+};
+
+/** → 'txt' | 'pdf' | 'doc' | 'img' | 'generic' */
+function _fileKind(fileType) {
+    return FILE_KINDS[(fileType || '').toUpperCase()] || 'generic';
+}
+
 // ── Transcript retention ────────────────────────────────────────────────────
 // Meeting transcripts are purged by an org-side retention process 7 days after
 // they are created. Nothing in this component does the deleting — it only shows
@@ -395,7 +418,7 @@ const TRANSCRIPT_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 
 /** A transcript is a text file whose title says so. Both conditions are required. */
 function _isTranscriptFile(title, fileType) {
-    return (fileType || '').toUpperCase() === 'TXT' && /transcript/i.test(title || '');
+    return _fileKind(fileType) === 'txt' && /transcript/i.test(title || '');
 }
 
 /**
@@ -1622,10 +1645,13 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
                 const selected = this._selectedArtifactFileIds.has(cdl.ContentDocumentId);
                 let iconStyle = 'color:#94a3b8;';
                 let tagClass  = 'wph-artifact-type-tag';
-                if (ft === 'PDF')                              { iconStyle = 'color:#ef4444;'; tagClass += ' wph-atype-pdf';  }
-                else if (ft === 'DOCX' || ft === 'DOC')       { iconStyle = 'color:#2563eb;'; tagClass += ' wph-atype-docx'; }
-                else if (ft === 'TXT')                         { iconStyle = 'color:#059669;'; tagClass += ' wph-atype-txt';  }
-                else if (ft === 'PNG' || ft === 'JPG' || ft === 'JPEG') { iconStyle = 'color:#7c3aed;'; tagClass += ' wph-atype-img';  }
+                switch (_fileKind(ft)) {
+                    case 'pdf': iconStyle = 'color:#ef4444;'; tagClass += ' wph-atype-pdf';  break;
+                    case 'doc': iconStyle = 'color:#2563eb;'; tagClass += ' wph-atype-docx'; break;
+                    case 'txt': iconStyle = 'color:#059669;'; tagClass += ' wph-atype-txt';  break;
+                    case 'img': iconStyle = 'color:#7c3aed;'; tagClass += ' wph-atype-img';  break;
+                    default: break;
+                }
                 linked.push({
                     id: cdl.ContentDocumentId,
                     title: doc.Title || cdl.ContentDocumentId,
@@ -2700,11 +2726,7 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
     get aaArtifactFiles() {
         return (this.artifactFiles || []).map(f => {
             const ft = (f.fileType || '').toUpperCase();
-            let iconWrapClass = 'aa-file-icon aa-file-icon--generic';
-            if (ft === 'PDF')                              iconWrapClass = 'aa-file-icon aa-file-icon--pdf';
-            else if (ft === 'DOCX' || ft === 'DOC')       iconWrapClass = 'aa-file-icon aa-file-icon--doc';
-            else if (['PNG','JPG','JPEG','GIF'].includes(ft)) iconWrapClass = 'aa-file-icon aa-file-icon--img';
-            else if (ft === 'TXT')                         iconWrapClass = 'aa-file-icon aa-file-icon--txt';
+            const iconWrapClass = `aa-file-icon aa-file-icon--${_fileKind(ft)}`;
             // Deliberately computed here and not in artifactFiles: that getter is
             // memoized on the file ids, which would freeze the countdown. This one
             // is not, so it re-reads _now on every render the ticker triggers.

@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>66.0</apiVersion>
+    <isExposed>true</isExposed>
+    <masterLabel>Agentforce AML Intelligence Tabs</masterLabel>
+    <description>Enterprise AML execution engine with Pro Mode consensus and multi-module tabs.</description>
+    <targets>
+        <target>lightning__RecordPage</target>
+        <target>lightning__AppPage</target>
+        <target>lightning__FlowScreen</target>
+    </targets>
+    <targetConfigs>
+        <targetConfig targets="lightning__FlowScreen">
+            <!-- Data Inputs -->
+            <property name="accountRecord" type="@salesforce/schema/Account" label="1. Account Record" description="Pass the {!accountRecord} variable here" />
+            
+            <!-- Core Analytical Flow APIs -->
+            <property name="promptCoreSnapshot" type="String" label="2. Core Snapshot Flow API Name" />
+            <property name="promptRecentActivity" type="String" label="3. Recent Activity Flow API Name" />
+            <property name="promptFinancialProfile" type="String" label="4. Financial Profile Flow API Name" />
+            <property name="promptTransactions" type="String" label="5. Transactions Flow API Name" />
+            <property name="promptRiskSummary" type="String" label="6. Risk Summary Flow API Name" />
+            
+            <!-- Advanced Features Flow APIs -->
+            <property name="flowApiNameConsensusJudge" type="String" label="7. Consensus Judge Flow API Name" description="Used for Pro Mode validation." />
+            <property name="flowApiNameChatQA" type="String" label="8. Analysis Chat Flow API Name" description="Used for asking questions about the generated analysis." />
+            
+            <!-- Action Flow APIs -->
+            <property name="flowApiNameCreateCase" type="String" label="9. Draft Case Flow API Name" />
+            <property name="flowApiNameSaveProfile" type="String" label="10. Save Profile Flow API Name" />
+
+            <!-- Load Previous Analysis (legacy String type — do not remove, referenced by existing Flows) -->
+            <property name="inputAnalyzerRecord" type="String" label="11. (Deprecated) Analyzer Record JSON" description="Legacy JSON input. Use property 13 instead." />
+            <property name="inputAnalyzerRecords" type="String" label="12. (Deprecated) Analyzer Records JSON" description="Legacy JSON input. Use property 14 instead." />
+
+            <!-- Load Previous Analysis (record variables) -->
+            <property name="analyzerRecord" type="@salesforce/schema/AML_Analyzer__c" label="13. Analyzer Record" description="Pass a single AML_Analyzer__c record variable to pre-load a saved analysis." />
+            <property name="analyzerRecordCollection" type="@salesforce/schema/AML_Analyzer__c[]" label="14. Analyzer Records Collection" description="Pass a record collection of AML_Analyzer__c records for dropdown selection." />
+
+            <!-- Field API Name Mapping (defaults work if you follow the suggested naming) -->
+            <property name="fieldCoreSnapshot" type="String" label="15. Field: Core Snapshot" default="Core_Snapshot__c" description="API name of the field storing Core Snapshot text." />
+            <property name="fieldRecentActivity" type="String" label="16. Field: Recent Activity" default="Recent_Activities__c" description="API name of the field storing Recent Activity text." />
+            <property name="fieldFinancialProfile" type="String" label="17. Field: Financial Profile" default="Financial_Profile__c" description="API name of the field storing Financial Profile text." />
+            <property name="fieldTransactions" type="String" label="18. Field: Transactions" default="Transactions__c" description="API name of the field storing Transactions text." />
+            <property name="fieldRiskSummary" type="String" label="19. Field: Risk Summary" default="Summary__c" description="API name of the field storing Risk Summary text." />
+            <property name="fieldRiskScore" type="String" label="20. Field: Risk Score" default="Risk_Score__c" description="API name of the number field storing the risk score." />
+        </targetConfig>
+    </targetConfigs>
+</LightningComponentBundle>

@@ -1,0 +1,1181 @@
+<template>
+
+    <div class="modern-wrapper">
+
+        <!-- ========================================== -->
+        <!-- FLOATING HIGHLIGHT BUTTON (Flag + Pin)     -->
+        <!-- Captures selected text to append to Case   -->
+        <!-- ========================================== -->
+        <template lwc:if={floatingAction.show}>
+            <div style={floatingStyle} class="floating-flag-btn">
+                <button class="modern-btn modern-btn-primary" onclick={handleFlagText} style="padding: 4px 10px; font-size: 11px; margin-right: 4px;">
+                    <lightning-icon icon-name="utility:priority" size="xx-small" variant="inverse" class="slds-var-m-right_xx-small"></lightning-icon>
+                    Flag
+                </button>
+                <button class="modern-btn modern-btn-outline" onclick={handlePinText} style="padding: 4px 10px; font-size: 11px; background: #fff;">
+                    <lightning-icon icon-name="utility:bookmark" size="xx-small" class="slds-var-m-right_xx-small"></lightning-icon>
+                    Pin
+                </button>
+            </div>
+        </template>
+
+        <!-- ========================================== -->
+        <!-- ANALYSIS CHAT PANEL (QA ASSISTANT)         -->
+        <!-- Conditionally rendered via flowApiName     -->
+        <!-- ========================================== -->
+        <template lwc:if={flowApiNameChatQA}>
+            <template lwc:if={isChatOpen}>
+                <div class="chat-panel fade-in">
+                    <div class="chat-header slds-media slds-media_center">
+                        <div class="slds-media__figure"><lightning-icon icon-name="standard:bot" size="small"></lightning-icon></div>
+                        <div class="slds-media__body">
+                            <h3 class="slds-text-heading_small slds-text-title_bold" style="color: #014486; font-size: 0.85rem;">Analysis Chat</h3>
+                        </div>
+                        <button class="slds-button slds-button_icon" title="Close" onclick={toggleChat}>
+                            <lightning-icon icon-name="utility:close" size="small"></lightning-icon>
+                        </button>
+                    </div>
+
+                    <div class="chat-history">
+                        <!-- Iterates over Chat Message History -->
+                        <template for:each={chatMessages} for:item="msg">
+                            <div key={msg.id} class={msg.isUser}>
+                                <template lwc:if={msg.isUser}>
+                                    <div class="chat-bubble-user">{msg.text}</div>
+                                </template>
+                                <template lwc:else>
+                                    <div class="chat-bubble-bot"><lightning-formatted-rich-text value={msg.text}></lightning-formatted-rich-text></div>
+                                </template>
+                            </div>
+                        </template>
+                        <!-- Dynamic Loading Indicator (Bouncing Dots) -->
+                        <template lwc:if={isChatLoading}>
+                            <div class="chat-bubble-bot typing-indicator"><span></span><span></span><span></span></div>
+                        </template>
+                    </div>
+
+                    <div class="chat-input-area slds-grid slds-media_center">
+                        <lightning-input type="text" variant="label-hidden" value={chatInputText} onchange={handleChatInputChange} placeholder="Ask about the analysis..." class="slds-col slds-var-m-right_x-small" disabled={isChatLoading}></lightning-input>
+                        <button class="modern-btn modern-btn-primary" style="padding: 4px 10px;" onclick={handleSendChat} disabled={isChatLoading}>
+                            <lightning-icon icon-name="utility:send" size="xx-small" variant="inverse"></lightning-icon>
+                        </button>
+                    </div>
+                </div>
+            </template>
+        </template>
+
+        <!-- ========================================== -->
+        <!-- PIN SIDEBAR PANEL                          -->
+        <!-- ========================================== -->
+        <template lwc:if={_isPinPanelOpen}>
+            <div class="aml-pin-panel fade-in">
+                <div class="chat-header">
+                    <div class="slds-media slds-media_center">
+                        <div class="slds-media__figure"><lightning-icon icon-name="utility:bookmark" size="small"></lightning-icon></div>
+                        <div class="slds-media__body"><h3 class="slds-text-heading_small slds-text-title_bold" style="color: var(--brand-dark); font-size: 0.85rem;">Pinned Findings ({pinnedCount})</h3></div>
+                    </div>
+                    <button class="modern-btn modern-btn-text" onclick={togglePinPanel} title="Close"><lightning-icon icon-name="utility:close" size="small"></lightning-icon></button>
+                </div>
+                <div class="aml-pin-list" style="flex: 1; overflow-y: auto; padding: 12px;">
+                    <template lwc:if={hasPinnedItems}>
+                        <template for:each={_pinnedItems} for:item="pin">
+                            <div key={pin.id} class="aml-pin-item">
+                                <p style="font-size: 0.82rem; flex: 1;">{pin.text}</p>
+                                <button class="aml-pin-remove" data-id={pin.id} onclick={handleRemovePin} title="Remove">
+                                    <lightning-icon icon-name="utility:close" size="xx-small"></lightning-icon>
+                                </button>
+                            </div>
+                        </template>
+                    </template>
+                    <template lwc:else>
+                        <p class="slds-text-color_weak slds-text-align_center" style="font-size: 0.82rem; padding: 24px;">Select text and click "Pin" to bookmark key findings.</p>
+                    </template>
+                </div>
+            </div>
+        </template>
+
+        <!-- ========================================== -->
+        <!-- MAIN DASHBOARD CARD                        -->
+        <!-- ========================================== -->
+        <lightning-card class="modern-card">
+
+            <!-- HEADER SECTION -->
+            <div slot="title" class="modern-header slds-media slds-media_center slds-var-p-bottom_small">
+                <div class="slds-media__figure">
+                    <div class="icon-glow-ring"><lightning-icon icon-name="standard:bot" size="medium"></lightning-icon></div>
+                </div>
+                <div class="slds-media__body slds-var-m-left_small">
+                    <h1 class="slds-text-heading_medium slds-text-title_bold gradient-text" style="font-size: 1.15rem; letter-spacing: -0.01em;">Agentforce AML Intelligence</h1>
+                    <p class="slds-text-body_regular slds-text-color_weak" style="font-size: 0.8rem;">Automated Risk & Client Analysis</p>
+                </div>
+            </div>
+
+            <!-- PRIMARY ACTIONS (Run All, Refresh, Settings) -->
+            <div slot="actions" class="modern-actions">
+                <!-- Analyzer dropdown -->
+                <template lwc:if={hasAnalyzerRecords}>
+                    <div class="aml-analyzer-select slds-var-m-right_x-small">
+                        <lightning-combobox label="" variant="label-hidden" value={_selectedAnalyzerId} options={analyzerOptions} placeholder="Load Previous..." onchange={handleAnalyzerSelect}></lightning-combobox>
+                    </div>
+                </template>
+
+                <button class="modern-btn modern-btn-secondary slds-var-m-right_xx-small" onclick={handleNewAnalysis} aria-label="New Analysis" title="Clear everything and start fresh">
+                    <lightning-icon icon-name="utility:new" size="x-small" class="slds-var-m-right_xx-small"></lightning-icon>
+                    New
+                </button>
+                <button class="modern-btn modern-btn-primary slds-var-m-right_xx-small" onclick={handleRunAll} aria-label="Run All">
+                    <lightning-icon icon-name="utility:play" size="x-small" variant="inverse" class="slds-var-m-right_xx-small"></lightning-icon>
+                    Run All
+                </button>
+                <button class="modern-btn modern-btn-secondary slds-var-m-right_xx-small" onclick={handleRefreshAll} aria-label="Refresh All">
+                    <lightning-icon icon-name="utility:refresh" size="x-small"></lightning-icon>
+                </button>
+                <button class="modern-btn modern-btn-text" onclick={handleOpenSettings} title="Model Settings">
+                    <lightning-icon icon-name="utility:setup" size="x-small"></lightning-icon>
+                </button>
+            </div>
+
+            <!-- SECONDARY TOOLBAR -->
+            <div class="aml-toolbar">
+                <!-- Tools group -->
+                <div class="aml-toolbar-group">
+                    <template lwc:if={flowApiNameChatQA}>
+                        <button class="modern-btn modern-btn-outline" onclick={toggleChat} aria-label="Analysis Chat">
+                            <lightning-icon icon-name="standard:messaging_session" size="xx-small" class="slds-var-m-right_xx-small"></lightning-icon>
+                            Chat
+                        </button>
+                    </template>
+                    <button class="modern-btn modern-btn-outline" onclick={togglePinPanel} aria-label="Pinned Findings">
+                        <lightning-icon icon-name="utility:bookmark" size="xx-small" class="slds-var-m-right_xx-small"></lightning-icon>
+                        Pins
+                        <template lwc:if={hasPinnedItems}>
+                            <span style="background: var(--brand-accent); color: #fff; border-radius: 50px; font-size: 0.6rem; padding: 1px 6px; margin-left: 4px; font-weight: 700;">{pinnedCount}</span>
+                        </template>
+                    </button>
+                    <button class="modern-btn modern-btn-outline" onclick={toggleFlagPanel} aria-label="Flagged Items">
+                        <lightning-icon icon-name="utility:priority" size="xx-small" class="slds-var-m-right_xx-small"></lightning-icon>
+                        Flags
+                        <template lwc:if={hasFlaggedItems}>
+                            <span style="background: var(--danger-red); color: #fff; border-radius: 50px; font-size: 0.6rem; padding: 1px 6px; margin-left: 4px; font-weight: 700;">{flaggedCount}</span>
+                        </template>
+                    </button>
+                    <button class="modern-btn modern-btn-outline" onclick={toggleAuditPanel} aria-label="Session Audit Log">
+                        <lightning-icon icon-name="utility:date_time" size="xx-small" class="slds-var-m-right_xx-small"></lightning-icon>
+                        Audit Log
+                        <template lwc:if={hasAuditEntries}>
+                            <span style="background: var(--bg-subtle); color: var(--text-muted); border-radius: 50px; font-size: 0.6rem; padding: 1px 6px; margin-left: 4px; font-weight: 700;">{auditCount}</span>
+                        </template>
+                    </button>
+                </div>
+
+                <div class="aml-toolbar-divider"></div>
+
+                <!-- Actions group (visible when analysis complete) -->
+                <template lwc:if={allSectionsAnalyzed}>
+                    <div class="aml-toolbar-group">
+                        <button class="modern-btn modern-btn-outline fade-in" onclick={handleOpenCaseModal} aria-label="Draft Case">
+                            <lightning-icon icon-name="standard:case" size="xx-small" class="slds-var-m-right_xx-small"></lightning-icon>
+                            Draft Case
+                        </button>
+                        <button class="modern-btn modern-btn-outline fade-in" onclick={handleOpenSaveModal} aria-label="Save Data" style="border-color: var(--success-green); color: var(--success-green);">
+                            <lightning-icon icon-name="utility:save" size="xx-small" class="slds-var-m-right_xx-small" style="--sds-c-icon-color-foreground-default: var(--success-green);"></lightning-icon>
+                            Save
+                        </button>
+                        <template lwc:if={canSplitView}>
+                            <button class="modern-btn modern-btn-outline fade-in" onclick={toggleSplitView} aria-label="Split View">
+                                <lightning-icon icon-name="utility:layout" size="xx-small" class="slds-var-m-right_xx-small"></lightning-icon>
+                                Split View
+                            </button>
+                        </template>
+                    </div>
+                </template>
+
+                <!-- Review progress + Sound toggle (right side) -->
+                <div class="aml-toolbar-group" style="margin-left: auto;">
+                    <template lwc:if={totalContentTabs}>
+                        <span class="aml-review-progress">
+                            <lightning-icon icon-name="utility:checkin" size="xx-small" class="slds-var-m-right_xx-small" style="--sds-c-icon-color-foreground-default: var(--text-muted);"></lightning-icon>
+                            <span style="font-size: 0.72rem; color: var(--text-muted);">{reviewProgressLabel}</span>
+                            <template lwc:if={hasUnreviewedTabs}>
+                                <span style="background: var(--warning-amber); color: #fff; border-radius: 50px; font-size: 0.6rem; padding: 1px 6px; margin-left: 4px; font-weight: 700;">{unreviewedCount}</span>
+                            </template>
+                        </span>
+                    </template>
+                    <button class="modern-btn modern-btn-text" onclick={toggleSound} aria-label="Toggle sound notification" title={soundToggleLabel}>
+                        <lightning-icon icon-name={soundToggleIcon} size="xx-small"></lightning-icon>
+                    </button>
+                </div>
+            </div>
+
+            <!-- USER GUIDE (collapsible) -->
+            <div class={guideClass}>
+                <button class="aml-guide-header" onclick={handleToggleGuide} aria-label="Toggle user guide">
+                    <div class="aml-guide-header-left">
+                        <lightning-icon icon-name="utility:info" size="xx-small"></lightning-icon>
+                        <span><b>User Guide</b></span>
+                        <span class="aml-guide-sub">Features &amp; how to use</span>
+                    </div>
+                    <svg class={guideChevronClass} viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </button>
+                <div class="aml-guide-body">
+                    <div class="aml-guide-tabs">
+                        <button class={guideRefTabClass} data-tab="reference" onclick={handleGuideTabSwitch}>Quick Reference</button>
+                        <button class={guideFeatTabClass} data-tab="features" onclick={handleGuideTabSwitch}>All Features</button>
+                        <button class={guideReleaseTabClass} data-tab="releases" onclick={handleGuideTabSwitch}>Release Notes</button>
+                    </div>
+
+                    <!-- Quick Reference Tab -->
+                    <template lwc:if={isGuideRefTab}>
+                        <div class="aml-guide-grid">
+                            <div class="aml-guide-section">
+                                <h4 class="aml-guide-section-title">How to Use</h4>
+                                <div class="aml-guide-list">
+                                    <div class="aml-guide-item">
+                                        <span class="aml-guide-num">1</span>
+                                        <div>
+                                            <span class="aml-guide-label"><b>Run Analysis</b></span>
+                                            <span class="aml-guide-desc">Click "Run All" or generate individual tabs</span>
+                                        </div>
+                                    </div>
+                                    <div class="aml-guide-item">
+                                        <span class="aml-guide-num">2</span>
+                                        <div>
+                                            <span class="aml-guide-label"><b>Review &amp; Annotate</b></span>
+                                            <span class="aml-guide-desc">Read results, add notes, pin key findings, flag concerns</span>
+                                        </div>
+                                    </div>
+                                    <div class="aml-guide-item">
+                                        <span class="aml-guide-num">3</span>
+                                        <div>
+                                            <span class="aml-guide-label"><b>Take Action</b></span>
+                                            <span class="aml-guide-desc">Save analysis, draft a case, or override the risk score</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="aml-guide-section">
+                                <h4 class="aml-guide-section-title">Tab States</h4>
+                                <div class="aml-guide-list">
+                                    <div class="aml-guide-item">
+                                        <span style="color: var(--success-green); font-size: 1rem;">&#9679;</span>
+                                        <div>
+                                            <span class="aml-guide-label"><b>Green — Complete</b></span>
+                                            <span class="aml-guide-desc">Analysis has been generated</span>
+                                        </div>
+                                    </div>
+                                    <div class="aml-guide-item">
+                                        <span style="color: var(--warning-amber); font-size: 1rem;">&#9679;</span>
+                                        <div>
+                                            <span class="aml-guide-label"><b>Orange — Running</b></span>
+                                            <span class="aml-guide-desc">AI is processing this section</span>
+                                        </div>
+                                    </div>
+                                    <div class="aml-guide-item">
+                                        <span style="color: var(--text-muted); font-size: 1rem;">&#9679;</span>
+                                        <div>
+                                            <span class="aml-guide-label"><b>Grey — Pending/Idle</b></span>
+                                            <span class="aml-guide-desc">Waiting or not yet started</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="aml-guide-section">
+                                <h4 class="aml-guide-section-title">Text Selection</h4>
+                                <div class="aml-guide-list">
+                                    <div class="aml-guide-item">
+                                        <lightning-icon icon-name="utility:priority" size="xx-small" style="--sds-c-icon-color-foreground-default: var(--danger-red);"></lightning-icon>
+                                        <div>
+                                            <span class="aml-guide-label"><b>Flag to Case</b></span>
+                                            <span class="aml-guide-desc">Select text, click "Flag" to add to case cart</span>
+                                        </div>
+                                    </div>
+                                    <div class="aml-guide-item">
+                                        <lightning-icon icon-name="utility:bookmark" size="xx-small" style="--sds-c-icon-color-foreground-default: var(--brand-accent);"></lightning-icon>
+                                        <div>
+                                            <span class="aml-guide-label"><b>Pin Finding</b></span>
+                                            <span class="aml-guide-desc">Select text, click "Pin" to bookmark as key finding</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- All Features Tab -->
+                    <template lwc:if={isGuideFeatTab}>
+                        <div class="aml-guide-features">
+                            <div class="aml-feat-group">
+                                <h4 class="aml-guide-section-title">AI Analysis</h4>
+                                <div class="aml-feat-list">
+                                    <div class="aml-feat-item">
+                                        <div class="aml-feat-icon aml-fi-blue"><lightning-icon icon-name="utility:play" size="xx-small"></lightning-icon></div>
+                                        <div>
+                                            <span class="aml-feat-title"><b>Multi-Tab Analysis</b></span>
+                                            <span class="aml-guide-desc">5 independent sections: Core, Activity, Financial, Transactions, and Risk Summary. Run individually or batch.</span>
+                                        </div>
+                                    </div>
+                                    <div class="aml-feat-item">
+                                        <div class="aml-feat-icon aml-fi-green"><lightning-icon icon-name="utility:verified" size="xx-small"></lightning-icon></div>
+                                        <div>
+                                            <span class="aml-feat-title"><b>Pro Mode (Multi-Pass)</b></span>
+                                            <span class="aml-guide-desc">Self-consistency validation with configurable passes per section and consensus judge synthesis.</span>
+                                        </div>
+                                    </div>
+                                    <div class="aml-feat-item">
+                                        <div class="aml-feat-icon aml-fi-purple"><lightning-icon icon-name="standard:messaging_session" size="xx-small"></lightning-icon></div>
+                                        <div>
+                                            <span class="aml-feat-title"><b>Analysis Chat</b></span>
+                                            <span class="aml-guide-desc">Ask questions about the generated analysis. The AI uses all tab results as context.</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="aml-feat-group">
+                                <h4 class="aml-guide-section-title">Review &amp; Annotate</h4>
+                                <div class="aml-feat-list">
+                                    <div class="aml-feat-item">
+                                        <div class="aml-feat-icon aml-fi-blue"><lightning-icon icon-name="utility:note" size="xx-small"></lightning-icon></div>
+                                        <div>
+                                            <span class="aml-feat-title"><b>Analyst Notes</b></span>
+                                            <span class="aml-guide-desc">Add private notes per tab. Saved with the analysis for audit trail.</span>
+                                        </div>
+                                    </div>
+                                    <div class="aml-feat-item">
+                                        <div class="aml-feat-icon aml-fi-blue"><lightning-icon icon-name="utility:bookmark" size="xx-small"></lightning-icon></div>
+                                        <div>
+                                            <span class="aml-feat-title"><b>Pin Key Findings</b></span>
+                                            <span class="aml-guide-desc">Bookmark important text from any tab. View all pins in the sidebar panel.</span>
+                                        </div>
+                                    </div>
+                                    <div class="aml-feat-item">
+                                        <div class="aml-feat-icon aml-fi-red"><lightning-icon icon-name="utility:priority" size="xx-small"></lightning-icon></div>
+                                        <div>
+                                            <span class="aml-feat-title"><b>Flag to Case</b></span>
+                                            <span class="aml-guide-desc">Flag concerning text for inclusion in AML case drafts. Manage flags with remove/clear all.</span>
+                                        </div>
+                                    </div>
+                                    <div class="aml-feat-item">
+                                        <div class="aml-feat-icon aml-fi-blue"><lightning-icon icon-name="utility:expand_all" size="xx-small"></lightning-icon></div>
+                                        <div>
+                                            <span class="aml-feat-title"><b>Collapsible Sections</b></span>
+                                            <span class="aml-guide-desc">AI output is parsed into expandable sections. Expand/collapse individually or all at once.</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="aml-feat-group">
+                                <h4 class="aml-guide-section-title">Data &amp; Compliance</h4>
+                                <div class="aml-feat-list">
+                                    <div class="aml-feat-item">
+                                        <div class="aml-feat-icon aml-fi-green"><lightning-icon icon-name="utility:save" size="xx-small"></lightning-icon></div>
+                                        <div>
+                                            <span class="aml-feat-title"><b>Save / Update Analysis</b></span>
+                                            <span class="aml-guide-desc">Save all results, notes, pins, and flags to an AML Analyzer record. Create new or update existing.</span>
+                                        </div>
+                                    </div>
+                                    <div class="aml-feat-item">
+                                        <div class="aml-feat-icon aml-fi-blue"><lightning-icon icon-name="utility:database" size="xx-small"></lightning-icon></div>
+                                        <div>
+                                            <span class="aml-feat-title"><b>Load Previous Analysis</b></span>
+                                            <span class="aml-guide-desc">Select from a dropdown of saved analyses to review without re-running the AI.</span>
+                                        </div>
+                                    </div>
+                                    <div class="aml-feat-item">
+                                        <div class="aml-feat-icon aml-fi-amber"><lightning-icon icon-name="utility:shield" size="xx-small"></lightning-icon></div>
+                                        <div>
+                                            <span class="aml-feat-title"><b>Risk Score Override</b></span>
+                                            <span class="aml-guide-desc">Manually adjust the AI risk score with a mandatory audit justification.</span>
+                                        </div>
+                                    </div>
+                                    <div class="aml-feat-item">
+                                        <div class="aml-feat-icon aml-fi-purple"><lightning-icon icon-name="utility:date_time" size="xx-small"></lightning-icon></div>
+                                        <div>
+                                            <span class="aml-feat-title"><b>Session Audit Log</b></span>
+                                            <span class="aml-guide-desc">All analyst actions are logged with timestamps. Included in the save payload.</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="aml-feat-group">
+                                <h4 class="aml-guide-section-title">Comparison</h4>
+                                <div class="aml-feat-list">
+                                    <div class="aml-feat-item">
+                                        <div class="aml-feat-icon aml-fi-blue"><lightning-icon icon-name="utility:layout" size="xx-small"></lightning-icon></div>
+                                        <div>
+                                            <span class="aml-feat-title"><b>Side-by-Side View</b></span>
+                                            <span class="aml-guide-desc">Compare two tabs simultaneously with selectable panels.</span>
+                                        </div>
+                                    </div>
+                                    <div class="aml-feat-item">
+                                        <div class="aml-feat-icon aml-fi-green"><lightning-icon icon-name="utility:info" size="xx-small"></lightning-icon></div>
+                                        <div>
+                                            <span class="aml-feat-title"><b>Tab Dependencies</b></span>
+                                            <span class="aml-guide-desc">Risk Summary shows which tabs it depends on and their completion status.</span>
+                                        </div>
+                                    </div>
+                                    <div class="aml-feat-item">
+                                        <div class="aml-feat-icon aml-fi-amber"><lightning-icon icon-name="utility:checkin" size="xx-small"></lightning-icon></div>
+                                        <div>
+                                            <span class="aml-feat-title"><b>Review Checklist</b></span>
+                                            <span class="aml-guide-desc">Tracks which tabs you've actually reviewed (3+ seconds). Warns before saving if tabs are unreviewed.</span>
+                                        </div>
+                                    </div>
+                                    <div class="aml-feat-item">
+                                        <div class="aml-feat-icon aml-fi-blue"><lightning-icon icon-name="utility:clock" size="xx-small"></lightning-icon></div>
+                                        <div>
+                                            <span class="aml-feat-title"><b>Generation Timestamps</b></span>
+                                            <span class="aml-guide-desc">Each tab shows when it was last generated, so you know which results are fresh vs. stale.</span>
+                                        </div>
+                                    </div>
+                                    <div class="aml-feat-item">
+                                        <div class="aml-feat-icon aml-fi-purple"><lightning-icon icon-name="utility:volume_high" size="xx-small"></lightning-icon></div>
+                                        <div>
+                                            <span class="aml-feat-title"><b>Completion Sound</b></span>
+                                            <span class="aml-guide-desc">Plays a notification sound when all tabs finish. Toggle on/off in the toolbar.</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- Release Notes Tab -->
+                    <template lwc:if={isGuideReleaseTab}>
+                        <div class="aml-guide-features" style="grid-template-columns: 1fr;">
+
+                            <!-- April 2026 -->
+                            <div class="aml-feat-group">
+                                <h4 class="aml-guide-section-title" style="display: flex; align-items: center; gap: 8px;">
+                                    <span style="background: var(--brand-accent); color: #fff; padding: 2px 10px; border-radius: 99px; font-size: 0.65rem; letter-spacing: 0;">v2.0</span>
+                                    April 2026 — Major Enhancement Release
+                                </h4>
+                                <div class="aml-feat-list">
+                                    <div class="aml-feat-item">
+                                        <div class="aml-feat-icon aml-fi-green"><lightning-icon icon-name="utility:save" size="xx-small"></lightning-icon></div>
+                                        <div>
+                                            <span class="aml-feat-title"><b>Save &amp; Load Analysis</b></span>
+                                            <span class="aml-guide-desc">Save complete analysis results to AML_Analyzer__c records. Load previous analyses from a dropdown without re-running the AI. Create new or update existing records.</span>
+                                        </div>
+                                    </div>
+                                    <div class="aml-feat-item">
+                                        <div class="aml-feat-icon aml-fi-blue"><lightning-icon icon-name="utility:note" size="xx-small"></lightning-icon></div>
+                                        <div>
+                                            <span class="aml-feat-title"><b>Analyst Notes &amp; Pin/Bookmark</b></span>
+                                            <span class="aml-guide-desc">Added per-tab analyst notes for private observations. Pin key findings from any tab to a dedicated sidebar. Both are saved with the analysis record.</span>
+                                        </div>
+                                    </div>
+                                    <div class="aml-feat-item">
+                                        <div class="aml-feat-icon aml-fi-red"><lightning-icon icon-name="utility:priority" size="xx-small"></lightning-icon></div>
+                                        <div>
+                                            <span class="aml-feat-title"><b>Flag Management</b></span>
+                                            <span class="aml-guide-desc">Improved flagging: remove individual flags, clear all, and a collapsible flag panel in the toolbar. Previously flags could only be cleared by creating a case.</span>
+                                        </div>
+                                    </div>
+                                    <div class="aml-feat-item">
+                                        <div class="aml-feat-icon aml-fi-blue"><lightning-icon icon-name="utility:expand_all" size="xx-small"></lightning-icon></div>
+                                        <div>
+                                            <span class="aml-feat-title"><b>Collapsible Result Sections</b></span>
+                                            <span class="aml-guide-desc">AI output is now parsed into expandable/collapsible sections based on headers. Expand All / Collapse All controls per tab.</span>
+                                        </div>
+                                    </div>
+                                    <div class="aml-feat-item">
+                                        <div class="aml-feat-icon aml-fi-amber"><lightning-icon icon-name="utility:diff" size="xx-small"></lightning-icon></div>
+                                        <div>
+                                            <span class="aml-feat-title"><b>Side-by-Side View</b></span>
+                                            <span class="aml-guide-desc">View two tabs side-by-side for cross-referencing findings across different analysis sections.</span>
+                                        </div>
+                                    </div>
+                                    <div class="aml-feat-item">
+                                        <div class="aml-feat-icon aml-fi-purple"><lightning-icon icon-name="utility:date_time" size="xx-small"></lightning-icon></div>
+                                        <div>
+                                            <span class="aml-feat-title"><b>Session Audit Log &amp; Tab Dependencies</b></span>
+                                            <span class="aml-guide-desc">All analyst actions are now logged with timestamps in a session audit log. Risk Summary tab shows real-time dependency status for the other 4 tabs.</span>
+                                        </div>
+                                    </div>
+                                    <div class="aml-feat-item">
+                                        <div class="aml-feat-icon aml-fi-amber"><lightning-icon icon-name="utility:checkin" size="xx-small"></lightning-icon></div>
+                                        <div>
+                                            <span class="aml-feat-title"><b>Review Checklist &amp; Timestamps</b></span>
+                                            <span class="aml-guide-desc">Tracks which tabs you've reviewed (3+ seconds viewing). Each tab shows its generation timestamp. Save modal warns about unreviewed tabs.</span>
+                                        </div>
+                                    </div>
+                                    <div class="aml-feat-item">
+                                        <div class="aml-feat-icon aml-fi-purple"><lightning-icon icon-name="utility:volume_high" size="xx-small"></lightning-icon></div>
+                                        <div>
+                                            <span class="aml-feat-title"><b>Completion Sound &amp; Improved Progress</b></span>
+                                            <span class="aml-guide-desc">Notification sound when all tabs finish (toggleable). Progress bars now use a realistic 3-phase approach instead of random increments.</span>
+                                        </div>
+                                    </div>
+                                    <div class="aml-feat-item">
+                                        <div class="aml-feat-icon aml-fi-green"><lightning-icon icon-name="utility:new" size="xx-small"></lightning-icon></div>
+                                        <div>
+                                            <span class="aml-feat-title"><b>New Analysis &amp; UI Redesign</b></span>
+                                            <span class="aml-guide-desc">"New" button to start fresh without loading saved data. Full CSS redesign aligned with the wealthPlan design system. Reorganized toolbar layout. Added user guide.</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- v1 -->
+                            <div class="aml-feat-group" style="margin-top: 8px;">
+                                <h4 class="aml-guide-section-title" style="display: flex; align-items: center; gap: 8px;">
+                                    <span style="background: var(--text-muted); color: #fff; padding: 2px 10px; border-radius: 99px; font-size: 0.65rem; letter-spacing: 0;">v1.0</span>
+                                    Initial Release
+                                </h4>
+                                <div class="aml-feat-list">
+                                    <div class="aml-feat-item">
+                                        <div class="aml-feat-icon aml-fi-blue"><lightning-icon icon-name="utility:magicwand" size="xx-small"></lightning-icon></div>
+                                        <div>
+                                            <span class="aml-feat-title"><b>Core Engine</b></span>
+                                            <span class="aml-guide-desc">5-tab AI analysis engine with Standard and Pro Mode (multi-pass consensus). Batch execution with parallel/serial modes. Risk scoring with SVG gauge and human override. Analysis Chat, Case drafting, and text flagging.</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </template>
+
+                </div>
+            </div>
+
+            <!-- COLLAPSIBLE FLAG PANEL -->
+            <template lwc:if={_isFlagPanelOpen}>
+                <div class="aml-flag-panel fade-in" style="padding: 0 16px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                        <span style="font-size: 0.82rem; font-weight: 700; color: var(--text-main);">Flagged Items ({flaggedCount})</span>
+                        <template lwc:if={hasFlaggedItems}>
+                            <button class="modern-btn modern-btn-text" onclick={handleClearAllFlags} style="font-size: 0.75rem; color: var(--danger-red);">Clear All</button>
+                        </template>
+                    </div>
+                    <template lwc:if={hasFlaggedItems}>
+                        <template for:each={flaggedItems} for:item="flag">
+                            <div key={flag.id} class="aml-flag-item">
+                                <p style="font-size: 0.8rem; flex: 1; margin: 0;">"{flag.text}"</p>
+                                <button class="aml-flag-remove" data-id={flag.id} onclick={handleRemoveFlag} title="Remove flag">
+                                    <lightning-icon icon-name="utility:close" size="xx-small"></lightning-icon>
+                                </button>
+                            </div>
+                        </template>
+                    </template>
+                    <template lwc:else>
+                        <p class="slds-text-color_weak" style="font-size: 0.8rem;">No items flagged yet. Select text in the analysis to flag.</p>
+                    </template>
+                </div>
+            </template>
+
+            <!-- AUDIT LOG PANEL -->
+            <template lwc:if={_isAuditPanelOpen}>
+                <div class="aml-audit-panel fade-in" style="padding: 0 16px; margin-bottom: 16px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                        <span style="font-size: 0.82rem; font-weight: 700; color: var(--text-main);">Session Audit Log</span>
+                        <span style="font-size: 0.72rem; color: var(--text-muted);">{auditCount} entries</span>
+                    </div>
+                    <div style="max-height: 250px; overflow-y: auto; background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 8px;">
+                        <template for:each={_auditLog} for:item="entry">
+                            <div key={entry.id} class="aml-audit-entry">
+                                <span style="font-size: 0.7rem; color: var(--text-muted); min-width: 140px;">{entry.timestamp}</span>
+                                <span style="font-size: 0.75rem; font-weight: 600; color: var(--text-main); text-transform: uppercase; min-width: 80px;">{entry.action}</span>
+                                <span style="font-size: 0.78rem; color: var(--text-muted); flex: 1;">{entry.detail}</span>
+                            </div>
+                        </template>
+                        <template lwc:if={noAuditEntries}>
+                            <p class="slds-text-color_weak slds-text-align_center" style="font-size: 0.8rem; padding: 16px;">No actions logged yet.</p>
+                        </template>
+                    </div>
+                </div>
+            </template>
+
+            <div class="slds-var-p-horizontal_medium slds-var-p-bottom_medium">
+
+                <!-- BATCH PROGRESS BAR (Visible only during 'Run All') -->
+                <template lwc:if={showOverallProgress}>
+                    <div class="overall-progress-container slds-var-m-bottom_medium fade-in">
+                        <div class="progress-header">
+                            <span class="progress-title slds-text-title_bold" style="color:#014486;">Agentforce Batch Processing</span>
+                            <span class="progress-percent slds-text-title_bold">{displayOverallProgress}%</span>
+                        </div>
+                        <div class="progress-track"><div class="progress-fill" style={overallProgressStyle}></div></div>
+                    </div>
+                </template>
+
+                <!-- TAB NAVIGATION BAR -->
+                <div class="modern-tab-bar slds-var-m-bottom_medium slds-var-m-top_small" style="background: #f4f6f9; border-radius: 50px; padding: 4px; display: inline-block;">
+                    <template for:each={processedTabs} for:item="tab">
+                        <button key={tab.id} class={tab.tabClass} data-id={tab.id} onclick={handleTabClick}>
+                            <lightning-icon icon-name={tab.icon} size="x-small" class={tab.iconClass}></lightning-icon>
+                            <span class="tab-label">{tab.label}</span>
+                        </button>
+                    </template>
+                </div>
+
+                <!-- ========================================== -->
+                <!-- DYNAMIC TAB CONTENT AREA                   -->
+                <!-- Wrapped in mouse listeners for text select -->
+                <!-- ========================================== -->
+
+                <!-- SIDE-BY-SIDE VIEW -->
+                <template lwc:if={_isSplitView}>
+                    <div class="aml-split-container slds-var-m-bottom_medium">
+                        <div class="aml-split-panel">
+                            <lightning-combobox label="Left Panel" variant="label-hidden" value={_splitLeftTabId} options={splitTabOptions} onchange={handleSplitLeftChange} placeholder="Select tab..." class="slds-var-m-bottom_small"></lightning-combobox>
+                            <template lwc:if={splitLeftTab}>
+                                <div class="modern-content-box slds-var-p-around_medium" style="font-size: 0.8rem;">
+                                    <h3 style="font-weight: 700; color: var(--brand-dark); margin-bottom: 8px;">{splitLeftTab.label}</h3>
+                                    <lightning-formatted-rich-text value={splitLeftTab.result}></lightning-formatted-rich-text>
+                                </div>
+                            </template>
+                        </div>
+                        <div class="aml-split-panel">
+                            <lightning-combobox label="Right Panel" variant="label-hidden" value={_splitRightTabId} options={splitTabOptions} onchange={handleSplitRightChange} placeholder="Select tab..." class="slds-var-m-bottom_small"></lightning-combobox>
+                            <template lwc:if={splitRightTab}>
+                                <div class="modern-content-box slds-var-p-around_medium" style="font-size: 0.8rem;">
+                                    <h3 style="font-weight: 700; color: var(--brand-dark); margin-bottom: 8px;">{splitRightTab.label}</h3>
+                                    <lightning-formatted-rich-text value={splitRightTab.result}></lightning-formatted-rich-text>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Normal single-tab view (only when NOT in split view) -->
+                <template lwc:else>
+                    <div class="modern-tab-content-area" onmouseup={handleMouseUp} onmousedown={handleMouseDown}>
+                        <template for:each={processedTabs} for:item="tab">
+
+                            <!-- Renders the actively selected tab pane -->
+                            <div key={tab.id} lwc:if={tab.isActive} class="tab-content-pane fade-in">
+
+                                <!-- Tab-Specific Inputs (e.g., Activity Filters) -->
+                                <template lwc:if={tab.isActivityTab}>
+                                    <div class="activity-settings-panel slds-var-m-bottom_medium fade-in">
+                                        <div class="slds-grid slds-wrap slds-grid_vertical-align-end">
+                                            <div class="slds-col slds-size_1-of-1 slds-var-m-bottom_small">
+                                                <span class="slds-text-heading_small slds-text-title_bold" style="color:#014486; font-size: 0.85rem;">
+                                                    <lightning-icon icon-name="utility:filterList" size="x-small" class="slds-var-m-right_x-small" style="--sds-c-icon-color-foreground-default: #0176d3;"></lightning-icon>
+                                                    Analysis Scope & Parameters
+                                                </span>
+                                            </div>
+                                            <div class="slds-col slds-size_1-of-2 slds-medium-size_1-of-3 slds-var-p-right_small">
+                                                <lightning-input type="number" label="Years to Analyze" value={activityYears} onchange={handleActivityYearsChange} min="1" max="20"></lightning-input>
+                                            </div>
+                                            <div class="slds-col slds-size_1-of-2 slds-medium-size_1-of-3">
+                                                <lightning-input type="number" label="Max Activities to Fetch" value={activityCount} onchange={handleActivityCountChange} min="1" max="100"></lightning-input>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+
+                                <!-- STATE 1: IDLE (Awaiting Execution) -->
+                                <template lwc:if={tab.isIdle}>
+                                    <div class="modern-state-box slds-text-align_center slds-var-p-around_large fade-in" style="background: linear-gradient(180deg, #ffffff 0%, #f8f9fb 100%); border: 1px solid #eef3f8; box-shadow: 0 4px 12px rgba(0,0,0,0.02);">
+                                        <div class="slds-var-m-bottom_medium" style="display:inline-block; padding:12px; background:#f4f6f9; border-radius:50%; border:1px dashed #c9c9c9;">
+                                            <lightning-icon icon-name={tab.emptyStateIcon} size="medium"></lightning-icon>
+                                        </div>
+                                        <h2 class="slds-text-heading_small slds-text-title_bold slds-var-m-bottom_x-small" style="color:#014486; font-size: 0.95rem;">{tab.emptyStateTitle}</h2>
+                                        <p class="slds-text-color_weak slds-var-m-bottom_medium" style="max-width: 400px; margin-left: auto; margin-right: auto; font-size: 0.85rem;">{tab.emptyStateDesc}</p>
+                                        <ul class="slds-var-m-bottom_large slds-text-align_left" style="display: inline-block; background: #ffffff; padding: 12px 20px; border-radius: 8px; border: 1px solid #e5e5e5; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                                            <template for:each={tab.emptyStateBullets} for:item="bullet">
+                                                <li key={bullet.id} class="slds-var-m-bottom_xx-small" style="color:#181818; display:flex; align-items:center; font-weight:500; font-size: 0.85rem;">
+                                                    <lightning-icon icon-name="utility:check" size="xx-small" class="slds-var-m-right_x-small" style="--sds-c-icon-color-foreground-default:#2e844a;"></lightning-icon>
+                                                    {bullet.text}
+                                                </li>
+                                            </template>
+                                        </ul>
+                                        <div class="slds-var-m-top_small">
+                                            <button class="modern-btn modern-btn-primary" data-id={tab.id} onclick={handleRunSingle}>
+                                                <lightning-icon icon-name="utility:magicwand" size="x-small" variant="inverse" class="slds-var-m-right_x-small"></lightning-icon>
+                                                Generate Insight
+                                            </button>
+                                        </div>
+
+                                        <!-- Risk Tab Dependencies -->
+                                        <template lwc:if={tab.isRiskTab}>
+                                            <div class="aml-dep-grid slds-var-m-top_medium">
+                                                <p style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Dependencies</p>
+                                                <template for:each={riskDependencies} for:item="dep">
+                                                    <div key={dep.id} class="aml-dep-item">
+                                                        <span class={dep.dotClass}></span>
+                                                        <span style="font-size: 0.82rem; color: var(--text-main);">{dep.label}</span>
+                                                        <span style="font-size: 0.75rem; color: var(--text-muted); margin-left: auto;">{dep.statusLabel}</span>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </template>
+
+                                <!-- STATE 2: PENDING (Waiting in Batch Queue) -->
+                                <template lwc:elseif={tab.isPending}>
+                                    <div class="modern-state-box slds-text-align_center slds-var-p-around_large fade-in" style="background: #f8f9fb; border: 1px dashed #e5e5e5; border-radius: 12px;">
+                                        <!-- Dancing Greyscale Bot Animation -->
+                                        <div class="slds-var-m-bottom_medium ai-pending-wrapper">
+                                            <lightning-icon icon-name="standard:bot" size="medium"></lightning-icon>
+                                        </div>
+                                        <h2 class="slds-text-heading_small slds-text-title_bold" style="color: #64748b; font-size: 0.9rem;">Waiting in Execution Queue</h2>
+                                        <p class="slds-text-color_weak slds-var-m-top_xx-small" style="font-size: 0.8rem;">Agentforce will begin analyzing this section shortly.</p>
+                                    </div>
+                                </template>
+
+                                <!-- STATE 3 & 4: LOADING / LOADED -->
+                                <template lwc:else>
+                                    <div class="active-render-wrapper">
+
+                                        <!-- LOADING SKELETON (Shows active AI processing) -->
+                                        <template lwc:if={tab.isLoading}>
+                                            <div class="ai-processing-container slds-var-m-bottom_medium">
+                                                <div class="ai-processing-header slds-media slds-media_center">
+                                                    <div class="slds-media__figure"><div class="ai-bot-pulse"><lightning-icon icon-name="standard:bot" size="medium"></lightning-icon></div></div>
+                                                    <div class="slds-media__body slds-var-m-left_small" style="width: 100%;">
+                                                        <div class="slds-grid slds-grid_align-spread slds-media_center slds-var-m-bottom_xx-small">
+                                                            <p class="ai-processing-text" style="margin-bottom: 0; font-size: 0.85rem;">{tab.proStatusText}</p>
+                                                            <div class="slds-grid slds-grid_vertical-align-center">
+                                                                <!-- Displays active Pro Mode Validation details -->
+                                                                <template lwc:if={tab.showProBadge}>
+                                                                    <div style="background: linear-gradient(90deg, #e6f4ea, #d1e8d5); color: #1a5c31; padding: 2px 8px; border-radius: 50px; font-size: 0.65rem; font-weight: 700; border: 1px solid #c3e6cb; animation: pulse-opacity 1s infinite alternate; margin-right: 12px;">
+                                                                        <lightning-icon icon-name="utility:sync" size="xx-small" class="slds-var-m-right_xx-small" style="--sds-c-icon-color-foreground-default: #1a5c31;"></lightning-icon>
+                                                                        PRO ENGINE ({tab.executedRuns}x)
+                                                                    </div>
+                                                                </template>
+                                                                <!-- Manual Halt Button -->
+                                                                <button class="modern-btn modern-btn-outline" data-id={tab.id} onclick={handleAbort} style="padding: 2px 8px; font-size: 0.7rem; border-color: #c23934; color: #c23934;">
+                                                                    <lightning-icon icon-name="utility:close" size="xx-small" class="slds-var-m-right_xx-small" style="--sds-c-icon-color-foreground-default: #c23934;"></lightning-icon>
+                                                                    Stop
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                        <!-- Internal Simulator Progress Bar -->
+                                                        <div class="ai-determinate-progress"><div class="ai-determinate-progress-fill" style={tab.progressStyle}></div></div>
+                                                    </div>
+                                                </div>
+                                                <div class="ai-skeleton-body" style="position: relative; overflow: hidden; padding-top: 12px; margin-top: 16px; min-height: 120px;">
+                                                    <div class="laser-scanner"></div>
+                                                    <div class="skeleton-row w-40 skeleton-title"></div>
+                                                    <div class="skeleton-row w-100"></div><div class="skeleton-row w-90"></div><div class="skeleton-row w-80"></div><div class="skeleton-row w-60"></div>
+                                                </div>
+                                            </div>
+                                        </template>
+
+                                        <!-- LOADED CONTENT PAYLOAD -->
+                                        <template lwc:if={tab.hasContent}>
+                                            <div class={tab.contentClass}>
+
+                                                <!-- Section Header & Model Validation Badge -->
+                                                <div class="slds-grid slds-grid_align-spread slds-media_center slds-var-m-bottom_medium slds-var-p-bottom_small" style="border-bottom: 2px solid #eef3f8;">
+                                                    <div class="slds-media slds-media_center">
+                                                        <div class="slds-media__figure"><lightning-icon icon-name={tab.icon} size="small" style="--sds-c-icon-color-foreground-default: #0176d3;"></lightning-icon></div>
+                                                        <div class="slds-media__body"><h2 class="slds-text-heading_small slds-text-title_bold" style="color:#014486; font-size: 0.95rem;">{tab.label} Output</h2></div>
+                                                    </div>
+                                                    <div>
+                                                        <template lwc:if={tab.showProBadge}>
+                                                            <div style="display:inline-flex; align-items:center; background: linear-gradient(90deg, #e6f4ea, #d1e8d5); color: #1a5c31; padding: 2px 10px; border-radius: 50px; font-size: 0.7rem; font-weight: 700; border: 1px solid #c3e6cb;">
+                                                                <lightning-icon icon-name="utility:verified" size="xx-small" class="slds-var-m-right_x-small" style="--sds-c-icon-color-foreground-default: #1a5c31;"></lightning-icon>
+                                                                PRO VERIFIED ({tab.executedRuns}x)
+                                                            </div>
+                                                        </template>
+                                                        <template lwc:if={tab.showStandardBadge}>
+                                                            <div style="display:inline-flex; align-items:center; background: #f4f6f9; color: #444444; padding: 2px 10px; border-radius: 50px; font-size: 0.7rem; font-weight: 700; border: 1px solid #e5e5e5;">
+                                                                <lightning-icon icon-name="utility:bolt" size="xx-small" class="slds-var-m-right_x-small" style="--sds-c-icon-color-foreground-default: #444444;"></lightning-icon>
+                                                                STANDARD MODEL
+                                                            </div>
+                                                        </template>
+                                                        <!-- Timestamp -->
+                                                        <template lwc:if={tab.hasTimestamp}>
+                                                            <span style="display:inline-flex; align-items:center; color: var(--text-muted); font-size: 0.68rem; margin-left: 8px;">
+                                                                <lightning-icon icon-name="utility:clock" size="xx-small" class="slds-var-m-right_xx-small" style="--sds-c-icon-color-foreground-default: var(--text-muted);"></lightning-icon>
+                                                                {tab.timestampLabel}
+                                                            </span>
+                                                        </template>
+                                                        <!-- Review indicator -->
+                                                        <template lwc:if={tab.isReviewed}>
+                                                            <span style="display:inline-flex; align-items:center; background: #ecfdf5; color: var(--success-green); padding: 2px 8px; border-radius: 50px; font-size: 0.65rem; font-weight: 700; border: 1px solid #a7f3d0; margin-left: 6px;">
+                                                                <lightning-icon icon-name="utility:check" size="xx-small" class="slds-var-m-right_xx-small" style="--sds-c-icon-color-foreground-default: var(--success-green);"></lightning-icon>
+                                                                REVIEWED
+                                                            </span>
+                                                        </template>
+                                                    </div>
+                                                </div>
+
+                                                <!-- INTERACTIVE SVG RISK GAUGE (Only parses if Risk Score is detected) -->
+                                                <template lwc:if={tab.riskScore}>
+                                                    <div class="risk-gauge-container fade-in slds-text-align_center slds-var-m-bottom_medium slds-var-p-bottom_medium interactive-gauge" title="Click to view Scorecard Criteria" style="border-bottom: 1px dashed #eef3f8; padding: 12px; border-radius: 12px; position: relative;">
+                                                        <div onclick={handleOpenRiskModal} style="cursor: pointer; display: inline-block;">
+                                                            <div class="gauge-wrapper" style="position: relative; display: inline-block; width: 100px; height: 100px;">
+                                                                <!-- SVG Ring Implementation -->
+                                                                <svg viewBox="0 0 100 100">
+                                                                    <circle cx="50" cy="50" r="40" fill="none" stroke="#eef3f8" stroke-width="10"></circle>
+                                                                    <circle cx="50" cy="50" r="40" fill="none" stroke-width="10" stroke-linecap="round" transform="rotate(-90 50 50)" style={tab.gaugeStyle}></circle>
+                                                                </svg>
+                                                                <div class="gauge-center" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+                                                                    <span style={tab.riskColorStyle} class="slds-text-heading_medium slds-text-title_bold">{tab.riskScore}</span>
+                                                                </div>
+                                                            </div>
+                                                            <h3 class="slds-text-heading_small slds-var-m-top_small" style={tab.riskColorStyle}>
+                                                                <strong style="font-size: 0.85rem;">{tab.riskLabel}</strong>
+                                                                <lightning-icon icon-name="utility:info_alt" size="xx-small" class="slds-var-m-left_xx-small" style={tab.riskColorStyle}></lightning-icon>
+                                                            </h3>
+                                                        </div>
+                                                        <div class="slds-var-m-top_small slds-text-align_center">
+                                                            <button class="modern-btn modern-btn-text" data-id={tab.id} onclick={handleOpenOverrideModal} style="font-size: 0.7rem; padding: 4px 8px; border: 1px dashed #c9c9c9;">
+                                                                <lightning-icon icon-name="utility:edit" size="xx-small" class="slds-var-m-right_xx-small"></lightning-icon>
+                                                                Override AI Score
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </template>
+
+                                                <!-- Collapsible Sections -->
+                                                <div class="selectable-content-area" style="font-size: 0.8rem; line-height: 1.45;">
+                                                    <template lwc:if={tab.hasParsedSections}>
+                                                        <!-- Expand/Collapse All -->
+                                                        <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                                                            <button class="modern-btn modern-btn-text" data-id={tab.id} onclick={handleExpandAllSections} style="font-size: 0.72rem;">Expand All</button>
+                                                            <button class="modern-btn modern-btn-text" data-id={tab.id} onclick={handleCollapseAllSections} style="font-size: 0.72rem;">Collapse All</button>
+                                                        </div>
+                                                        <template for:each={tab.parsedSections} for:item="section">
+                                                            <div key={section.id} class="aml-section-accordion">
+                                                                <div class="aml-section-header" data-section-id={section.id} onclick={handleToggleSection}>
+                                                                    <span style="font-weight: 700; font-size: 0.88rem; color: var(--brand-dark);">{section.header}</span>
+                                                                    <lightning-icon icon-name="utility:chevrondown" size="xx-small" class={section.chevronClass}></lightning-icon>
+                                                                </div>
+                                                                <template lwc:if={section.isExpanded}>
+                                                                    <div class="aml-section-body fade-in">
+                                                                        <lightning-formatted-rich-text value={section.bodyHtml}></lightning-formatted-rich-text>
+                                                                    </div>
+                                                                </template>
+                                                            </div>
+                                                        </template>
+                                                    </template>
+                                                    <template lwc:else>
+                                                        <!-- Fallback: render as single block if no headers found -->
+                                                        <lightning-formatted-rich-text value={tab.result}></lightning-formatted-rich-text>
+                                                    </template>
+                                                </div>
+
+                                                <!-- Analyst Notes (Collapsible) -->
+                                                <div class="aml-notes-area slds-var-m-top_medium">
+                                                    <button class="aml-notes-toggle" data-id={tab.id} onclick={toggleNoteExpand}>
+                                                        <lightning-icon icon-name="utility:note" size="xx-small" class="slds-var-m-right_xx-small"></lightning-icon>
+                                                        {tab.noteToggleLabel}
+                                                        <template lwc:if={tab.noteText}>
+                                                            <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--brand-accent); display: inline-block; margin-left: 6px;"></span>
+                                                        </template>
+                                                    </button>
+                                                    <template lwc:if={tab.isNoteExpanded}>
+                                                        <textarea class="aml-notes-textarea fade-in" data-id={tab.id} oninput={handleNoteChange} placeholder="Add analyst observations, follow-up items, or private notes...">{tab.noteText}</textarea>
+                                                    </template>
+                                                </div>
+
+                                                <!-- AI AUDIT TRAIL (Reveals raw drafts fed into Consensus Judge) -->
+                                                <template lwc:if={tab.showAuditTrail}>
+                                                    <div class="slds-box slds-var-m-top_large fade-in" style="background: #f8f9fb; border: 1px solid #c9c9c9; border-radius: 8px;">
+                                                        <h3 class="slds-text-heading_small slds-var-m-bottom_medium" style="color:#014486;">
+                                                            <lightning-icon icon-name="utility:multi_select_checkbox" size="x-small" class="slds-var-m-right_x-small"></lightning-icon>
+                                                            <strong>AI Audit Trail (Raw Drafts)</strong>
+                                                        </h3>
+                                                        <div class="slds-grid slds-wrap slds-gutters">
+                                                            <template for:each={tab.drafts} for:item="draft">
+                                                                <div key={draft.id} class="slds-col slds-size_1-of-1 slds-large-size_1-of-2 slds-var-m-bottom_medium">
+                                                                    <div class="slds-box" style="background: #ffffff; max-height: 350px; overflow-y: auto; font-size: 0.8rem;">
+                                                                        <strong style="color: #444; border-bottom: 1px solid #eee; display:block; padding-bottom: 4px; margin-bottom: 8px; font-size: 0.85rem;">{draft.title}</strong>
+                                                                        <lightning-formatted-rich-text value={draft.html}></lightning-formatted-rich-text>
+                                                                    </div>
+                                                                </div>
+                                                            </template>
+                                                        </div>
+                                                    </div>
+                                                </template>
+
+                                                <!-- FOOTER ACTIONS (Copy, Rerun, Saved Badge) -->
+                                                <div class="modern-footer-actions slds-grid slds-grid_align-spread slds-var-m-top_medium slds-var-p-top_small" style="border-top: 1px solid var(--border-color);">
+                                                    <div>
+                                                        <template lwc:if={tab.showSavedBadge}>
+                                                            <span style="display: inline-flex; align-items: center; background: #eff6ff; color: var(--brand-accent); padding: 2px 10px; border-radius: 50px; font-size: 0.7rem; font-weight: 700; border: 1px solid rgba(14,165,233,0.2);">
+                                                                <lightning-icon icon-name="utility:database" size="xx-small" class="slds-var-m-right_xx-small" style="--sds-c-icon-color-foreground-default: var(--brand-accent);"></lightning-icon>
+                                                                LOADED FROM SAVED
+                                                            </span>
+                                                        </template>
+                                                    </div>
+                                                    <div>
+                                                        <!-- Audit trail toggle, copy, rerun -->
+                                                        <template lwc:if={tab.showProBadge}>
+                                                            <button class="modern-btn modern-btn-text slds-var-m-right_small" data-id={tab.id} onclick={toggleAuditTrail}>
+                                                                <lightning-icon icon-name="utility:preview" size="x-small" class="slds-var-m-right_xx-small"></lightning-icon>
+                                                                {tab.auditTrailLabel}
+                                                            </button>
+                                                        </template>
+                                                        <button class="modern-btn modern-btn-text slds-var-m-right_small" data-id={tab.id} onclick={handleCopyToClipboard}>
+                                                            <lightning-icon icon-name="utility:copy" size="x-small" class="slds-var-m-right_xx-small"></lightning-icon>
+                                                            Copy Snippet
+                                                        </button>
+                                                        <button class="modern-btn modern-btn-text" data-id={tab.id} onclick={handleRunSingle} disabled={tab.isLoading}>
+                                                            <lightning-icon icon-name="utility:refresh" size="x-small" class="slds-var-m-right_xx-small"></lightning-icon>
+                                                            Rerun Insight
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                            </div>
+                                        </template>
+
+                                    </div>
+                                </template>
+
+                            </div>
+                        </template>
+                    </div>
+                </template>
+            </div>
+        </lightning-card>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- COMPONENT MODALS                           -->
+    <!-- All modals use an explicit z-index 1000001 -->
+    <!-- to escape standard Salesforce Flow traps.  -->
+    <!-- ========================================== -->
+
+    <!-- 1. OVERRIDE SCORE MODAL -->
+    <template lwc:if={isOverrideModalOpen}>
+        <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open slds-modal_small" style="z-index: 1000001;">
+            <div class="slds-modal__container" style="max-width: 450px;">
+                <header class="slds-modal__header" style="background: #fff5f5; border-bottom: 2px solid #c23934; border-radius: 12px 12px 0 0;">
+                    <button class="slds-button slds-button_icon slds-modal__close" title="Close" onclick={handleCloseOverrideModal}>
+                        <lightning-icon icon-name="utility:close" size="small"></lightning-icon>
+                    </button>
+                    <h2 class="slds-text-heading_medium slds-text-title_bold" style="color: #c23934; font-size: 1rem;">
+                        <lightning-icon icon-name="utility:edit" size="small" class="slds-var-m-right_small" style="--sds-c-icon-color-foreground-default: #c23934;"></lightning-icon>
+                        Human Score Override
+                    </h2>
+                </header>
+                <div class="slds-modal__content slds-var-p-around_large">
+                    <p class="slds-var-m-bottom_medium slds-text-color_weak" style="font-size: 0.85rem;">Manually overriding the AI score will log an audit entry and append your justification to the final output.</p>
+                    <lightning-slider label="New Risk Score" value={overrideScore} onchange={handleOverrideScoreChange} min="0" max="100" class="slds-var-m-bottom_medium"></lightning-slider>
+                    <lightning-textarea label="Auditor Justification (Required)" value={overrideJustification} onchange={handleOverrideJustChange} required placeholder="Why are you changing the AI's calculation?"></lightning-textarea>
+                </div>
+                <footer class="slds-modal__footer" style="border-radius: 0 0 12px 12px;">
+                    <button class="modern-btn modern-btn-secondary slds-var-m-right_x-small" onclick={handleCloseOverrideModal}>Cancel</button>
+                    <button class="modern-btn modern-btn-primary" onclick={saveOverride} style="background: #c23934; border-color: #c23934;">Apply Override</button>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open" style="z-index: 1000000;"></div>
+    </template>
+
+    <!-- 2. RISK GAUGE EXPLANATION MODAL -->
+    <template lwc:if={isRiskModalOpen}>
+        <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open slds-modal_small" style="z-index: 1000001;">
+            <div class="slds-modal__container">
+                <header class="slds-modal__header" style="background: #f8fbfe; border-bottom: 1px solid #eef3f8; border-radius: 12px 12px 0 0;">
+                    <button class="slds-button slds-button_icon slds-modal__close" title="Close" onclick={handleCloseRiskModal}>
+                        <lightning-icon icon-name="utility:close" size="small"></lightning-icon>
+                    </button>
+                    <h2 class="slds-text-heading_medium slds-text-title_bold" style="color: #014486; font-size: 1rem;">Formue Compliance Matrix Logic</h2>
+                </header>
+                <div class="slds-modal__content slds-var-p-around_large" style="font-size: 0.85rem;">
+                    <p class="slds-var-m-bottom_medium">Agentforce calculates the total risk score across core pillars. Points are deducted based on findings in the independent modules.</p>
+                    <ul class="slds-has-dividers_bottom-space">
+                        <li class="slds-item"><strong>Identity Data:</strong> Deductions for missing ID, unclear addresses, or vague PEP classification.</li>
+                        <li class="slds-item"><strong>Behavioral Risk:</strong> Deductions for urgency, evasiveness, or erratic historical transactions.</li>
+                        <li class="slds-item"><strong>Ledger Movements:</strong> Major deductions for structuring, high velocity, or high-risk counterparties.</li>
+                        <li class="slds-item"><strong>Asset Risk:</strong> Major deductions for high-risk assets (Crypto, complex real estate, unexplained cash drops).</li>
+                        <li class="slds-item"><strong>SoW Evidence:</strong> Major deductions for lacking Source of Wealth or illogical jumps in net worth.</li>
+                    </ul>
+                    <div class="slds-box slds-var-m-top_large" style="background: #f4f6f9;">
+                        <strong>Score Thresholds:</strong><br/>
+                        🔴 0–39: Critical (Manual Check Mandatory)<br/>
+                        🟡 40–69: Moderate (Enhanced Diligence Required)<br/>
+                        🟢 70–100: Standard Validation
+                    </div>
+                </div>
+                <footer class="slds-modal__footer" style="border-radius: 0 0 12px 12px;">
+                    <button class="modern-btn modern-btn-primary" onclick={handleCloseRiskModal}>Close Matrix</button>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open" style="z-index: 1000000;"></div>
+    </template>
+
+    <!-- 3. DRAFT CASE MODAL -->
+    <template lwc:if={isCaseModalOpen}>
+        <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open slds-modal_large" style="z-index: 1000001;">
+            <div class="slds-modal__container" style="max-width: 800px;">
+                <header class="slds-modal__header" style="border-radius: 12px 12px 0 0;">
+                    <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse" title="Close" onclick={handleCloseCaseModal}>
+                        <lightning-icon icon-name="utility:close" size="small" variant="inverse"></lightning-icon>
+                    </button>
+                    <h2 class="slds-text-heading_medium slds-text-title_bold gradient-text" style="font-size: 1.1rem;">Draft AML Case</h2>
+                </header>
+                <div class="slds-modal__content slds-var-p-around_medium" style="position: relative; min-height: 250px;">
+                    <template lwc:if={isCaseLoading}>
+                        <!-- Centered Loading Simulator -->
+                        <div class="slds-align_absolute-center slds-var-m-top_xx-large" style="flex-direction: column;">
+                            <div class="ai-bot-pulse slds-var-m-bottom_medium"><lightning-icon icon-name="standard:bot" size="medium"></lightning-icon></div>
+                            <p class="ai-processing-text" style="font-size: 0.85rem;">Agentforce is drafting the case details...</p>
+                            <div class="ai-determinate-progress" style="width:150px; margin-top:8px;"><div class="ai-determinate-progress-fill" style="width: 100%; animation: pulse-opacity 1s infinite alternate;"></div></div>
+                        </div>
+                    </template>
+                    <template lwc:else>
+                        <lightning-input label="Case Subject" value={caseSubject} onchange={handleSubjectChange} class="slds-var-m-bottom_medium" required></lightning-input>
+                        <lightning-textarea label="Case Description" value={caseDescription} onchange={handleDescriptionChange} rows="12" required></lightning-textarea>
+                    </template>
+                </div>
+                <footer class="slds-modal__footer" style="border-radius: 0 0 12px 12px;">
+                    <button class="modern-btn modern-btn-secondary slds-var-m-right_x-small" onclick={handleCloseCaseModal}>Cancel</button>
+                    <button class="modern-btn modern-btn-primary" onclick={handleCreateCase} disabled={isCaseLoading}>Create Case</button>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open" style="z-index: 1000000;"></div>
+    </template>
+
+    <!-- 4. SAVE DATA MODAL (Enhanced with Create/Update toggle) -->
+    <template lwc:if={isSaveModalOpen}>
+        <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open" style="z-index: 1000001;">
+            <div class="slds-modal__container" style="max-width: 500px;">
+                <header class="slds-modal__header" style="border-radius: 12px 12px 0 0;">
+                    <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse" title="Close" onclick={handleCloseSaveModal}>
+                        <lightning-icon icon-name="utility:close" size="small" variant="inverse"></lightning-icon>
+                    </button>
+                    <h2 class="slds-text-heading_medium slds-text-title_bold gradient-text" style="font-size: 1.1rem;">Save Intelligence Data</h2>
+                </header>
+                <div class="slds-modal__content slds-var-p-around_medium" style="position: relative; min-height: 220px;">
+                    <template lwc:if={isSaving}>
+                        <div class="slds-align_absolute-center slds-var-m-top_large" style="flex-direction: column;">
+                            <div class="ai-bot-pulse slds-var-m-bottom_medium"><lightning-icon icon-name="standard:bot" size="medium"></lightning-icon></div>
+                            <p class="ai-processing-text" style="font-size: 0.85rem;">Saving analysis to Salesforce...</p>
+                        </div>
+                    </template>
+                    <template lwc:else>
+                        <lightning-icon icon-name="utility:save" size="large" class="slds-var-m-bottom_medium" style="--sds-c-icon-color-foreground-default: var(--brand-accent); display: block; margin: 0 auto;"></lightning-icon>
+
+                        <!-- Save mode toggle -->
+                        <lightning-radio-group label="Save Mode" value={_saveMode} onchange={handleSaveModeChange} options={saveModeOptions} type="button" class="slds-var-m-bottom_medium"></lightning-radio-group>
+
+                        <!-- Unreviewed warning -->
+                        <template lwc:if={hasUnreviewedTabs}>
+                            <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: var(--radius-sm); padding: 10px 12px; font-size: 0.82rem; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                                <lightning-icon icon-name="utility:warning" size="xx-small" style="--sds-c-icon-color-foreground-default: var(--warning-amber);"></lightning-icon>
+                                <span style="color: #92400e;"><strong>{unreviewedCount} tab(s)</strong> have not been reviewed yet.</span>
+                            </div>
+                        </template>
+                        <!-- Summary -->
+                        <div style="background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 12px; font-size: 0.82rem;">
+                            <p style="margin-bottom: 4px;"><strong>Sections:</strong> {sectionsWithContent} of {totalTabCount}</p>
+                            <p style="margin-bottom: 4px;"><strong>Reviewed:</strong> {reviewProgressLabel}</p>
+                            <p style="margin-bottom: 4px;"><strong>Analyst Notes:</strong> {notesCount} tabs with notes</p>
+                            <p style="margin-bottom: 4px;"><strong>Pinned Items:</strong> {pinnedCount}</p>
+                            <p><strong>Flagged Items:</strong> {flaggedCount}</p>
+                        </div>
+                    </template>
+                </div>
+                <footer class="slds-modal__footer" style="border-radius: 0 0 12px 12px;">
+                    <button class="modern-btn modern-btn-secondary slds-var-m-right_x-small" onclick={handleCloseSaveModal} disabled={isSaving}>Cancel</button>
+                    <button class="modern-btn modern-btn-primary" onclick={handleConfirmSave} disabled={isSaving} style="background: linear-gradient(135deg, #2e844a 0%, #1a5c31 100%);">Confirm Save</button>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open" style="z-index: 1000000;"></div>
+    </template>
+
+    <!-- 5. SETTINGS / CONFIGURATION MODAL -->
+    <template lwc:if={isSettingsModalOpen}>
+        <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open slds-modal_small" style="z-index: 1000001;">
+            <div class="slds-modal__container">
+                <header class="slds-modal__header" style="border-radius: 12px 12px 0 0; background: #f8fbfe; border-bottom: 1px solid #eef3f8;">
+                    <button class="slds-button slds-button_icon slds-modal__close" title="Close" onclick={handleCloseSettings}>
+                        <lightning-icon icon-name="utility:close" size="small"></lightning-icon>
+                    </button>
+                    <h2 class="slds-text-heading_medium slds-text-title_bold" style="color: #014486; font-size: 1.05rem;">Agentforce Model Orchestration</h2>
+                </header>
+                <div class="slds-modal__content slds-var-p-around_large" style="min-height: 300px; background: #ffffff;">
+
+                    <!-- Global Batch Strategy Toggle (Parallel vs Sequential) -->
+                    <h3 class="slds-text-heading_small slds-text-title_bold slds-var-m-bottom_small" style="color: #014486; font-size: 0.95rem;">Global Batch Strategy (Run All)</h3>
+                    <div class="slds-grid slds-gutters slds-var-m-bottom_large slds-var-p-bottom_medium" style="border-bottom: 2px solid #eef3f8;">
+                        <div class="slds-col slds-size_1-of-2">
+                            <div class={batchParallelModeClass} data-mode="parallel" onclick={handleBatchExecutionModeChange}>
+                                <div class="slds-media slds-media_center">
+                                    <div class="slds-media__figure"><lightning-icon icon-name="utility:macros" size="small"></lightning-icon></div>
+                                    <div class="slds-media__body">
+                                        <strong style="font-size: 0.85rem;">Parallel (Fast)</strong>
+                                        <p class="slds-text-body_small slds-text-color_weak" style="line-height: 1.2; font-size: 0.75rem;">Executes sections simultaneously.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="slds-col slds-size_1-of-2">
+                            <div class={batchSerialModeClass} data-mode="serial" onclick={handleBatchExecutionModeChange}>
+                                <div class="slds-media slds-media_center">
+                                    <div class="slds-media__figure"><lightning-icon icon-name="utility:sort" size="small"></lightning-icon></div>
+                                    <div class="slds-media__body">
+                                        <strong style="font-size: 0.85rem;">Sequential (Stable)</strong>
+                                        <p class="slds-text-body_small slds-text-color_weak" style="line-height: 1.2; font-size: 0.75rem;">Executes sections one by one to avoid rate limits.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pro Mode Toggle -->
+                    <div class="slds-grid slds-grid_align-spread slds-media_center slds-var-m-bottom_large slds-var-p-bottom_medium" style="border-bottom: 2px solid #eef3f8;">
+                        <div>
+                            <p class="slds-text-heading_small slds-text-title_bold" style="font-size: 0.9rem;">Enable Pro Validation Model</p>
+                            <p class="slds-text-body_small slds-text-color_weak" style="font-size: 0.8rem;">Uses self-consistency (multi-pass) to verify insights and eliminate hallucinations.</p>
+                        </div>
+                        <div style="transform: scale(1.2);">
+                            <lightning-input type="toggle" label="Pro Mode" variant="label-hidden" checked={isProMode} onchange={handleModeChange} message-toggle-active="PRO" message-toggle-inactive="STD"></lightning-input>
+                        </div>
+                    </div>
+
+                    <!-- Pro Mode Multi-Pass Advanced Configuration -->
+                    <template lwc:if={isProMode}>
+                        <h3 class="slds-text-heading_small slds-text-title_bold slds-var-m-bottom_medium" style="color: #0176d3; font-size: 0.9rem;">Multi-Pass Configuration (Max 4)</h3>
+                        <div class="slds-grid slds-wrap slds-gutters slds-var-m-bottom_large">
+                            <div class="slds-col slds-size_1-of-2 slds-var-m-bottom_medium"><div class="admin-config-card"><lightning-input type="number" label="Core Snapshot Runs" value={proSettings.core} data-section="core" onchange={handleRunCountChange} min="1" max="4"></lightning-input></div></div>
+                            <div class="slds-col slds-size_1-of-2 slds-var-m-bottom_medium"><div class="admin-config-card"><lightning-input type="number" label="Recent Activity Runs" value={proSettings.activity} data-section="activity" onchange={handleRunCountChange} min="1" max="4"></lightning-input></div></div>
+                            <div class="slds-col slds-size_1-of-2 slds-var-m-bottom_medium"><div class="admin-config-card"><lightning-input type="number" label="Financial Profile Runs" value={proSettings.financials} data-section="financials" onchange={handleRunCountChange} min="1" max="4"></lightning-input></div></div>
+                            <div class="slds-col slds-size_1-of-2 slds-var-m-bottom_medium"><div class="admin-config-card"><lightning-input type="number" label="Transactions Runs" value={proSettings.transactions} data-section="transactions" onchange={handleRunCountChange} min="1" max="4"></lightning-input></div></div>
+                            <div class="slds-col slds-size_1-of-1"><div class="admin-config-card"><lightning-input type="number" label="Risk Summary Runs" value={proSettings.risk} data-section="risk" onchange={handleRunCountChange} min="1" max="4"></lightning-input></div></div>
+                        </div>
+                        <h3 class="slds-text-heading_small slds-text-title_bold slds-var-m-bottom_small" style="color: #0176d3; font-size: 0.9rem;">Pro Mode Multi-Pass Execution Style</h3>
+                        <div class="slds-grid slds-gutters">
+                            <div class="slds-col slds-size_1-of-2">
+                                <div class={parallelModeClass} data-mode="parallel" onclick={handleExecutionModeChange}>
+                                    <div class="slds-media slds-media_center">
+                                        <div class="slds-media__figure"><lightning-icon icon-name="utility:macros" size="small"></lightning-icon></div>
+                                        <div class="slds-media__body">
+                                            <strong style="font-size: 0.85rem;">Parallel (Speed)</strong>
+                                            <p class="slds-text-body_small slds-text-color_weak" style="line-height: 1.2; font-size: 0.75rem;">Executes simultaneously. Fastest, but higher risk of rate limits.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="slds-col slds-size_1-of-2">
+                                <div class={serialModeClass} data-mode="serial" onclick={handleExecutionModeChange}>
+                                    <div class="slds-media slds-media_center">
+                                        <div class="slds-media__figure"><lightning-icon icon-name="utility:sort" size="small"></lightning-icon></div>
+                                        <div class="slds-media__body">
+                                            <strong style="font-size: 0.85rem;">Serial (Stability)</strong>
+                                            <p class="slds-text-body_small slds-text-color_weak" style="line-height: 1.2; font-size: 0.75rem;">Executes sequentially. Slower, but protects org token limits.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                    <template lwc:else>
+                        <div class="slds-illustration slds-text-align_center slds-var-p-vertical_large">
+                            <h3 class="slds-text-heading_small slds-text-color_weak">Standard Mode Active</h3>
+                            <p class="slds-text-body_small slds-text-color_weak slds-var-m-top_x-small">Each section will be executed exactly once.<br/>This is optimized for speed and token conservation.</p>
+                        </div>
+                    </template>
+                </div>
+                <footer class="slds-modal__footer" style="border-radius: 0 0 12px 12px; background: #f8fbfe;">
+                    <button class="modern-btn modern-btn-primary" onclick={handleCloseSettings}>Apply & Close</button>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open" style="z-index: 1000000;"></div>
+    </template>
+</template>

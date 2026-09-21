@@ -128,6 +128,25 @@ The countdown is driven by `ContentDocument.CreatedDate`, which **the Flow must 
 degrades cleanly rather than showing a wrong date. Nothing here performs the deletion; the chip
 only reports the policy.
 
+#### `ContentDocument.FileType` is not the file extension
+
+This is the trap that stopped the countdown from ever firing on a real file. `FileType` uses
+Salesforce's own vocabulary, not the extension:
+
+| Extension | `FileType` |
+|---|---|
+| `.txt` | **`TEXT`** |
+| `.docx` | **`WORD_X`** |
+| `.doc` | **`WORD`** |
+| `.xlsx` | **`EXCEL_X`** |
+| `.pdf` `.png` `.jpg` `.jpeg` `.gif` | same as the extension |
+
+Files also reach the components from two sources with two spellings — Flow-supplied rows carry
+`ContentDocument.FileType`, session-uploaded rows carry the raw filename extension. All three
+components therefore normalise through a local `_fileKind()` helper returning
+`'txt' | 'pdf' | 'doc' | 'img' | 'generic'`. **Never compare `FileType` to an extension directly**;
+route it through `_fileKind()`.
+
 ---
 
 ## 4. The four tabs

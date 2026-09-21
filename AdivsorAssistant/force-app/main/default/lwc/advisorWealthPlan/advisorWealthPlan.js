@@ -289,6 +289,24 @@ function _stripHtmlToText(html) {
     return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').trim();
 }
 
+/**
+ * `ContentDocument.FileType` is NOT the file extension: a .txt is `TEXT`, a .docx
+ * is `WORD_X`, a .doc is `WORD`. Only PDF/PNG/JPG/JPEG/GIF match their extension.
+ * Session-uploaded rows carry the raw extension instead, so both spellings are
+ * normalised here to one token set.
+ *
+ * → 'txt' | 'pdf' | 'doc' | 'img' | 'generic'
+ */
+const FILE_KINDS = {
+    TXT: 'txt',  TEXT: 'txt',
+    PDF: 'pdf',
+    DOC: 'doc',  DOCX: 'doc',  WORD: 'doc',  WORD_X: 'doc',
+    PNG: 'img',  JPG: 'img',   JPEG: 'img',  GIF: 'img',
+};
+function _fileKind(fileType) {
+    return FILE_KINDS[(fileType || '').toUpperCase()] || 'generic';
+}
+
 export default class AdvisorWealthPlan extends NavigationMixin(LightningElement) {
     // ── Inputs ───────────────────────────────────────────────────────────────
     @api recordId;
@@ -1263,10 +1281,13 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
                     const selected = this._selectedArtifactFileIds.has(cdl.ContentDocumentId);
                     let iconStyle = 'color:#94a3b8;';
                     let tagClass  = 'wph-artifact-type-tag';
-                    if (ft === 'PDF')                              { iconStyle = 'color:#ef4444;'; tagClass += ' wph-atype-pdf';  }
-                    else if (ft === 'DOCX' || ft === 'DOC')       { iconStyle = 'color:#2563eb;'; tagClass += ' wph-atype-docx'; }
-                    else if (ft === 'TXT')                         { iconStyle = 'color:#059669;'; tagClass += ' wph-atype-txt';  }
-                    else if (['PNG','JPG','JPEG'].includes(ft))    { iconStyle = 'color:#7c3aed;'; tagClass += ' wph-atype-img';  }
+                    switch (_fileKind(ft)) {
+                        case 'pdf': iconStyle = 'color:#ef4444;'; tagClass += ' wph-atype-pdf';  break;
+                        case 'doc': iconStyle = 'color:#2563eb;'; tagClass += ' wph-atype-docx'; break;
+                        case 'txt': iconStyle = 'color:#059669;'; tagClass += ' wph-atype-txt';  break;
+                        case 'img': iconStyle = 'color:#7c3aed;'; tagClass += ' wph-atype-img';  break;
+                        default: break;
+                    }
                     return {
                         id:         cdl.ContentDocumentId,
                         title:      doc.Title || cdl.ContentDocumentId,
