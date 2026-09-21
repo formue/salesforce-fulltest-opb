@@ -103,9 +103,25 @@ already attached to the event) and **Document Upload**.
 
 An org-side retention process deletes meeting transcripts 7 days after they are created. Any file
 whose `FileType` is `TXT` **and** whose title contains "transcript" (case-insensitive) therefore
-carries a countdown chip in both file lists: `Deleted in 5 days` in amber, switching to hours and
-then minutes and turning red inside the last 24 h, and `Deleted` once the window has passed. A
-60-second ticker repaints it while the component is open.
+carries a countdown chip in both file lists. A 60-second ticker repaints it while the component is
+open.
+
+The chip counts in both directions, in three tiers:
+
+| State | Label | Chip |
+|---|---|---|
+| More than 24 h left | `Deleted in 5 days` | amber |
+| Under 24 h left | `Deleted in 6 hours` → `Deleted in 30 min` | light red |
+| Past the deadline | `Overdue 3 days` | solid red |
+
+Past the deadline the wording is **"Overdue", never "Deleted"**: the list is built from live
+`ContentDocumentLink` records, so a file that is on screen has not actually been removed —
+overdue means the retention job has not caught it yet. Hovering any chip shows the exact
+timestamp (`Scheduled for deletion 28. sep. 2026, 14:32`).
+
+The two directions round opposite ways. Remaining time rounds **up**, so "7 days" means up to
+seven days are left; elapsed time rounds **down**, so "Overdue 3 days" means three full days have
+passed.
 
 The countdown is driven by `ContentDocument.CreatedDate`, which **the Flow must query** — see the
 `inputContentDocuments` property. If that field is absent no chip renders at all, so the component

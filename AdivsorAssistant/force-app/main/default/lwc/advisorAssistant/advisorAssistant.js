@@ -401,6 +401,14 @@ function _isTranscriptFile(title, fileType) {
 /**
  * Countdown chip for one transcript.
  *
+ * Counts in both directions. Before the deadline it rounds UP — "7 days" means up
+ * to seven days remain. After it, elapsed time rounds DOWN, so "Overdue 3 days"
+ * means three FULL days have passed rather than some part of a third.
+ *
+ * Past the deadline the label is "Overdue", never "Deleted": these rows are built
+ * from live ContentDocumentLink records, so a file that is on screen has not been
+ * removed. Overdue means the retention job has not caught it yet.
+ *
  * Returns null when there is no date to count from — ContentDocument.CreatedDate
  * has to be queried by the Flow, so until that is in place every row simply
  * renders without a chip rather than with a wrong one.
@@ -420,13 +428,26 @@ function _retentionChip(createdDate, nowMs) {
     try {
         const d = deleteAt.toLocaleDateString('no-NO', { day: '2-digit', month: 'short', year: 'numeric' });
         const t = deleteAt.toLocaleTimeString('no-NO', { hour: '2-digit', minute: '2-digit' });
-        exactLabel = `Deleted ${d}, ${t}`;
+        exactLabel = `Scheduled for deletion ${d}, ${t}`;
     } catch {
-        exactLabel = 'Deleted after 7 days';
+        exactLabel = 'Scheduled for deletion after 7 days';
     }
 
+    // Past the deadline: count UP, rounding down, so the label states completed time.
     if (remaining <= 0) {
-        return { label: 'Deleted', chipClass: 'aa-file-ttl aa-file-ttl--gone', exactLabel };
+        const overdue = -remaining;
+        const cls = 'aa-file-ttl aa-file-ttl--overdue';
+        if (overdue < 60 * 60 * 1000) {
+            // max(1) so thirty seconds past reads "1 min", not "0 min".
+            const mins = Math.max(1, Math.floor(overdue / 60000));
+            return { label: `Overdue ${mins} min`, chipClass: cls, exactLabel };
+        }
+        if (overdue < 24 * 60 * 60 * 1000) {
+            const hours = Math.floor(overdue / 3600000);
+            return { label: `Overdue ${hours} ${hours === 1 ? 'hour' : 'hours'}`, chipClass: cls, exactLabel };
+        }
+        const days = Math.floor(overdue / 86400000);
+        return { label: `Overdue ${days} ${days === 1 ? 'day' : 'days'}`, chipClass: cls, exactLabel };
     }
     if (remaining < 60 * 60 * 1000) {
         const mins = Math.ceil(remaining / 60000);

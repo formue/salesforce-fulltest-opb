@@ -4962,8 +4962,9 @@ b, strong { font-weight: 800; color: var(--text-main); }
 
 /* ── Transcript deletion countdown ──────────────────────────────────────────
    Shown only on transcript text files, which an org retention process purges
-   7 days after upload. Amber while there is time, red inside the last 24 h.
-   flex-shrink: 0 keeps the chip whole — a long filename ellipsises instead. */
+   7 days after upload. Three tiers: amber with time to spare, light red inside
+   the last 24 h, solid red once the deadline has passed and the file is still
+   here. flex-shrink: 0 keeps the chip whole — a long filename ellipsises. */
 .aa-file-ttl {
     flex-shrink: 0;
     font-size: 0.68rem;
@@ -4974,8 +4975,8 @@ b, strong { font-weight: 800; color: var(--text-main); }
     color: #92400e;
     white-space: nowrap;
 }
-.aa-file-ttl--urgent { background: #fee2e2; color: #b91c1c; }
-.aa-file-ttl--gone   { background: #e2e8f0; color: #475569; }
+.aa-file-ttl--urgent  { background: #fee2e2; color: #b91c1c; }
+.aa-file-ttl--overdue { background: #b91c1c; color: #ffffff; }
 .aa-file-drop {
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 6px;
