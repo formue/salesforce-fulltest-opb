@@ -4983,6 +4983,23 @@ b, strong { font-weight: 800; color: var(--text-main); }
     font-weight: 500;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
+
+/* ── Transcript deletion countdown ──────────────────────────────────────────
+   Shown only on transcript text files, which an org retention process purges
+   7 days after upload. Amber while there is time, red inside the last 24 h.
+   flex-shrink: 0 keeps the chip whole — a long filename ellipsises instead. */
+.aa-file-ttl {
+    flex-shrink: 0;
+    font-size: 0.68rem;
+    font-weight: 600;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: #fef3c7;
+    color: #92400e;
+    white-space: nowrap;
+}
+.aa-file-ttl--urgent { background: #fee2e2; color: #b91c1c; }
+.aa-file-ttl--gone   { background: #e2e8f0; color: #475569; }
 .aa-file-drop {
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 6px;

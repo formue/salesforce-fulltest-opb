@@ -816,6 +816,12 @@
                                                 <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                                             </span>
                                             <span class="aa-file-title">{af.title}</span>
+                                            <!-- Transcripts are purged 7 days after upload by an
+                                                 org retention process. Only rendered when the Flow
+                                                 supplied CreatedDate — see _retentionChip. -->
+                                            <template lwc:if={af.showTtl}>
+                                                <span class={af.ttlClass} title={af.ttlTitle}>{af.ttlLabel}</span>
+                                            </template>
                                             <!-- Preview. handlePreviewFile stops propagation so
                                                  this does not also toggle row selection. -->
                                             <button class="aa-file-preview"
@@ -874,9 +880,12 @@
                                          uploading two files with the same name produces
                                          duplicate keys and LWC list corruption.
                                          `f.documentId` is present on these objects. -->
-                                    <template for:each={_sharedFiles} for:item="f" for:index="idx">
+                                    <template for:each={aaSharedFiles} for:item="f" for:index="idx">
                                         <li key={f.name} class="aa-uploaded-row">
                                             <span class="aa-uploaded-name" title={f.name}>{f.name}</span>
+                                            <template lwc:if={f.showTtl}>
+                                                <span class={f.ttlClass} title={f.ttlTitle}>{f.ttlLabel}</span>
+                                            </template>
                                             <button class="aa-uploaded-preview"
                                                     type="button"
                                                     data-document-id={f.documentId}

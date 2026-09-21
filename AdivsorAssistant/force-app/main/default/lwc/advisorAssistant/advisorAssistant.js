@@ -386,6 +386,63 @@ function _stripHtmlToText(html) {
     return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').trim();
 }
 
+// ── Transcript retention ────────────────────────────────────────────────────
+// Meeting transcripts are purged by an org-side retention process 7 days after
+// they are created. Nothing in this component does the deleting — it only shows
+// the advisor how long is left, so a transcript is not lost without warning.
+
+const TRANSCRIPT_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
+
+/** A transcript is a text file whose title says so. Both conditions are required. */
+function _isTranscriptFile(title, fileType) {
+    return (fileType || '').toUpperCase() === 'TXT' && /transcript/i.test(title || '');
+}
+
+/**
+ * Countdown chip for one transcript.
+ *
+ * Returns null when there is no date to count from — ContentDocument.CreatedDate
+ * has to be queried by the Flow, so until that is in place every row simply
+ * renders without a chip rather than with a wrong one.
+ *
+ * @returns {{label: string, chipClass: string, exactLabel: string}|null}
+ */
+function _retentionChip(createdDate, nowMs) {
+    if (!createdDate) return null;
+    const createdMs = new Date(createdDate).getTime();
+    if (isNaN(createdMs)) return null;
+
+    const deleteAtMs = createdMs + TRANSCRIPT_RETENTION_MS;
+    const remaining  = deleteAtMs - nowMs;
+    const deleteAt   = new Date(deleteAtMs);
+
+    let exactLabel;
+    try {
+        const d = deleteAt.toLocaleDateString('no-NO', { day: '2-digit', month: 'short', year: 'numeric' });
+        const t = deleteAt.toLocaleTimeString('no-NO', { hour: '2-digit', minute: '2-digit' });
+        exactLabel = `Deleted ${d}, ${t}`;
+    } catch {
+        exactLabel = 'Deleted after 7 days';
+    }
+
+    if (remaining <= 0) {
+        return { label: 'Deleted', chipClass: 'aa-file-ttl aa-file-ttl--gone', exactLabel };
+    }
+    if (remaining < 60 * 60 * 1000) {
+        const mins = Math.ceil(remaining / 60000);
+        return { label: `Deleted in ${mins} min`, chipClass: 'aa-file-ttl aa-file-ttl--urgent', exactLabel };
+    }
+    if (remaining < 24 * 60 * 60 * 1000) {
+        const hours = Math.ceil(remaining / 3600000);
+        return { label: `Deleted in ${hours} ${hours === 1 ? 'hour' : 'hours'}`,
+                 chipClass: 'aa-file-ttl aa-file-ttl--urgent', exactLabel };
+    }
+    // Round up, so a file uploaded ten minutes ago reads "7 days", not "6".
+    const days = Math.ceil(remaining / 86400000);
+    return { label: `Deleted in ${days} ${days === 1 ? 'day' : 'days'}`,
+             chipClass: 'aa-file-ttl', exactLabel };
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // COMPONENT
 // ═══════════════════════════════════════════════════════════════════════════
@@ -447,7 +504,9 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
     }
 
     // ContentDocument records — display metadata for the linked files
-    // Fields needed: Id, Title, FileType
+    // Fields needed: Id, Title, FileType, CreatedDate
+    // CreatedDate drives the transcript deletion countdown. If the Flow does not
+    // supply it the countdown chip is simply not rendered — see _retentionChip.
     _inputContentDocuments = [];
     @api get inputContentDocuments() { return this._inputContentDocuments; }
     set inputContentDocuments(val) {
@@ -464,6 +523,14 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
     _inputEvents = [];
     _inputEventsLoading = true;   // starts true; cleared when events arrive or 10 s elapses
     _eventsLoadingTimeoutId = null;
+
+    // ── Transcript countdown clock ───────────────────────────────────────────
+    // The countdown getters read this instead of calling Date.now() directly: a
+    // getter over a live clock never re-renders, because nothing reactive changed.
+    // Ticking this field is what repaints the chips. 60 s is enough — the finest
+    // granularity the chip renders is whole minutes.
+    @track _now = Date.now();
+    _ttlTimerId = null;
 
     @api get inputEvents() { return this._inputEvents; }
     set inputEvents(val) {
@@ -593,6 +660,9 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
         this._boundKeyHandler = this._handleKeyDown.bind(this);
         document.addEventListener('keydown', this._boundKeyHandler);
 
+        // Repaints the transcript deletion countdowns. Torn down in disconnectedCallback.
+        // eslint-disable-next-line @lwc/lwc/no-async-operation
+        this._ttlTimerId = setInterval(() => { this._now = Date.now(); }, 60000);
     }
 
     /**
@@ -1554,6 +1624,9 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
                     id: cdl.ContentDocumentId,
                     title: doc.Title || cdl.ContentDocumentId,
                     fileType: ft,
+                    // Null unless the Flow queries ContentDocument.CreatedDate. Consumed by
+                    // aaArtifactFiles for the transcript countdown, nowhere else.
+                    createdDate: doc.CreatedDate || null,
                     isSelected: selected,
                     iconStyle,
                     tagClass,
@@ -1698,7 +1771,10 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
             if (ext === 'pdf')                           iconStyle = 'background: #fee2e2; color: #ef4444;';
             else if (ext === 'txt')                      iconStyle = 'background: #d1fae5; color: #059669;';
             else if (['png','jpg','jpeg'].includes(ext)) iconStyle = 'background: #ede9fe; color: #7c3aed;';
-            newFiles.push({ name: file.name, documentId: file.documentId, extension: ext, iconStyle, savedToEvent: false, included: true });
+            newFiles.push({ name: file.name, documentId: file.documentId, extension: ext, iconStyle,
+                            // Uploaded now — starts the 7-day retention clock for transcripts.
+                            createdDate: new Date().toISOString(),
+                            savedToEvent: false, included: true });
         }
         this._sharedFiles = newFiles;
         if (newFiles.length > before) {
@@ -1758,6 +1834,9 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
             const ext = (name.split('.').pop() || '').toUpperCase();
             this._sessionSavedFiles = [...this._sessionSavedFiles, {
                 id: documentId, title: name, fileType: ext,
+                // Saved just now, so the retention clock starts here. Without this the
+                // row would sit without a countdown until the Flow re-queries the files.
+                createdDate: new Date().toISOString(),
                 isSelected: false, rowClass: 'wph-artifact-file-row'
             }];
             this._showToast('File Saved', `${name} has been saved to the event.`, 'success');
@@ -2674,6 +2753,10 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
             else if (ft === 'DOCX' || ft === 'DOC')       iconWrapClass = 'aa-file-icon aa-file-icon--doc';
             else if (['PNG','JPG','JPEG','GIF'].includes(ft)) iconWrapClass = 'aa-file-icon aa-file-icon--img';
             else if (ft === 'TXT')                         iconWrapClass = 'aa-file-icon aa-file-icon--txt';
+            // Deliberately computed here and not in artifactFiles: that getter is
+            // memoized on the file ids, which would freeze the countdown. This one
+            // is not, so it re-reads _now on every render the ticker triggers.
+            const ttl = _isTranscriptFile(f.title, ft) ? _retentionChip(f.createdDate, this._now) : null;
             return {
                 id:        f.id,
                 title:     f.title,
@@ -2682,9 +2765,33 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
                 rowClass:  f.isSelected ? 'aa-file-row aa-file-row--selected' : 'aa-file-row',
                 checkClass:f.isSelected ? 'aa-file-check aa-file-check--on' : 'aa-file-check aa-file-check--off',
                 iconWrapClass,
+                showTtl:   !!ttl,
+                ttlLabel:  ttl?.label,
+                ttlClass:  ttl?.chipClass,
+                ttlTitle:  ttl?.exactLabel,
             };
         });
     }
+    /**
+     * Rows for the Document Upload list. Only exists to add the transcript countdown
+     * on top of `_sharedFiles`; every other field is passed straight through.
+     */
+    get aaSharedFiles() {
+        return (this._sharedFiles || []).map((f, idx) => {
+            const ttl = _isTranscriptFile(f.name, f.extension)
+                ? _retentionChip(f.createdDate, this._now)
+                : null;
+            return {
+                ...f,
+                index:    idx,
+                showTtl:  !!ttl,
+                ttlLabel: ttl?.label,
+                ttlClass: ttl?.chipClass,
+                ttlTitle: ttl?.exactLabel,
+            };
+        });
+    }
+
     get acceptedTodosCountForTab() {
         return this.acceptedTodosCount;
     }
@@ -2977,6 +3084,14 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
             this._progressTimerId = null;
         }
     }
+
+    /** Stops the transcript countdown clock. Called from disconnectedCallback. */
+    _stopTtlTicker() {
+        if (this._ttlTimerId) {
+            clearInterval(this._ttlTimerId);
+            this._ttlTimerId = null;
+        }
+    }
     _finishProgress() {
         this._progressValue = 100;
         this._stopProgressCycle();
@@ -3076,6 +3191,7 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
         // Timer / listener teardown
         this._stopLoadingCycle();
         this._stopSummaryLoadingCycle();
+        this._stopTtlTicker();
         if (this._eventsLoadingTimeoutId) {
             clearTimeout(this._eventsLoadingTimeoutId);
             this._eventsLoadingTimeoutId = null;
