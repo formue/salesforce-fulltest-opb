@@ -856,8 +856,8 @@ b, strong { font-weight: 800; color: var(--text-main); }
 .wph-preloaded-summary-header {
     display: flex; align-items: center; gap: 10px; padding: 14px 20px;
     border-bottom: 1px solid var(--border-color);
-    /* Was a 135deg gradient. Flat now: the brief band directly below is also tinted, and two
-       gradients stacked read as two unrelated cards rather than one document. */
+    /* Was a 135deg gradient. Flat now: stacked gradients read as two unrelated
+       cards rather than one document. */
     background: var(--bg-subtle); flex-wrap: wrap;
 }
 .wph-preloaded-summary-header b { font-size: 0.92rem; color: var(--text-main); }
@@ -2691,7 +2691,7 @@ b, strong { font-weight: 800; color: var(--text-main); }
     box-shadow: 0 20px 60px rgba(0,0,0,0.25), 0 4px 16px rgba(0,0,0,0.1);
     overflow: hidden;
 }
-/* ── Editor modals (summary + brief) ─────────────────────────────────────── */
+/* ── Editor modal (summary) ──────────────────────────────────────────────── */
 .wph-edit-modal-card {
     position: relative; z-index: 1;
     background: var(--bg-surface);
@@ -3787,48 +3787,6 @@ b, strong { font-weight: 800; color: var(--text-main); }
     font-weight: 400; font-style: italic;
 }
 
-/* ── At a Glance section ─────────────────────────────────── */
-/* ── Brief summary, as the document's lede ──────────────────────────────────
-   It already sat between the summary header and the summary body; it just looked like a
-   warning banner — #fffbeb inside a #fde68a border under an 11.5px bold amber header, which
-   is the same amber that now means internal notes and the regenerate CTA. Restyled as the
-   opening block of one document: no border of its own, a quiet small-caps label, and a navy
-   accent rule. Still a <button>, so briefOpenByDefault and handleToggleBrief keep working. */
-/* A self-contained block: 1px border all round plus a 3px navy left edge, on a light blue
-   wash. It needs to be obviously not-the-summary at a glance — the summary body is white and
-   the header above it is --bg-subtle (#f6f8fa), so the tint is the bluer --brand-gold-light
-   (#eff6ff) rather than another grey, which would have read as the same surface.
-   Still not amber: that means advisor-private and caution (internal notes, regenerate CTA). */
-.wph-brief-section {
-    /* 24px matches .wph-summary-html-body's horizontal padding, so the brief box and the
-       summary text below it sit on the same edge. */
-    margin: 14px 24px;
-    border: 1px solid var(--brand-purple-light);
-    border-left: 3px solid var(--brand-purple);
-    border-radius: var(--radius-md);
-    background: var(--brand-gold-light);
-    overflow: clip; flex-shrink: 0;
-}
-.wph-brief-toggle {
-    display: flex; align-items: center; gap: 7px; width: 100%;
-    padding: 10px 14px 4px; background: transparent;
-    border: none; cursor: pointer;
-    font-size: 0.66rem; font-weight: 700;
-    text-transform: uppercase; letter-spacing: 0.09em;
-    /* Slightly stronger than --text-muted: it sits on a tint now, not on white. */
-    color: var(--brand-purple); text-align: left; transition: color 0.15s;
-}
-.wph-brief-toggle:hover { color: var(--brand-dark); background: transparent; }
-.wph-brief-toggle svg:first-child { color: var(--brand-teal); flex-shrink: 0; }
-.wph-brief-toggle span { flex: 1; }
-.wph-brief-body {
-    /* Inherits the section's tint; no inner accent rule, since the block's own border and
-       left edge already mark it out and a second rule inside would just be noise. */
-    padding: 0 14px 12px;
-    background: transparent;
-    color: var(--text-main);
-}
-
 /* ── Service Toggle ─────────────────────────────────────── */
 .wph-toggle-switch {
     position: relative; width: 38px; height: 22px; flex-shrink: 0;
@@ -4016,8 +3974,8 @@ b, strong { font-weight: 800; color: var(--text-main); }
 }
 /* ═══════════════════════════════════════════════════════════════════════════
    EDIT-MODAL RICH-TEXT CHROME
-   Toolbar, link strip, regenerate strip and busy overlay, shared by the
-   Meeting Summary and Brief Summary edit modals.
+   Toolbar, link strip, regenerate strip and busy overlay for the Meeting
+   Summary edit modal.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 /* The busy overlay is positioned against the body. Re-declared rather than
@@ -4140,8 +4098,8 @@ b, strong { font-weight: 800; color: var(--text-main); }
    .wph-prose — ONE type scale for AI-authored rich text
    ═══════════════════════════════════════════════════════════════════════════
 
-   Applied to the three summary read views, the brief lede, and both edit-modal
-   editors, so a summary looks the same whether you are reading it or editing it.
+   Applied to the three summary read views and the edit-modal editor, so a
+   summary looks the same whether you are reading it or editing it.
 
    These rules only reach the content because every container carries
    lwc:dom="manual". The style compiler emits `.wph-prose[tok] h2[tok]`, and
@@ -4164,8 +4122,8 @@ b, strong { font-weight: 800; color: var(--text-main); }
 /* Reading measure, deliberately generous.
    74ch centred was too aggressive: at the panel's real width it produced a
    narrow column with ~230px of dead space on BOTH sides, which read as broken
-   next to the full-width brief above it. 120ch is roughly 900px, so at normal
-   widths this is inert and the summary fills the card like the brief does; it
+   against the full-width card. 120ch is roughly 900px, so at normal widths
+   this is inert and the summary fills the card; it
    only engages on a very wide monitor or console, where a 1600px line really
    is unreadable. Left-aligned, never centred — the summary must start on the
    same edge as everything else in the card. */
@@ -4245,19 +4203,6 @@ b, strong { font-weight: 800; color: var(--text-main); }
 /* The editors keep their own box model (flex child, scrolling, padding) and take
    only the type scale from .wph-prose. */
 .wph-rte-editable.wph-prose { font-size: 0.92rem; line-height: 1.75; }
-
-/* The brief's "Generating…" badge had no rule at all — it inherited the toggle's
-   uppercase letter-spacing and sat flush against the label. Now that the toggle is a
-   quiet small-caps row, an unstyled badge in it is conspicuous. */
-.wph-brief-loading-badge {
-    display: inline-flex; align-items: center; gap: 6px;
-    margin-left: 8px; padding: 1px 8px;
-    border-radius: 99px;
-    background: var(--brand-gold-light); color: var(--brand-accent);
-    font-size: 0.62rem; font-weight: 700;
-    text-transform: none; letter-spacing: 0.02em;
-}
-.wph-brief-loading-badge .wph-phase-dot { width: 5px; height: 5px; }
 
 /* ── To-Do's: filter chips, overdue, manual add ─────────────────────────────
    The count chips are <button>s now, so they need the button reset the plain

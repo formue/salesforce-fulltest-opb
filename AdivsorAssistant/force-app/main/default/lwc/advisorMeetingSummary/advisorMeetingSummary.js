@@ -418,8 +418,11 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
     @api showDiscardSection     = false;
     @api showRegenerateSection  = false;
     @api showScrollToError      = false;
-    @api briefEnabled           = false;   // show "At a Glance" section when a brief is returned
-    @api briefOpenByDefault     = false;   // start the section expanded
+    // DEPRECATED / INERT — Brief Summary was removed from the UI. Both properties are
+    // still declared because AdvisorAssistant_SCR_AI_Helper binds them; deleting them
+    // while the Flow references them fails the deploy. Nothing reads them any more.
+    @api briefEnabled           = false;
+    @api briefOpenByDefault     = false;
     @api saveTodosFlowApiName       = '';  // autolaunched flow that creates Task records from accepted action items
     @api saveFileToEventFlowApiName = '';  // autolaunched flow invoked when saving an uploaded file to the event record
     @api wealthPlanSaveFlowApiName  = '';  // autolaunched flow that handles WP DML via typed SObject record collections
@@ -686,7 +689,6 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
         this._paintProse('summaryBodyPublished', this.summaryDisplayHtml);
         this._paintProse('summaryBodyVersion',   this.summaryDisplayHtml);
         this._paintProse('summaryBodyDraft',     this.summaryDisplayHtml);
-        this._paintProse('briefBody',            this.briefDisplayHtml);
         // Focus the absorber when the component overlay first opens
         if (this._modalOpen && !this._prevModalOpen) {
             this._prevModalOpen = true;
@@ -702,16 +704,6 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
                 // eslint-disable-next-line @lwc/lwc/no-inner-html
                 el.innerHTML = sanitizeRichText(this._summaryEditValue || '');
                 this._editorNeedsInit = false;
-                el.focus();
-            }
-        }
-        if (this._briefEditorNeedsInit && this._briefEditMode) {
-            const el = this.refs.briefEditor;
-            if (el) {
-                // Same untrusted source as the read view — scrub before injecting.
-                // eslint-disable-next-line @lwc/lwc/no-inner-html
-                el.innerHTML = sanitizeRichText(this._briefEditValue || '');
-                this._briefEditorNeedsInit = false;
                 el.focus();
             }
         }
@@ -850,7 +842,6 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
     _modalDragStartY      = 0;
     _modalDragStartH      = 0;
     _editorNeedsInit      = false;  // set true when summary modal opens; cleared after innerHTML is set
-    _briefEditorNeedsInit = false;  // same for brief modal
     _prevModalOpen        = false;  // tracks previous _modalOpen to detect transitions
 
     // ── Event selection + meeting type modal ─────────────────────────────────
@@ -876,8 +867,6 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
     @track _summaryInstructions    = '';
     @track _summaryEditMode        = false;
     @track _summaryEditValue       = '';
-    @track _briefEditMode          = false;
-    @track _briefEditValue         = '';
     @track _regeneratingSummaryOnly = false; // kept for loadingTitle getter (wealth plan loading step)
     @track _currentNoteHtml         = null;  // regenerated HTML; null = read from original note
     @track _summarySaved            = false; // true after handleSaveSummary; reset when content changes
@@ -928,9 +917,11 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
     @track _meetingTodos            = [];    // parsed todos from JSON summary response
     @track _summaryGenerating       = false;
     @track _summaryLoadingMessage   = '';
-    @track _meetingBrief            = null;  // "At a Glance" content returned by the flow
-    @track _briefExpanded           = false;
-    @track _briefGenerating         = false;
+    // Brief Summary was removed from the UI. This field is kept ONLY so the value
+    // already stored in MeetingNote__c.Brief_Summary__c survives a re-save: it is
+    // read from the note on event select and handed straight back to the save
+    // Flow as briefHtml/briefMarkdown. Nothing renders or edits it.
+    _meetingBrief                   = null;
     @track _noteDeletedLocally      = false; // true after note deleted this session; cleared on event re-select
     @track _versionSavedLocally     = false; // true after version save; makes isNotePublished ignore selectedEventNote?.Published__c
     // _noNoteSelectedArtifactIds and _noNoteStagedFiles removed — now using shared _selectedArtifactFileIds and _sharedFiles
@@ -1279,10 +1270,6 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
         }
         return this._currentNoteHtml ?? this.selectedEventNote?.Note__c ?? null;
     }
-    get briefDisplayHtml() {
-        if (this._previewingVersionId) return this.previewingVersion?.BriefSummary__c || null;
-        return this._meetingBrief;
-    }
     get sortedVersions() {
         return [...this._meetingNoteVersions]
             .sort((a, b) => (b.DateActive__c || '').localeCompare(a.DateActive__c || ''));
@@ -1477,7 +1464,7 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
         if (this.embeddedLayout) return false;
         return this.isSummaryTab && !this.noEventSelected && this.hasSummaryForEvent && !this.isNotePublished && !this._summaryGenerating;
     }
-    get _saveBarBusy()        { return this._summarySaving || this._briefGenerating || this.isPreviewingHistoricalVersion; }
+    get _saveBarBusy()        { return this._summarySaving || this.isPreviewingHistoricalVersion; }
     // Button label for inline summary generation (no-note state)
     get summaryGenerateBtnLabel() { return this._summaryGenerating ? 'Generating…' : 'Generate Meeting Summary'; }
     // True when the selected event has a meeting summary available to use as Wealth Plan input
@@ -1641,7 +1628,7 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
      * within a session, so it is a save/reset/restore cycle, not a plain reset:
      *
      *   1. CACHE OUT — stash the outgoing event's to-dos under its Id.
-     *   2. RESET     — clear every piece of event-scoped state (draft HTML, brief,
+     *   2. RESET     — clear every piece of event-scoped state (draft HTML,
      *                  instructions, edit modes, file selection, uploads).
      *   3. RESTORE   — for the incoming event, prefer this session's caches
      *                  (`_savedNoteCache`, `_meetingTypeCache`,
@@ -1688,15 +1675,12 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
             this._notePublishedLocally  = false;
             this._summarySaved          = false;
         }
-        // Restore brief from the linked MeetingNote__c (Brief_Summary__c must be queried by the parent flow)
+        // Brief Summary is no longer shown, but the stored value is carried so a re-save
+        // round-trips it back to Brief_Summary__c instead of blanking the field.
         this._meetingBrief  = this.selectedEventNote?.Brief_Summary__c || null;
-        this._briefExpanded = !!(this.selectedEventNote?.Brief_Summary__c) &&
-            (this.briefOpenByDefault === true || this.briefOpenByDefault === 'true');
         this._summaryInstructions    = '';
         this._syncTextarea('summaryInstructions', '');
         this._summaryEditMode        = false;
-        this._briefEditMode          = false;
-        this._briefEditValue         = '';
         this._selectedArtifactFileIds = new Set();
         this._sharedFiles            = [];
         this._sessionSavedFiles      = [];
@@ -1940,10 +1924,6 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
         this._summaryEditValue = event.currentTarget.innerHTML;
     }
 
-    handleBriefEditorInput(event) {
-        this._briefEditValue = event.currentTarget.innerHTML;
-    }
-
     handleEditorKeyDown(event) {
         event.stopPropagation();
     }
@@ -1959,7 +1939,7 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
     // EDIT-MODAL FORMATTING TOOLBAR
     // ═══════════════════════════════════════════════════════════════════════
     //
-    // Both edit modals are plain `contenteditable` divs, so without a toolbar the only way to
+    // The edit modal is a plain `contenteditable` div, so without a toolbar the only way to
     // bold a word or make a list is a keyboard shortcut the advisor has to already know.
     //
     // `document.execCommand` rather than `lightning-input-rich-text`: the base component
@@ -1969,27 +1949,26 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
     // but universally implemented, and `handleEditorPaste` above already depends on it in this
     // very editor — so selection inside the shadow root is known to work here.
     //
-    // One toolbar markup block per modal, distinguished by `data-target`.
+    // The toolbar tags each control with `data-target="summary"`, kept from when there
+    // were two modals; the summary editor is now the only target.
 
-    /** Which editor the open link strip belongs to: 'summary' | 'brief' | null. */
+    /** Which editor the open link strip belongs to: 'summary' | null. */
     @track _linkStripFor = null;
     @track _linkUrl      = '';
 
-    /** The live `contenteditable` for a target, or null if that modal is not open. */
-    _editorRef(target) {
-        return target === 'brief' ? (this.refs.briefEditor || null) : (this.refs.summaryEditor || null);
+    /** The live `contenteditable`, or null if the modal is not open. */
+    _editorRef() {
+        return this.refs.summaryEditor || null;
     }
 
     /** Read the DOM back into the tracked value — programmatic commands do not fire `input`. */
-    _syncEditorValue(target) {
-        const el = this._editorRef(target);
+    _syncEditorValue() {
+        const el = this._editorRef();
         if (!el) return;
         // Reading a contenteditable's markup is the whole point here; there is no
         // sanctioned alternative for this rule.
         // eslint-disable-next-line @lwc/lwc/no-inner-html
-        if (target === 'brief') this._briefEditValue   = el.innerHTML;
-        // eslint-disable-next-line @lwc/lwc/no-inner-html
-        else                    this._summaryEditValue = el.innerHTML;
+        this._summaryEditValue = el.innerHTML;
     }
 
     /**
@@ -2001,9 +1980,9 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
     }
 
     handleToolbarCommand(event) {
-        const { cmd, target } = event.currentTarget.dataset;
+        const { cmd } = event.currentTarget.dataset;
         const spec = TOOLBAR_COMMANDS[cmd];
-        const el   = this._editorRef(target);
+        const el   = this._editorRef();
         if (!spec || !el) return;
 
         el.focus();
@@ -2011,7 +1990,7 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
         // the prompt template produces.
         try { document.execCommand('styleWithCSS', false, false); } catch { /* not supported — harmless */ }
         document.execCommand(spec[0], false, spec.length > 1 ? spec[1] : null);
-        this._syncEditorValue(target);
+        this._syncEditorValue();
     }
 
     // ── Link strip — an inline URL field, not window.prompt ─────────────────
@@ -2047,8 +2026,7 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
 
     handleApplyLink() {
         const url    = (this._linkUrl || '').trim();
-        const target = this._linkStripFor;
-        const el     = this._editorRef(target);
+        const el     = this._editorRef();
         const range  = this._savedLinkRange;
         if (!url || !el || !range) return;
         // A bare domain would otherwise become a same-origin relative link.
@@ -2060,14 +2038,13 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
         sel.addRange(range);
 
         document.execCommand('createLink', false, href);
-        this._syncEditorValue(target);
+        this._syncEditorValue();
         this._linkStripFor   = null;
         this._linkUrl        = '';
         this._savedLinkRange = null;
     }
 
     get showSummaryLinkStrip() { return this._linkStripFor === 'summary'; }
-    get showBriefLinkStrip()   { return this._linkStripFor === 'brief'; }
     /** Nothing to link with an empty URL, or if the selection was lost before opening. */
     get linkApplyDisabled()    { return (this._linkUrl || '').trim().length === 0 || !this._savedLinkRange; }
 
@@ -2102,11 +2079,6 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
      * has already typed in the modal is carried into the regeneration rather than discarded.
      */
     async handleModalRegenerate() {
-        // Summary editor only. The brief is adjusted by hand, so its modal has no instructions
-        // box and no button that could reach here — this guard states the invariant rather than
-        // defending a live path.
-        if (this._briefEditMode) return;
-
         const instructions = (this._modalInstructions || '').trim();
         if (!instructions || this._modalRegenerating) return;
 
@@ -2256,8 +2228,9 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
      * success, so the component stays usable in an org that has not wired the Flows.
      *
      * Both routes send the note twice — `noteHtml` (what the advisor edits) and
-     * `noteMarkdown` (the mirror the client web app reads) — plus the same pair for
-     * the brief.
+     * `noteMarkdown` (the mirror the client web app reads) — plus `briefHtml` /
+     * `briefMarkdown`. The brief is no longer part of the UI; those two are the
+     * stored `Brief_Summary__c` handed straight back, so a save does not blank it.
      *
      * @returns {Promise<boolean>} true ONLY if the note actually reached the server.
      *   Errors are surfaced as a toast, never thrown, so any caller that destroys
@@ -2500,9 +2473,6 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
         this._lastSavedHtml         = null;
         this._noteDeletedLocally    = true;
         this._meetingBrief          = null;
-        this._briefEditMode         = false;
-        this._briefEditValue        = '';
-        this._briefExpanded         = false;
         this._summaryEditMode       = false;
         this._summaryEditValue      = '';
         this._showToast('Meeting Note Deleted', 'The meeting note has been deleted.', 'success');
@@ -2512,10 +2482,8 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
     handleCreateNewVersion() {
         this._currentNoteHtml  = null;
         this._lastSavedHtml    = null;
+        // A new version starts without the previous version's brief — unchanged behaviour.
         this._meetingBrief     = null;
-        this._briefEditMode    = false;
-        this._briefEditValue   = '';
-        this._briefExpanded    = false;
         this._summaryEditMode  = false;
         this._summaryEditValue = '';
         this._creatingNewVersion   = true;
@@ -2559,10 +2527,10 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
      * The response is accepted in two shapes, because the Flow was split partway
      * through the project's life: either plain summary HTML, or JSON
      * `{summary, brief}` from the older combined Flow. Anything that is not valid
-     * JSON is treated as HTML.
+     * JSON is treated as HTML; the `brief` half is discarded.
      *
-     * Brief and to-dos are then fired as SEPARATE async calls rather than awaited,
-     * so the summary paints as soon as it arrives instead of waiting on all three.
+     * To-dos are then fired as a SEPARATE async call rather than awaited, so the
+     * summary paints as soon as it arrives instead of waiting on both.
      *
      * Note the early return: when no Flow is configured it still dispatches
      * `summarychange`. That is deliberate — the parent clears `_bgJobs.summary` on
@@ -2606,36 +2574,23 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
                 saveDoc3AsArtifact: false
             };
             const raw = await generateSummary(flowParams);
-            // If the flow still returns both summary+brief as JSON, split them out;
-            // otherwise treat the whole string as plain summary HTML.
+            // The older combined Flow returns JSON `{summary, brief}`; the split one
+            // returns plain HTML. Anything that is not valid JSON is treated as HTML.
+            // The `brief` half is discarded — Brief Summary was removed from the UI.
             let summaryHtml = raw || '';
-            let embeddedBrief = null;
             try {
                 const parsed = JSON.parse(raw);
-                if (parsed?.summary) {
-                    summaryHtml    = parsed.summary;
-                    embeddedBrief  = parsed.brief || null;
-                }
+                if (parsed?.summary) summaryHtml = parsed.summary;
             } catch (_) { /* plain string — no-op */ }
             this._currentNoteHtml    = _stripStyleBlocks(summaryHtml);
             this._noteDeletedLocally = false;  // new summary generated — note exists again
             this._meetingBrief       = null;
-            this._briefExpanded      = false;
             this._meetingTodos       = [];
             this._panelEqualOverride = false;
             this.outputMeetingSummary = this._currentNoteHtml;
             this._flowOut('outputMeetingSummary', this._currentNoteHtml);
             this._summarySaved = false;
-            // Fire brief and todos as separate async calls so summary is visible immediately
-            if (this.briefEnabled === true || this.briefEnabled === 'true') {
-                if (embeddedBrief) {
-                    // Flow returned brief alongside summary (pre-split flow) — use it directly
-                    this._meetingBrief  = embeddedBrief;
-                    this._briefExpanded = true;
-                } else {
-                    this._generateBrief(flowParams, this._currentNoteHtml);
-                }
-            }
+            // Todos are fired as a separate async call so the summary paints immediately
             if (this._hasTodos) {
                 this._generateTodos(flowParams);
             }
@@ -2726,26 +2681,6 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
                 bubbles: false,
                 detail: { todos: this._meetingTodos, acceptedCount: this.acceptedTodosCount }
             }));
-        }
-    }
-
-    async _generateBrief(flowParams, currentSummary) {
-        this._briefGenerating = true;
-        try {
-            const brief = await generateSummary({
-                flowApiName:    flowParams.flowApiName,
-                eventId:        flowParams.eventId        || '',
-                accountId:      flowParams.accountId      || '',
-                currentSummary: currentSummary            || ''
-            });
-            this._meetingBrief  = brief || null;
-            this._briefExpanded = !!brief;
-        } catch (e) {
-            const msg = e?.body?.message || e?.message || 'Unknown error';
-            this._showToast('Brief Generation Failed', msg, 'error');
-            this._meetingBrief = null;
-        } finally {
-            this._briefGenerating = false;
         }
     }
 
@@ -3194,47 +3129,6 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
     }
     get hasMsContextSummary() {
         return !!(this._selectedMeetingType || this.msContextFiles.length || this.msContextNotesSnippet);
-    }
-    // "At a Glance" brief section
-    get showBriefSection() {
-        if (!(this.briefEnabled === true || this.briefEnabled === 'true')) return false;
-        if (this._previewingVersionId) return !!this.previewingVersion?.BriefSummary__c;
-        return this._briefGenerating || !!this._meetingBrief;
-    }
-    /**
-     * Edit Brief lives on the summary header row next to Edit Summary, not inside the brief
-     * accordion body — so it does NOT depend on `_briefExpanded`. The brief can be edited
-     * without expanding it first, which is the point of putting the button up there.
-     */
-    get showBriefEditButton() {
-        return this.showBriefSection && !this._briefGenerating && !this.isPreviewingHistoricalVersion;
-    }
-    get briefChevronClass() { return `wph-chevron${this._briefExpanded ? ' wph-chevron-up' : ''}`; }
-    handleToggleBrief()     { this._briefExpanded = !this._briefExpanded; }
-    handleEditBrief() {
-        this._briefEditValue       = this._meetingBrief || '';
-        this._briefEditMode        = true;
-        this._briefEditorNeedsInit = true;
-        // Modal-local scratch state does not carry between openings.
-        this._modalInstructions = '';
-        this._linkStripFor      = null;
-        this._linkUrl           = '';
-    }
-    handleSaveBriefEdit() {
-        this._modalHeightPx = null;
-        this._meetingBrief  = this._briefEditValue;
-        this._briefEditMode = false;
-        this.handleSaveSummary();
-    }
-    handleCancelBriefEdit() {
-        this._modalHeightPx        = null;
-        this._briefEditMode        = false;
-        this._briefEditValue       = '';
-        this._briefEditorNeedsInit = false;
-        // Modal-local scratch state does not carry between openings.
-        this._modalInstructions = '';
-        this._linkStripFor      = null;
-        this._linkUrl           = '';
     }
     // ── Two-column layout collapse / ratio ──────────────────────────────────
     @track _theme               = 'corporate'; // 'classic' | 'corporate'

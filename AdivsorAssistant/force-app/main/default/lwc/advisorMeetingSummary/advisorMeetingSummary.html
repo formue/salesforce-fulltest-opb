@@ -22,12 +22,12 @@
                  1. no event selected        → prompt to pick one
                  2. published                → read-only rich text + published notice
                  3. previewing a version     → read-only + "viewing history" banner
-                 4. unpublished draft        → the full editor, brief section and
+                 4. unpublished draft        → the full editor and the
                                                selection→task popup
                plus a "no summary yet" state with an inline Generate button,
                the save bar (hidden when embedded), and the To-Do's list.
 
-        MODALS summary edit · brief edit · publish confirm · delete confirm ·
+        MODALS summary edit · publish confirm · delete confirm ·
                generate-overwrite confirm.
 
       TWO INSTANCES: the parent mounts this component twice (data-role="summary"
@@ -465,15 +465,6 @@
                                                             <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                                                             <b>Edit Summary</b>
                                                         </button>
-                                                        <!-- Sits beside Edit Summary rather than inside the
-                                                             brief accordion, so both editors are reachable
-                                                             from one row. See showBriefEditButton. -->
-                                                        <template lwc:if={showBriefEditButton}>
-                                                            <button class="wph-summary-action-btn" onclick={handleEditBrief}>
-                                                                <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
-                                                                <b>Edit Brief</b>
-                                                            </button>
-                                                        </template>
                                                         <template lwc:if={canRevertSummary}>
                                                             <button class="wph-summary-action-btn wph-summary-action-btn-danger" onclick={handleRevertSummary} title="Discard edits and restore the original note">
                                                                 <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 .49-3.5"></path></svg>
@@ -483,29 +474,6 @@
                                                     </div>
                                                 </div>
 
-                                                    <template lwc:if={showBriefSection}>
-                                                        <div class="wph-brief-section">
-                                                            <button class="wph-brief-toggle" onclick={handleToggleBrief}>
-                                                                <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
-                                                                <span>Brief Summary</span>
-                                                                <template lwc:if={_briefGenerating}>
-                                                                    <span class="wph-brief-loading-badge">
-                                                                        <span class="wph-phase-dot"></span>
-                                                                        Generating…
-                                                                    </span>
-                                                                </template>
-                                                                <template lwc:else>
-                                                                    <svg class={briefChevronClass} viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2.5" fill="none"><polyline points="6 9 12 15 18 9"/></svg>
-                                                                </template>
-                                                            </button>
-                                                            <template lwc:if={_briefExpanded}>
-                                                                    <!-- Edit Brief lives on the summary header row. Painted by
-                                                                         _paintProse — same reason as the summary above. -->
-                                                                    <div class="wph-brief-body wph-prose wph-prose--lede fade-in"
-                                                                         lwc:dom="manual" lwc:ref="briefBody"></div>
-                                                            </template>
-                                                        </div>
-                                                    </template>
                                                     <div class="wph-summary-selection-zone cke_editable"
                                                          tabindex="-1"
                                                          onmouseup={handleSummaryMouseUp}
@@ -610,15 +578,7 @@
                                 <!-- Save bar -->
                                 <template lwc:if={showMsSaveBar}>
                                     <div class="wph-summary-save-bar">
-                                        <template lwc:if={_briefGenerating}>
-                                            <span class="wph-summary-saving-badge">
-                                                <svg class="wph-spin" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2.5" fill="none">
-                                                    <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
-                                                </svg>
-                                                Generating Brief Summary…
-                                            </span>
-                                        </template>
-                                        <template lwc:elseif={_summarySaving}>
+                                        <template lwc:if={_summarySaving}>
                                             <span class="wph-summary-saving-badge">
                                                 <svg class="wph-spin" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2.5" fill="none">
                                                     <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
@@ -1064,111 +1024,6 @@
                                 <div class="wph-edit-modal-footer">
                                     <button class="wph-summary-cancel-btn" onclick={handleCancelSummaryEdit}>Cancel</button>
                                     <button class="wph-summary-save-btn" disabled={_modalRegenerating} onclick={handleSaveSummaryEdit}>
-                                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none">
-                                            <polyline points="20 6 9 17 4 12"></polyline>
-                                        </svg>
-                                        <b>Apply &amp; Save</b>
-                                    </button>
-                                </div>
-                                <div class="wph-edit-modal-drag-handle" onmousedown={handleModalDragStart}>
-                                    <svg viewBox="0 0 24 6" width="32" height="8" fill="currentColor">
-                                        <rect x="0" y="1" width="24" height="1.5" rx="1"/>
-                                        <rect x="0" y="4" width="24" height="1.5" rx="1"/>
-                                    </svg>
-                                </div>
-                            </div>
-                        </div>
-                    </template>
-
-                    <!-- Brief edit modal -->
-                    <template lwc:if={_briefEditMode}>
-                        <div class="wph-modal-root">
-                            <div class="wph-modal-backdrop" onclick={handleCancelBriefEdit}></div>
-                            <div class="wph-edit-modal-card fade-in" style={_modalCardStyle}>
-                                <div class="wph-edit-modal-header">
-                                    <div class="wph-edit-modal-title">
-                                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="currentColor">
-                                            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-                                        </svg>
-                                        <b>Edit Brief Summary</b>
-                                    </div>
-                                    <button class="wph-edit-modal-close" onclick={handleCancelBriefEdit}>
-                                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2.5" fill="none">
-                                            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                                        </svg>
-                                    </button>
-                                </div>
-                                <div class="wph-edit-modal-body">
-                                <!-- Formatting toolbar — same handlers, data-target switches the editor -->
-                                <div class="wph-rte-toolbar">
-                                        <button type="button" class="wph-rte-tool" data-cmd="bold" data-target="brief"
-                                                title="Bold" aria-label="Bold"
-                                                onmousedown={handleToolbarMouseDown} onclick={handleToolbarCommand}><b>B</b></button>
-                                        <button type="button" class="wph-rte-tool" data-cmd="italic" data-target="brief"
-                                                title="Italic" aria-label="Italic"
-                                                onmousedown={handleToolbarMouseDown} onclick={handleToolbarCommand}><i>I</i></button>
-                                        <button type="button" class="wph-rte-tool" data-cmd="underline" data-target="brief"
-                                                title="Underline" aria-label="Underline"
-                                                onmousedown={handleToolbarMouseDown} onclick={handleToolbarCommand}><u>U</u></button>
-                                        <span class="wph-rte-tool-sep"></span>
-                                        <button type="button" class="wph-rte-tool" data-cmd="h2" data-target="brief"
-                                                title="Heading" aria-label="Heading"
-                                                onmousedown={handleToolbarMouseDown} onclick={handleToolbarCommand}><b>H2</b></button>
-                                        <button type="button" class="wph-rte-tool" data-cmd="h3" data-target="brief"
-                                                title="Subheading" aria-label="Subheading"
-                                                onmousedown={handleToolbarMouseDown} onclick={handleToolbarCommand}><b>H3</b></button>
-                                        <button type="button" class="wph-rte-tool" data-cmd="p" data-target="brief"
-                                                title="Normal text" aria-label="Normal text"
-                                                onmousedown={handleToolbarMouseDown} onclick={handleToolbarCommand}><span>&para;</span></button>
-                                        <span class="wph-rte-tool-sep"></span>
-                                        <button type="button" class="wph-rte-tool" data-cmd="ul" data-target="brief"
-                                                title="Bulleted list" aria-label="Bulleted list"
-                                                onmousedown={handleToolbarMouseDown} onclick={handleToolbarCommand}><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3.5" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="3.5" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="3.5" cy="18" r="1.5" fill="currentColor" stroke="none"/></svg></button>
-                                        <button type="button" class="wph-rte-tool" data-cmd="ol" data-target="brief"
-                                                title="Numbered list" aria-label="Numbered list"
-                                                onmousedown={handleToolbarMouseDown} onclick={handleToolbarCommand}><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/><line x1="10" y1="18" x2="21" y2="18"/><path d="M4 6h1V3H4M3 12h2.5L3 15h2.5M3 17h2v4H3" stroke-width="1.4"/></svg></button>
-                                        <button type="button" class="wph-rte-tool" data-cmd="outdent" data-target="brief"
-                                                title="Decrease indent" aria-label="Decrease indent"
-                                                onmousedown={handleToolbarMouseDown} onclick={handleToolbarCommand}><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polyline points="7 8 3 12 7 16"/><line x1="11" y1="6" x2="21" y2="6"/><line x1="11" y1="12" x2="21" y2="12"/><line x1="11" y1="18" x2="21" y2="18"/></svg></button>
-                                        <button type="button" class="wph-rte-tool" data-cmd="indent" data-target="brief"
-                                                title="Increase indent" aria-label="Increase indent"
-                                                onmousedown={handleToolbarMouseDown} onclick={handleToolbarCommand}><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polyline points="3 8 7 12 3 16"/><line x1="11" y1="6" x2="21" y2="6"/><line x1="11" y1="12" x2="21" y2="12"/><line x1="11" y1="18" x2="21" y2="18"/></svg></button>
-                                        <span class="wph-rte-tool-sep"></span>
-                                        <button type="button" class="wph-rte-tool" data-target="brief"
-                                                title="Insert link" aria-label="Insert link"
-                                                onmousedown={handleToolbarMouseDown} onclick={handleToggleLinkStrip}><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></button>
-                                        <button type="button" class="wph-rte-tool" data-cmd="unlink" data-target="brief"
-                                                title="Remove link" aria-label="Remove link"
-                                                onmousedown={handleToolbarMouseDown} onclick={handleToolbarCommand}><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M18.36 6.64a5 5 0 0 1 0 7.07l-1.72 1.71"/><path d="M5.64 17.36a5 5 0 0 1 0-7.07l1.72-1.71"/><line x1="2" y1="2" x2="22" y2="22"/></svg></button>
-                                        <button type="button" class="wph-rte-tool" data-cmd="removeFormat" data-target="brief"
-                                                title="Clear formatting" aria-label="Clear formatting"
-                                                onmousedown={handleToolbarMouseDown} onclick={handleToolbarCommand}><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M6 4h12M9 4l-2 16M15 4l2 16M4 20h16"/></svg></button>
-                                </div>
-                                <template lwc:if={showBriefLinkStrip}>
-                                    <div class="wph-rte-link-strip">
-                                        <input class="wph-rte-link-input" type="url" placeholder="https://example.com"
-                                               oninput={handleLinkUrlInput} />
-                                        <button type="button" class="wph-rte-link-apply" disabled={linkApplyDisabled}
-                                                title="Select text in the editor, then enter a URL"
-                                                onmousedown={handleToolbarMouseDown} onclick={handleApplyLink}>Add link</button>
-                                        <button type="button" class="wph-rte-link-cancel" data-target="brief"
-                                                onmousedown={handleToolbarMouseDown} onclick={handleToggleLinkStrip}>Cancel</button>
-                                    </div>
-                                </template>
-                                    <div class="wph-rte-editable wph-prose cke_editable"
-                                         contenteditable="true"
-                                         lwc:dom="manual"
-                                         lwc:ref="briefEditor"
-                                         oninput={handleBriefEditorInput}
-                                         onkeydown={handleEditorKeyDown}
-                                         onpaste={handleEditorPaste}>
-                                    </div>
-                                </div>
-                                <!-- No regenerate strip here, deliberately: the brief is adjusted by
-                                     hand. The Meeting Summary editor keeps its own. -->
-                                <div class="wph-edit-modal-footer">
-                                    <button class="wph-summary-cancel-btn" onclick={handleCancelBriefEdit}>Cancel</button>
-                                    <button class="wph-summary-save-btn" onclick={handleSaveBriefEdit}>
                                         <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none">
                                             <polyline points="20 6 9 17 4 12"></polyline>
                                         </svg>
