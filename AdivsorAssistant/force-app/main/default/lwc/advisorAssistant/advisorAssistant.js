@@ -606,8 +606,11 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
     @api showDiscardSection     = false;
     @api showRegenerateSection  = false;
     @api showScrollToError      = false;
-    @api briefEnabled           = false;   // show "At a Glance" section when a brief is returned
-    @api briefOpenByDefault     = false;   // start the section expanded
+    // DEPRECATED / INERT — Brief Summary was removed from the UI. Kept declared (and
+    // still passed to advisorMeetingSummary) because AdvisorAssistant_SCR_AI_Helper
+    // binds them; deleting them while the Flow references them fails the deploy.
+    @api briefEnabled           = false;
+    @api briefOpenByDefault     = false;
     // Forwarded to <c-advisor-internal-notes>, which owns the save.
     @api saveInternalNotesFlowApiName = '';
     @api saveTodosFlowApiName       = '';  // autolaunched flow that creates Task records from accepted action items
@@ -669,12 +672,12 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
      * Two jobs, both of which must run after paint rather than in a setter:
      *  1. move focus into the hidden absorber when the modal opens, so Salesforce's
      *     inline-edit shortcuts don't steal the first keystroke;
-     *  2. seed the contenteditable editors' innerHTML once (they are uncontrolled —
+     *  2. seed the contenteditable editor's innerHTML once (it is uncontrolled —
      *     re-setting innerHTML on every render would destroy the caret).
      *
-     * FIXME (DEFECTS.md #8): neither `summaryEditor` nor `briefEditor` exists as an
-     * `lwc:ref` in this template any more (only `focusAbsorber` does), so both
-     * seeding branches below are dead. The live editors are in the children.
+     * FIXME (DEFECTS.md #8): `summaryEditor` no longer exists as an `lwc:ref` in
+     * this template (only `focusAbsorber` does), so the seeding branch below is
+     * dead. The live editor is in advisorMeetingSummary.
      */
     renderedCallback() {
         // Focus the absorber when the component overlay first opens
@@ -690,14 +693,6 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
             if (el) {
                 el.innerHTML = this._summaryEditValue || '';
                 this._editorNeedsInit = false;
-                el.focus();
-            }
-        }
-        if (this._briefEditorNeedsInit && this._briefEditMode) {
-            const el = this.refs.briefEditor;
-            if (el) {
-                el.innerHTML = this._briefEditValue || '';
-                this._briefEditorNeedsInit = false;
                 el.focus();
             }
         }
@@ -872,7 +867,6 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
     _modalDragStartY      = 0;
     _modalDragStartH      = 0;
     _editorNeedsInit      = false;  // set true when summary modal opens; cleared after innerHTML is set
-    _briefEditorNeedsInit = false;  // same for brief modal
     _prevModalOpen        = false;  // tracks previous _modalOpen to detect transitions
 
     // ── Event selection + meeting type modal ─────────────────────────────────
@@ -899,8 +893,6 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
     @track _summaryInstructions    = '';
     @track _summaryEditMode        = false;
     @track _summaryEditValue       = '';
-    @track _briefEditMode          = false;
-    @track _briefEditValue         = '';
     @track _regeneratingSummaryOnly = false; // kept for loadingTitle getter (wealth plan loading step)
     @track _currentNoteHtml         = null;  // regenerated HTML; null = read from original note
     @track _summarySaved            = false; // true after handleSaveSummary; reset when content changes
@@ -928,9 +920,6 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
     @track _meetingTodos            = [];    // parsed todos from JSON summary response
     @track _summaryGenerating       = false;
     @track _summaryLoadingMessage   = '';
-    @track _meetingBrief            = null;  // "At a Glance" content returned by the flow
-    @track _briefExpanded           = false;
-    @track _briefGenerating         = false;
     @track _noteDeletedLocally      = false; // true after note deleted this session; cleared on event re-select
     @track _versionSavedLocally     = false; // true after version save; makes isNotePublished ignore selectedEventNote?.Published__c
     // _noNoteSelectedArtifactIds and _noNoteStagedFiles removed — now using shared _selectedArtifactFileIds and _sharedFiles
@@ -1417,10 +1406,6 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
         }
         return this._currentNoteHtml ?? this.selectedEventNote?.Note__c ?? null;
     }
-    get briefDisplayHtml() {
-        if (this._previewingVersionId) return this.previewingVersion?.BriefSummary__c || null;
-        return this._meetingBrief;
-    }
     get sortedVersions() {
         return [...this._meetingNoteVersions]
             .sort((a, b) => (b.DateActive__c || '').localeCompare(a.DateActive__c || ''));
@@ -1478,7 +1463,7 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
     get canDeleteNote()       { return !!(this._backgroundSavedNoteId || this.selectedEventNote?.Id) && !this.isNotePublished; }
     // Show the floating save bar when on the summary tab with a draft note that is not being regenerated
     get showMsSaveBar()       { return this.isSummaryTab && !this.noEventSelected && this.hasSummaryForEvent && !this.isNotePublished && !this._summaryGenerating; }
-    get _saveBarBusy()        { return this._summarySaving || this._briefGenerating || this.isPreviewingHistoricalVersion; }
+    get _saveBarBusy()        { return this._summarySaving || this.isPreviewingHistoricalVersion; }
     // Button label for inline summary generation (no-note state)
     get summaryGenerateBtnLabel() { return this._summaryGenerating ? 'Generating…' : 'Generate Meeting Summary'; }
     // True when the selected event has a meeting summary available to use as Wealth Plan input
@@ -1683,14 +1668,8 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
         this._msState            = { ...this._msState, savedNoteId: null };
         this._internalNotesState = { ...this._internalNotesState, savedNoteId: null };
 
-        // Restore brief from the linked MeetingNote__c (Brief_Summary__c must be queried by the parent flow)
-        this._meetingBrief  = this.selectedEventNote?.Brief_Summary__c || null;
-        this._briefExpanded = !!(this.selectedEventNote?.Brief_Summary__c) &&
-            (this.briefOpenByDefault === true || this.briefOpenByDefault === 'true');
         this._summaryInstructions    = '';
         this._summaryEditMode        = false;
-        this._briefEditMode          = false;
-        this._briefEditValue         = '';
         this._selectedArtifactFileIds = new Set();
         this._sharedFiles            = [];
         this._sessionSavedFiles      = [];
@@ -1909,10 +1888,6 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
         this._summaryEditValue = event.currentTarget.innerHTML;
     }
 
-    handleBriefEditorInput(event) {
-        this._briefEditValue = event.currentTarget.innerHTML;
-    }
-
     handleEditorKeyDown(event) {
         event.stopPropagation();
     }
@@ -2040,8 +2015,8 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
                     noteId:        this.selectedEventNote?.Id || this._backgroundSavedNoteId || '',
                     noteHtml:      html,
                     noteMarkdown:  _htmlToMd(html),
-                    briefHtml:     this._meetingBrief     || '',
-                    briefMarkdown: _htmlToMd(this._meetingBrief || ''),
+                    briefHtml:     '',   // brief removed; key kept for the Apex signature
+                    briefMarkdown: '',
                     eventId:       this._selectedEventId  || '',
                     published:     false,
                     meetingType:   this.meetingTypeLabel || '',
@@ -2071,8 +2046,8 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
                 noteId:        this.selectedEventNote?.Id || this._backgroundSavedNoteId || '',
                 noteHtml:      html,
                 noteMarkdown:  _htmlToMd(html),
-                briefHtml:     this._meetingBrief     || '',
-                briefMarkdown: _htmlToMd(this._meetingBrief || ''),
+                briefHtml:     '',   // brief removed; key kept for the Apex signature
+                briefMarkdown: '',
                 eventId:       this._selectedEventId  || '',
                 published:     false,
                 meetingType:   this.meetingTypeLabel || '',
@@ -2164,8 +2139,8 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
                     noteId:        this.selectedEventNote?.Id || this._backgroundSavedNoteId || '',
                     noteHtml:      html,
                     noteMarkdown:  _htmlToMd(html),
-                    briefHtml:     this._meetingBrief     || '',
-                    briefMarkdown: _htmlToMd(this._meetingBrief || ''),
+                    briefHtml:     '',   // brief removed; key kept for the Apex signature
+                    briefMarkdown: '',
                     eventId:       this._selectedEventId  || '',
                     published:     true,
                     meetingType:   this.meetingTypeLabel || '',
@@ -2198,8 +2173,8 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
                 noteId:        this.selectedEventNote?.Id || this._backgroundSavedNoteId || '',
                 noteHtml:      html,
                 noteMarkdown:  _htmlToMd(html),
-                briefHtml:     this._meetingBrief     || '',
-                briefMarkdown: _htmlToMd(this._meetingBrief || ''),
+                briefHtml:     '',   // brief removed; key kept for the Apex signature
+                briefMarkdown: '',
                 eventId:       this._selectedEventId  || '',
                 published:     true,
                 meetingType:   this.meetingTypeLabel || '',
@@ -2258,10 +2233,6 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
         this._backgroundSavedNoteId = null;
         this._lastSavedHtml         = null;
         this._noteDeletedLocally    = true;
-        this._meetingBrief          = null;
-        this._briefEditMode         = false;
-        this._briefEditValue        = '';
-        this._briefExpanded         = false;
         this._summaryEditMode       = false;
         this._summaryEditValue      = '';
         this._showToast('Meeting Note Deleted', 'The meeting note has been deleted.', 'success');
@@ -2271,10 +2242,6 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
     handleCreateNewVersion() {
         this._currentNoteHtml  = null;
         this._lastSavedHtml    = null;
-        this._meetingBrief     = null;
-        this._briefEditMode    = false;
-        this._briefEditValue   = '';
-        this._briefExpanded    = false;
         this._summaryEditMode  = false;
         this._summaryEditValue = '';
         this._creatingNewVersion   = true;
@@ -2338,36 +2305,20 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
                 saveDoc3AsArtifact: false
             };
             const raw = await generateSummary(flowParams);
-            // If the flow still returns both summary+brief as JSON, split them out;
-            // otherwise treat the whole string as plain summary HTML.
+            // The older combined Flow returns JSON `{summary, brief}`; the split one
+            // returns plain HTML. The `brief` half is discarded — the feature is gone.
             let summaryHtml = raw || '';
-            let embeddedBrief = null;
             try {
                 const parsed = JSON.parse(raw);
-                if (parsed?.summary) {
-                    summaryHtml    = parsed.summary;
-                    embeddedBrief  = parsed.brief || null;
-                }
+                if (parsed?.summary) summaryHtml = parsed.summary;
             } catch (_) { /* plain string — no-op */ }
             this._currentNoteHtml    = _stripStyleBlocks(summaryHtml);
             this._noteDeletedLocally = false;  // new summary generated — note exists again
-            this._meetingBrief       = null;
-            this._briefExpanded      = false;
             this._meetingTodos       = [];
             this._panelEqualOverride = false;
             this.outputMeetingSummary = this._currentNoteHtml;
             this.dispatchEvent(new FlowAttributeChangeEvent('outputMeetingSummary', this._currentNoteHtml));
             this._summarySaved = false;
-            // Fire brief and todos as separate async calls so summary is visible immediately
-            if (this.briefEnabled === true || this.briefEnabled === 'true') {
-                if (embeddedBrief) {
-                    // Flow returned brief alongside summary (pre-split flow) — use it directly
-                    this._meetingBrief  = embeddedBrief;
-                    this._briefExpanded = true;
-                } else {
-                    this._generateBrief(flowParams, this._currentNoteHtml);
-                }
-            }
             if (this._hasTodos) {
                 this._generateTodos(flowParams);
             }
@@ -2430,26 +2381,6 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
             this._showToast("To-Do's Failed", msg, 'error');
         } finally {
             this._todosGenerating = false;
-        }
-    }
-
-    async _generateBrief(flowParams, currentSummary) {
-        this._briefGenerating = true;
-        try {
-            const brief = await generateSummary({
-                flowApiName:    flowParams.flowApiName,
-                eventId:        flowParams.eventId        || '',
-                accountId:      flowParams.accountId      || '',
-                currentSummary: currentSummary            || ''
-            });
-            this._meetingBrief  = brief || null;
-            this._briefExpanded = !!brief;
-        } catch (e) {
-            const msg = e?.body?.message || e?.message || 'Unknown error';
-            this._showToast('Brief Generation Failed', msg, 'error');
-            this._meetingBrief = null;
-        } finally {
-            this._briefGenerating = false;
         }
     }
 
@@ -3617,31 +3548,6 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
     }
     get hasMsContextSummary() {
         return !!(this._selectedMeetingType || this.msContextFiles.length || this.msContextNotesSnippet);
-    }
-    // "At a Glance" brief section
-    get showBriefSection() {
-        if (!(this.briefEnabled === true || this.briefEnabled === 'true')) return false;
-        if (this._previewingVersionId) return !!this.previewingVersion?.BriefSummary__c;
-        return this._briefGenerating || !!this._meetingBrief;
-    }
-    get briefChevronClass() { return `wph-chevron${this._briefExpanded ? ' wph-chevron-up' : ''}`; }
-    handleToggleBrief()     { this._briefExpanded = !this._briefExpanded; }
-    handleEditBrief() {
-        this._briefEditValue       = this._meetingBrief || '';
-        this._briefEditMode        = true;
-        this._briefEditorNeedsInit = true;
-    }
-    handleSaveBriefEdit() {
-        this._modalHeightPx = null;
-        this._meetingBrief  = this._briefEditValue;
-        this._briefEditMode = false;
-        this.handleSaveSummary();
-    }
-    handleCancelBriefEdit() {
-        this._modalHeightPx        = null;
-        this._briefEditMode        = false;
-        this._briefEditValue       = '';
-        this._briefEditorNeedsInit = false;
     }
     // ── Two-column layout collapse / ratio ──────────────────────────────────
     // theme system removed — single unified design
@@ -5232,7 +5138,7 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
         { selector: '[data-card="files"]',              title: 'Meeting Files',      text: 'Pick documents already attached to the event. These are sent to the AI as context, and the eye icon previews one without leaving.',            position: 'right'  },
         { selector: '[data-card="docs"]',               title: 'Document Upload',    text: 'Upload supporting documents from your machine to give the AI extra material to work from.',                                                    position: 'right'  },
         { selector: '.aa-footer-left .aa-primary-cta',  title: 'Generate',           text: 'When you\'re ready, click Generate. It targets whichever tab you\'re on, and jobs keep running if you switch away.',                            position: 'top'    },
-        { selector: '[data-tab="summary"]',             title: 'Meeting Summary',    text: 'The AI note lands here, with a short At a Glance brief above it. Edit either one, regenerate with instructions, then Save & Publish.',         position: 'bottom' },
+        { selector: '[data-tab="summary"]',             title: 'Meeting Summary',    text: 'The AI note lands here. Edit it, regenerate with instructions, then Save & Publish.',                                                          position: 'bottom' },
         { selector: '[data-tab="wealthplan"]',          title: 'Wealth Plan',        text: 'Structured portfolio suggestions to review row by row. Accept the ones you want, then Save to Wealth Plan writes only those.',                 position: 'bottom' },
         { selector: '[data-tab="todos"]',               title: 'To-Do\'s',            text: 'Action items pulled from the summary. Accept the ones you want and save them as Tasks — or add one yourself if the AI missed it.',             position: 'bottom' },
         { selector: '[data-tab="internalnotes"]',       title: 'Internal Notes',     text: 'Your private notes. Never shared with the client and never part of the summary. They save themselves a few seconds after you stop typing.',    position: 'bottom' },

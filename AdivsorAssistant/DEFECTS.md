@@ -26,7 +26,7 @@ every wealth-plan save" no longer hold.
 | 5 | No `error` branch on any `getPicklistValues` wire | **Open.** Handlers destructure `{ data }` only, so a picklist failure is silent |
 | 6 | `_uploadFeedbackTimer` not cleared on teardown | **Open.** Still fires into a torn-down component |
 | 7 | "Permanently inert" global key listener | **Withdrawn — the premise was false.** `_step = 'review'` *is* assigned, at `advisorAssistant.js:2044` in the existing-data tab path. The listener is not provably dead and stays registered |
-| 8 | Unreachable editor seeding in the parent | **Open.** `summaryEditor` / `briefEditor` refs live in the child, not the parent |
+| 8 | Unreachable editor seeding in the parent | **Partly fixed.** The `briefEditor` branch is gone with the Brief Summary removal; the `summaryEditor` branch is still dead |
 | 9 | `_msState` initialised with half its keys | **Fixed.** 9 keys, matching what the child emits |
 | 10 | Meta ↔ JS gaps | **Fixed.** 79 `@api` properties, 79 `<property>` entries, 0 gaps |
 | 11 | Large unreachable surface | **Open, and re-measured** — see the entry for the real numbers |
@@ -271,12 +271,13 @@ return on every keystroke in the page.
 
 **Fix:** remove the registration here; the working copy lives in the child.
 
-### 8. ⚠️ OPEN — Unreachable editor seeding in the parent
+### 8. ⚠️ PARTLY FIXED — Unreachable editor seeding in the parent
 
-`renderedCallback` seeds `this.refs.summaryEditor.innerHTML` and
-`this.refs.briefEditor.innerHTML`. Neither ref exists: `advisorAssistant.html` declares
-exactly one, `lwc:ref="focusAbsorber"`. Both branches are dead. The live editors are in
-`advisorMeetingSummary`.
+`renderedCallback` seeds `this.refs.summaryEditor.innerHTML`. That ref does not exist:
+`advisorAssistant.html` declares exactly one, `lwc:ref="focusAbsorber"`, so the branch is
+dead. The live editor is in `advisorMeetingSummary`.
+
+The matching `briefEditor` branch was removed along with the Brief Summary feature.
 
 ### 9. ✅ FIXED — `_msState` initialised with half its keys
 
