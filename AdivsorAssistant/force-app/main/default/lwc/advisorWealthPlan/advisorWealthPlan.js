@@ -392,8 +392,6 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
     @api showDiscardSection     = false;
     @api showRegenerateSection  = false;
     @api showScrollToError      = false;
-    @api briefEnabled           = false;   // show "At a Glance" section when a brief is returned
-    @api briefOpenByDefault     = false;   // start the section expanded
     @api saveTodosFlowApiName       = '';  // autolaunched flow that creates Task records from accepted action items
     @api saveFileToEventFlowApiName = '';  // autolaunched flow invoked when saving an uploaded file to the event record
     @api wealthPlanSaveFlowApiName  = '';  // autolaunched flow that handles WP DML via typed SObject record collections
@@ -513,14 +511,6 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
             if (el) {
                 el.innerHTML = this._summaryEditValue || '';
                 this._editorNeedsInit = false;
-                el.focus();
-            }
-        }
-        if (this._briefEditorNeedsInit && this._briefEditMode) {
-            const el = this.refs.briefEditor;
-            if (el) {
-                el.innerHTML = this._briefEditValue || '';
-                this._briefEditorNeedsInit = false;
                 el.focus();
             }
         }
@@ -668,7 +658,6 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
     _modalDragStartY      = 0;
     _modalDragStartH      = 0;
     _editorNeedsInit      = false;  // set true when summary modal opens; cleared after innerHTML is set
-    _briefEditorNeedsInit = false;  // same for brief modal
     _prevModalOpen        = false;  // tracks previous _modalOpen to detect transitions
 
     // ── Event selection + meeting type modal ─────────────────────────────────
@@ -694,8 +683,6 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
     @track _summaryInstructions    = '';
     @track _summaryEditMode        = false;
     @track _summaryEditValue       = '';
-    @track _briefEditMode          = false;
-    @track _briefEditValue         = '';
     @track _regeneratingSummaryOnly = false; // kept for loadingTitle getter (wealth plan loading step)
     @track _currentNoteHtml         = null;  // regenerated HTML; null = read from original note
     @track _summarySaved            = false; // true after handleSaveSummary; reset when content changes
@@ -746,9 +733,6 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
     @track _meetingTodos            = [];    // parsed todos from JSON summary response
     @track _summaryGenerating       = false;
     @track _summaryLoadingMessage   = '';
-    @track _meetingBrief            = null;  // "At a Glance" content returned by the flow
-    @track _briefExpanded           = false;
-    @track _briefGenerating         = false;
     @track _noteDeletedLocally      = false; // true after note deleted this session; cleared on event re-select
     @track _versionSavedLocally     = false; // true after version save; makes isNotePublished ignore selectedEventNote?.Published__c
     // _noNoteSelectedArtifactIds and _noNoteStagedFiles removed — now using shared _selectedArtifactFileIds and _sharedFiles
@@ -1110,10 +1094,6 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
         }
         return this._currentNoteHtml ?? this.selectedEventNote?.Note__c ?? null;
     }
-    get briefDisplayHtml() {
-        if (this._previewingVersionId) return this.previewingVersion?.BriefSummary__c || null;
-        return this._meetingBrief;
-    }
     get sortedVersions() {
         return [...this._meetingNoteVersions]
             .sort((a, b) => (b.DateActive__c || '').localeCompare(a.DateActive__c || ''));
@@ -1170,7 +1150,7 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
     get canDeleteNote()       { return !!(this._backgroundSavedNoteId || this.selectedEventNote?.Id) && !this.isNotePublished; }
     // Show the floating save bar when on the summary tab with a draft note that is not being regenerated
     get showMsSaveBar()       { return this.isSummaryTab && !this.noEventSelected && this.hasSummaryForEvent && !this.isNotePublished && !this._summaryGenerating; }
-    get _saveBarBusy()        { return this._summarySaving || this._briefGenerating || this.isPreviewingHistoricalVersion; }
+    get _saveBarBusy()        { return this._summarySaving || this.isPreviewingHistoricalVersion; }
     // Button label for inline summary generation (no-note state)
     get summaryGenerateBtnLabel() { return this._summaryGenerating ? 'Generating…' : 'Generate Meeting Summary'; }
     // True when the selected event has a meeting summary available to use as Wealth Plan input
@@ -1354,14 +1334,8 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
             this._notePublishedLocally  = false;
             this._summarySaved          = false;
         }
-        // Restore brief from the linked MeetingNote__c (Brief_Summary__c must be queried by the parent flow)
-        this._meetingBrief  = this.selectedEventNote?.Brief_Summary__c || null;
-        this._briefExpanded = !!(this.selectedEventNote?.Brief_Summary__c) &&
-            (this.briefOpenByDefault === true || this.briefOpenByDefault === 'true');
         this._summaryInstructions    = '';
         this._summaryEditMode        = false;
-        this._briefEditMode          = false;
-        this._briefEditValue         = '';
         this._selectedArtifactFileIds = new Set();
         this._sharedFiles            = [];
         this._sessionSavedFiles      = [];
@@ -1563,10 +1537,6 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
         this._summaryEditValue = event.currentTarget.innerHTML;
     }
 
-    handleBriefEditorInput(event) {
-        this._briefEditValue = event.currentTarget.innerHTML;
-    }
-
     handleEditorKeyDown(event) {
         event.stopPropagation();
     }
@@ -1694,8 +1664,8 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
                     noteId:        this.selectedEventNote?.Id || this._backgroundSavedNoteId || '',
                     noteHtml:      html,
                     noteMarkdown:  _htmlToMd(html),
-                    briefHtml:     this._meetingBrief     || '',
-                    briefMarkdown: _htmlToMd(this._meetingBrief || ''),
+                    briefHtml:     '',   // brief removed; key kept for the Apex signature
+                    briefMarkdown: '',
                     eventId:       this._selectedEventId  || '',
                     published:     false,
                     meetingType:   this.meetingTypeLabel || '',
@@ -1725,8 +1695,8 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
                 noteId:        this.selectedEventNote?.Id || this._backgroundSavedNoteId || '',
                 noteHtml:      html,
                 noteMarkdown:  _htmlToMd(html),
-                briefHtml:     this._meetingBrief     || '',
-                briefMarkdown: _htmlToMd(this._meetingBrief || ''),
+                briefHtml:     '',   // brief removed; key kept for the Apex signature
+                briefMarkdown: '',
                 eventId:       this._selectedEventId  || '',
                 published:     false,
                 meetingType:   this.meetingTypeLabel || '',
@@ -1818,8 +1788,8 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
                     noteId:        this.selectedEventNote?.Id || this._backgroundSavedNoteId || '',
                     noteHtml:      html,
                     noteMarkdown:  _htmlToMd(html),
-                    briefHtml:     this._meetingBrief     || '',
-                    briefMarkdown: _htmlToMd(this._meetingBrief || ''),
+                    briefHtml:     '',   // brief removed; key kept for the Apex signature
+                    briefMarkdown: '',
                     eventId:       this._selectedEventId  || '',
                     published:     true,
                     meetingType:   this.meetingTypeLabel || '',
@@ -1852,8 +1822,8 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
                 noteId:        this.selectedEventNote?.Id || this._backgroundSavedNoteId || '',
                 noteHtml:      html,
                 noteMarkdown:  _htmlToMd(html),
-                briefHtml:     this._meetingBrief     || '',
-                briefMarkdown: _htmlToMd(this._meetingBrief || ''),
+                briefHtml:     '',   // brief removed; key kept for the Apex signature
+                briefMarkdown: '',
                 eventId:       this._selectedEventId  || '',
                 published:     true,
                 meetingType:   this.meetingTypeLabel || '',
@@ -1912,10 +1882,6 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
         this._backgroundSavedNoteId = null;
         this._lastSavedHtml         = null;
         this._noteDeletedLocally    = true;
-        this._meetingBrief          = null;
-        this._briefEditMode         = false;
-        this._briefEditValue        = '';
-        this._briefExpanded         = false;
         this._summaryEditMode       = false;
         this._summaryEditValue      = '';
         this._showToast('Meeting Note Deleted', 'The meeting note has been deleted.', 'success');
@@ -1925,10 +1891,6 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
     handleCreateNewVersion() {
         this._currentNoteHtml  = null;
         this._lastSavedHtml    = null;
-        this._meetingBrief     = null;
-        this._briefEditMode    = false;
-        this._briefEditValue   = '';
-        this._briefExpanded    = false;
         this._summaryEditMode  = false;
         this._summaryEditValue = '';
         this._creatingNewVersion   = true;
@@ -1997,36 +1959,20 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
                 saveDoc3AsArtifact: false
             };
             const raw = await generateSummary(flowParams);
-            // If the flow still returns both summary+brief as JSON, split them out;
-            // otherwise treat the whole string as plain summary HTML.
+            // The older combined Flow returns JSON `{summary, brief}`; the split one
+            // returns plain HTML. The `brief` half is discarded — the feature is gone.
             let summaryHtml = raw || '';
-            let embeddedBrief = null;
             try {
                 const parsed = JSON.parse(raw);
-                if (parsed?.summary) {
-                    summaryHtml    = parsed.summary;
-                    embeddedBrief  = parsed.brief || null;
-                }
+                if (parsed?.summary) summaryHtml = parsed.summary;
             } catch (_) { /* plain string — no-op */ }
             this._currentNoteHtml    = _stripStyleBlocks(summaryHtml);
             this._noteDeletedLocally = false;  // new summary generated — note exists again
-            this._meetingBrief       = null;
-            this._briefExpanded      = false;
             this._meetingTodos       = [];
             this._panelEqualOverride = false;
             this.outputMeetingSummary = this._currentNoteHtml;
             this._flowOut('outputMeetingSummary', this._currentNoteHtml);
             this._summarySaved = false;
-            // Fire brief and todos as separate async calls so summary is visible immediately
-            if (this.briefEnabled === true || this.briefEnabled === 'true') {
-                if (embeddedBrief) {
-                    // Flow returned brief alongside summary (pre-split flow) — use it directly
-                    this._meetingBrief  = embeddedBrief;
-                    this._briefExpanded = true;
-                } else {
-                    this._generateBrief(flowParams, this._currentNoteHtml);
-                }
-            }
             if (this._hasTodos) {
                 this._generateTodos(flowParams);
             }
@@ -2089,26 +2035,6 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
             this._showToast("To-Do's Failed", msg, 'error');
         } finally {
             this._todosGenerating = false;
-        }
-    }
-
-    async _generateBrief(flowParams, currentSummary) {
-        this._briefGenerating = true;
-        try {
-            const brief = await generateSummary({
-                flowApiName:    flowParams.flowApiName,
-                eventId:        flowParams.eventId        || '',
-                accountId:      flowParams.accountId      || '',
-                currentSummary: currentSummary            || ''
-            });
-            this._meetingBrief  = brief || null;
-            this._briefExpanded = !!brief;
-        } catch (e) {
-            const msg = e?.body?.message || e?.message || 'Unknown error';
-            this._showToast('Brief Generation Failed', msg, 'error');
-            this._meetingBrief = null;
-        } finally {
-            this._briefGenerating = false;
         }
     }
 
@@ -2525,31 +2451,6 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
     }
     get hasMsContextSummary() {
         return !!(this._selectedMeetingType || this.msContextFiles.length || this.msContextNotesSnippet);
-    }
-    // "At a Glance" brief section
-    get showBriefSection() {
-        if (!(this.briefEnabled === true || this.briefEnabled === 'true')) return false;
-        if (this._previewingVersionId) return !!this.previewingVersion?.BriefSummary__c;
-        return this._briefGenerating || !!this._meetingBrief;
-    }
-    get briefChevronClass() { return `wph-chevron${this._briefExpanded ? ' wph-chevron-up' : ''}`; }
-    handleToggleBrief()     { this._briefExpanded = !this._briefExpanded; }
-    handleEditBrief() {
-        this._briefEditValue       = this._meetingBrief || '';
-        this._briefEditMode        = true;
-        this._briefEditorNeedsInit = true;
-    }
-    handleSaveBriefEdit() {
-        this._modalHeightPx = null;
-        this._meetingBrief  = this._briefEditValue;
-        this._briefEditMode = false;
-        this.handleSaveSummary();
-    }
-    handleCancelBriefEdit() {
-        this._modalHeightPx        = null;
-        this._briefEditMode        = false;
-        this._briefEditValue       = '';
-        this._briefEditorNeedsInit = false;
     }
     // ── Two-column layout collapse / ratio ──────────────────────────────────
     @track _theme               = 'corporate'; // 'classic' | 'corporate'

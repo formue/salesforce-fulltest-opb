@@ -24,7 +24,7 @@ It supersedes `wealthPlanHelper`, which remains in the org and is out of scope f
 **Apex:** `MeetingSummaryController` (9 `@AuraEnabled` methods, `with sharing`) and
 `MeetingSummaryControllerTest` (21 tests, 100% pass, 83% class coverage).
 
-**Flows in the repo:** 11, listed in section 8.
+**Flows in the repo:** 11, listed in section 9.
 
 ---
 
@@ -94,17 +94,35 @@ duplicates**, so always save against `resolvedNoteId`, never a local guess.
 
 ---
 
-## 3. The four tabs
+## 3. The left panel
+
+Shared by every tab: event picker, meeting category, context notes, **Meeting Files** (files
+already attached to the event) and **Document Upload**.
+
+### Transcript retention countdown
+
+An org-side retention process deletes meeting transcripts 7 days after they are created. Any file
+whose `FileType` is `TXT` **and** whose title contains "transcript" (case-insensitive) therefore
+carries a countdown chip in both file lists: `Deleted in 5 days` in amber, switching to hours and
+then minutes and turning red inside the last 24 h, and `Deleted` once the window has passed. A
+60-second ticker repaints it while the component is open.
+
+The countdown is driven by `ContentDocument.CreatedDate`, which **the Flow must query** — see the
+`inputContentDocuments` property. If that field is absent no chip renders at all, so the component
+degrades cleanly rather than showing a wrong date. Nothing here performs the deletion; the chip
+only reports the policy.
+
+---
+
+## 4. The four tabs
 
 ### Meeting Summary
 
 - The AI note, rendered with full typography — headings, lists, bold, tables, quotes
-- **Brief Summary** ("At a Glance") in a bordered block above it
-- **Edit Summary** / **Edit Brief** open a full-screen editor with a formatting toolbar
+- **Edit Summary** opens a full-screen editor with a formatting toolbar
   (bold, italic, underline, H2/H3, both list types, indent, link, clear)
 - **Regenerate with instructions** from inside the summary editor — the result replaces the editor
   content, so it is reviewed before committing. Cancel discards it; only **Apply & Save** persists
-- The brief is **hand-edited only** — no regeneration
 - Select any text in the summary → **Add as Action Item**, which sends it to the To-Do's tab
 - Version history: earlier saved versions, previewable read-only
 - Save paths: **Save & Review** (keep editing), **Save & Publish** (lock and share),
@@ -144,12 +162,12 @@ on the To-Do's tab instead).
   tab is amber throughout
 - **Autosaves** ~3 seconds after typing stops, with a visible countdown. A manual save cancels a
   pending one
-- Warns before the field's **32,768** character limit (see section 5 — the counter measures HTML,
+- Warns before the field's **32,768** character limit (see section 6 — the counter measures HTML,
   not visible text)
 
 ---
 
-## 4. Configuration — for admins
+## 5. Configuration — for admins
 
 `advisorAssistant` targets three surfaces:
 
@@ -187,7 +205,8 @@ Assistant Flexipage.
 - **Event range collections** — `inputEvents` plus `inputEventsLast3Months`,
   `inputEventsLast6Months`, `inputEventsLast12Months`, `inputEventsAll`. A range only appears in
   the picker if its collection is populated, so supplying just `inputEvents` gives no selector
-- `briefOpenByDefault` — whether the At a Glance block starts expanded
+- `briefEnabled` / `briefOpenByDefault` — **deprecated and inert.** The Brief Summary feature was
+  removed; both properties remain declared only because the screen Flow still binds them
 - Feature toggles (16) — `showEditTracking`, `showExpandCollapseAll`, `showDetailedStats`,
   `showDiscardSection`, `showRegenerateSection`, `showScrollToError` and others. A Flow passing the
   string `'false'` is treated as off
@@ -204,7 +223,7 @@ Assistant Flexipage.
 
 ---
 
-## 5. Data model
+## 6. Data model
 
 ### `MeetingNote__c`
 
@@ -231,7 +250,7 @@ Wealth Plan objects `Household_Milestones__c`, `Company_Ownership__c`,
 
 ---
 
-## 6. Apex API reference
+## 7. Apex API reference
 
 `MeetingSummaryController`, `public with sharing`. Every method takes the Flow's API name as its
 first parameter and invokes it via `Flow.Interview`, so the component is not bound to any specific
@@ -278,7 +297,7 @@ therefore possible and intentional: one bad section does not lose the rest.
 
 ---
 
-## 7. Security
+## 8. Security
 
 - **`with sharing`** on the controller; record access follows the running user
 - **`advisorHtmlSanitizer`** scrubs all AI-authored HTML before it is injected. The input is not
@@ -299,7 +318,7 @@ therefore possible and intentional: one bad section does not lose the rest.
 
 ---
 
-## 8. Flows
+## 9. Flows
 
 | Flow | Used for |
 |---|---|
@@ -316,7 +335,7 @@ therefore possible and intentional: one bad section does not lose the rest.
 
 ---
 
-## 9. Gotchas for the next developer
+## 10. Gotchas for the next developer
 
 These are all real defects that have already cost time. They are non-obvious and easy to
 reintroduce.
@@ -360,7 +379,7 @@ detection over-reports. Every candidate needs individual verification.
 
 ---
 
-## 10. Testing and verification
+## 11. Testing and verification
 
 **Apex:** 21 tests, 100% pass, **83%** coverage on `MeetingSummaryController`. The uncovered lines
 are all after `Flow.Interview.start()` and cannot be reached without the org's Flows, so that is
@@ -383,7 +402,7 @@ bundles), ESLint against fixed baselines (77 / 68 / 70 / 0 / 0), a comment-aware
 
 ---
 
-## 11. Related documents
+## 12. Related documents
 
 - `DEFECTS.md` — current findings with status, plus the full changelog
 - The improvement backlog, tiered by risk, covering the committed-tests gap, the `saveMode`

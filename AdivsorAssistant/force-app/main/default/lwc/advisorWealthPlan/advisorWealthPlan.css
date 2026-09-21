@@ -2699,7 +2699,7 @@ b, strong { font-weight: 800; color: var(--text-main); }
     box-shadow: 0 20px 60px rgba(0,0,0,0.25), 0 4px 16px rgba(0,0,0,0.1);
     overflow: hidden;
 }
-/* ── Editor modals (summary + brief) ─────────────────────────────────────── */
+/* ── Editor modal (summary) ──────────────────────────────────────────────── */
 .wph-edit-modal-card {
     position: relative; z-index: 1;
     background: var(--bg-surface);
@@ -3794,30 +3794,6 @@ b, strong { font-weight: 800; color: var(--text-main); }
 .wph-ctx-chip-notes {
     background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0;
     font-weight: 400; font-style: italic;
-}
-
-/* ── At a Glance section ─────────────────────────────────── */
-.wph-brief-section {
-    border: 1px solid #e0e7ef; border-radius: 8px;
-    margin-bottom: 10px; overflow: clip; flex-shrink: 0;
-}
-.wph-brief-toggle {
-    display: flex; align-items: center; gap: 7px; width: 100%;
-    padding: 8px 12px; background: linear-gradient(135deg, #fef9ec 0%, #fef3c7 100%);
-    border: none; cursor: pointer; font-size: 11.5px; font-weight: 700;
-    color: #92400e; text-align: left; transition: background 0.15s;
-}
-.wph-brief-toggle:hover { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); }
-.wph-brief-toggle svg:first-child { color: #d97706; flex-shrink: 0; }
-.wph-brief-toggle span { flex: 1; }
-.wph-brief-body {
-    padding: 10px 14px 12px;
-    background: #fffbeb;
-    font-size: 0.82rem; color: #44403c; line-height: 1.65;
-    border-top: 1px solid #fde68a;
-}
-.wph-brief-edit-row {
-    display: flex; justify-content: flex-end; margin-top: 8px;
 }
 
 /* ── Service Toggle ─────────────────────────────────────── */
