@@ -4962,9 +4962,9 @@ b, strong { font-weight: 800; color: var(--text-main); }
 
 /* ── Transcript deletion countdown ──────────────────────────────────────────
    Shown only on transcript text files, which an org retention process purges
-   7 days after upload. Three tiers: amber with time to spare, light red inside
-   the last 24 h, solid red once the deadline has passed and the file is still
-   here. flex-shrink: 0 keeps the chip whole — a long filename ellipsises. */
+   7 days after upload. Three tiers: amber with time to spare, light red on the
+   last day, solid red once the deadline has passed and the file is still here.
+   flex-shrink: 0 keeps the chip whole — a long filename ellipsises instead. */
 .aa-file-ttl {
     flex-shrink: 0;
     font-size: 0.68rem;
@@ -4974,10 +4974,6 @@ b, strong { font-weight: 800; color: var(--text-main); }
     background: #fef3c7;
     color: #92400e;
     white-space: nowrap;
-    /* The label ticks once a second. Without tabular figures the digits have
-       unequal widths, so every roll-over nudges the filename beside it — the
-       zero-padded hh:mm:ss format is only half of holding a constant width. */
-    font-variant-numeric: tabular-nums;
 }
 .aa-file-ttl--urgent  { background: #fee2e2; color: #b91c1c; }
 .aa-file-ttl--overdue { background: #b91c1c; color: #ffffff; }

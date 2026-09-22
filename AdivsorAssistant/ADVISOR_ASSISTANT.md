@@ -103,32 +103,39 @@ already attached to the event) and **Document Upload**.
 
 An org-side retention process deletes meeting transcripts 7 days after they are created. Any file
 that is a text file (see the `FileType` note below) **and** whose title contains "transcript"
-(case-insensitive) therefore carries a live countdown chip in both file lists, precise to the
-second and counting in both directions:
+(case-insensitive) therefore carries a chip in both file lists saying **when it will be deleted**:
 
 | State | Label | Chip |
 |---|---|---|
-| More than 24 h left | `Deleted in 6d 23:14:32` | amber |
-| 24 h or less left | `Deleted in 0d 09:29:40` | light red |
-| Past the deadline | `Overdue 7d 09:29:40` | solid red |
+| 2+ days out | `Deletes 28. sep. · 6 days left` | amber |
+| Tomorrow | `Deletes 23. sep. · tomorrow` | light red |
+| Later today | `Deletes 22. sep. · today` | light red |
+| Past due | `Overdue 7 days · 14. sep.` | solid red |
+
+The chip **leads with the date** because that is the question it exists to answer; the day count
+is secondary, for urgency at a glance. Hovering shows both timestamps —
+`Uploaded 21. sep. 2026, 22:17 · scheduled for deletion 28. sep. 2026, 22:17`. The upload date
+matters: without it the day count cannot be checked against anything, which is how a correct
+number still managed to look wrong.
 
 Past the deadline the wording is **"Overdue", never "Deleted"**: the list is built from live
 `ContentDocumentLink` records, so a file that is on screen has not actually been removed —
-overdue means the retention job has not caught it yet. Hovering any chip shows the exact
-timestamp (`Scheduled for deletion 14. sep. 2026, 18:36:08`).
+overdue means the retention job has not caught it yet.
 
-**Every unit is truncated, never rounded**, and identically on both sides of the deadline, so the
-label always agrees with the raw dates and the same gap reads the same whether it is remaining or
-overdue. (It used to round remaining *up* and overdue *down*, which displayed "6 d 1 h left" as
-`Deleted in 7 days`.) The days part is always shown, even `0d`, and hh:mm:ss are zero-padded —
-together with `font-variant-numeric: tabular-nums` on the chip, that holds one width as it ticks
-instead of nudging the filename beside it.
+**The count is in calendar days, not elapsed time** (`_calendarDaysBetween`). This is what keeps
+the two halves of the label agreeing: at 22 Sep 23:00 a deadline of 28 Sep 20:17 is 5.9 days away,
+so an elapsed-time count would render `Deletes 28. sep. · 5 days left` when 28 − 22 is plainly 6.
+Both ends are normalised to local midnight and differenced with `Math.round` — **not `Math.floor`**,
+because Norway observes DST and two days a year are 23 or 25 hours long.
 
-The clock (`_now`) is repainted by a **1-second interval that only writes state while a transcript
-chip is actually on screen** (`_hasTickingTranscript`). Assigning `_now` re-renders the whole
-parent template, so an ungated 1 Hz loop would be permanent churn on events with no transcripts.
-`_now` is local state, so children never re-render from it. Teardown is in the single
-`disconnectedCallback`.
+Note the consequence: a file whose deadline was 14 Sep reads `Overdue 8 days` on 22 Sep, even
+though only 7 days and some hours of wall-clock time have passed. That is deliberate — the count
+always matches the date printed beside it.
+
+`_now` is repainted by a 60-second interval that writes **only when the local calendar day
+changes** (`_localDayKey`), so a tab left open overnight stays correct at a cost of one re-render
+per day, and none at all on an event with no transcript (`_hasTickingTranscript`). `_now` is local
+state, so children never re-render from it. Teardown is in the single `disconnectedCallback`.
 
 The countdown is driven by `ContentDocument.CreatedDate`, which **the Flow must query** — see the
 `inputContentDocuments` property. If that field is absent no chip renders at all, so the component

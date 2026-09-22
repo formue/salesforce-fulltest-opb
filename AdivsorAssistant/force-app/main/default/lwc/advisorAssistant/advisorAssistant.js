@@ -421,32 +421,40 @@ function _isTranscriptFile(title, fileType) {
     return _fileKind(fileType) === 'txt' && /transcript/i.test(title || '');
 }
 
-/**
- * Elapsed/remaining milliseconds as `6d 23:14:32`.
- *
- * Every unit is TRUNCATED off the total, never rounded, so the label always agrees
- * with the raw dates — and, because the same truncation runs on both sides of the
- * deadline, the same gap reads identically whether it is remaining or overdue.
- * (The previous version rounded remaining UP and overdue DOWN, which made "6 d 1 h
- * left" display as "7 days" and disagree with the dates.)
- *
- * The days part is always present, even `0d`, and hh:mm:ss are zero-padded, so the
- * chip holds one width as it ticks instead of nudging the filename beside it.
- */
-function _formatDhms(ms) {
-    const total = Math.floor(Math.max(0, ms) / 1000);
-    const days  = Math.floor(total / 86400);
-    const hours = Math.floor((total % 86400) / 3600);
-    const mins  = Math.floor((total % 3600) / 60);
-    const secs  = total % 60;
-    const pad   = n => String(n).padStart(2, '0');
-    return `${days}d ${pad(hours)}:${pad(mins)}:${pad(secs)}`;
+/** Local calendar day as `yyyy-mm-dd`. Used to notice a day boundary passing. */
+function _localDayKey(ms) {
+    const d = new Date(ms);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 /**
- * Countdown chip for one transcript, precise to the second and counting both ways.
+ * Whole calendar days from `fromMs` to `toMs`, counted the way a person reads a
+ * calendar rather than by elapsed time.
  *
- * Past the deadline the label is "Overdue", never "Deleted": these rows are built
+ * This distinction matters because the chip shows the deletion DATE next to the
+ * day count, and an elapsed-time count contradicts it: at 22 Sep 23:00 a deadline
+ * of 28 Sep 20:17 is 5.9 days away, so flooring elapsed ms would render
+ * "28. sep. · 5 days left" when 28 − 22 is plainly 6. Normalising both ends to
+ * local midnight keeps the two halves of the label agreeing.
+ *
+ * Math.round, not Math.floor: Norway observes DST, so two days a year are 23 or
+ * 25 hours long and flooring would be off by one across those boundaries.
+ */
+function _calendarDaysBetween(fromMs, toMs) {
+    const a = new Date(fromMs); a.setHours(0, 0, 0, 0);
+    const b = new Date(toMs);   b.setHours(0, 0, 0, 0);
+    return Math.round((b.getTime() - a.getTime()) / 86400000);
+}
+
+/**
+ * Retention chip for one transcript: when the file will be deleted, plus how long
+ * that is away.
+ *
+ * Leads with the DATE, because the point of the chip is to answer "when will this
+ * be deleted" — a running countdown does not say that. The day count is secondary,
+ * for urgency at a glance.
+ *
+ * Past the deadline the label says "Overdue", never "Deleted": these rows are built
  * from live ContentDocumentLink records, so a file that is on screen has not been
  * removed. Overdue means the retention job has not caught it yet.
  *
@@ -462,26 +470,45 @@ function _retentionChip(createdDate, nowMs) {
     if (isNaN(createdMs)) return null;
 
     const deleteAtMs = createdMs + TRANSCRIPT_RETENTION_MS;
-    const remaining  = deleteAtMs - nowMs;
-    const deleteAt   = new Date(deleteAtMs);
+    const days       = _calendarDaysBetween(nowMs, deleteAtMs);
 
-    let exactLabel;
-    try {
-        const d = deleteAt.toLocaleDateString('no-NO', { day: '2-digit', month: 'short', year: 'numeric' });
-        const t = deleteAt.toLocaleTimeString('no-NO', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        exactLabel = `Scheduled for deletion ${d}, ${t}`;
-    } catch {
-        exactLabel = 'Scheduled for deletion after 7 days';
+    const shortDate = ms => {
+        try { return new Date(ms).toLocaleDateString('no-NO', { day: '2-digit', month: 'short' }); }
+        catch { return ''; }
+    };
+    const fullStamp = ms => {
+        try {
+            const d = new Date(ms).toLocaleDateString('no-NO', { day: '2-digit', month: 'short', year: 'numeric' });
+            const t = new Date(ms).toLocaleTimeString('no-NO', { hour: '2-digit', minute: '2-digit' });
+            return `${d}, ${t}`;
+        } catch { return ''; }
+    };
+
+    // Hover carries the upload date as well as the deadline — without it the day
+    // count cannot be checked against anything, which is how a correct number
+    // still managed to look wrong.
+    const exactLabel = `Uploaded ${fullStamp(createdMs)} · scheduled for deletion ${fullStamp(deleteAtMs)}`;
+
+    if (days < 0) {
+        const overdue = -days;
+        return {
+            label: `Overdue ${overdue} ${overdue === 1 ? 'day' : 'days'} · ${shortDate(deleteAtMs)}`,
+            chipClass: 'aa-file-ttl aa-file-ttl--overdue',
+            exactLabel,
+        };
     }
 
-    // Tier is decided by the precise remaining time; the label no longer influences it.
-    let chipClass;
-    if (remaining <= 0)                   chipClass = 'aa-file-ttl aa-file-ttl--overdue';
-    else if (remaining <= 24 * 3600000)   chipClass = 'aa-file-ttl aa-file-ttl--urgent';
-    else                                  chipClass = 'aa-file-ttl';
+    let when;
+    if (days === 0)      when = 'today';
+    else if (days === 1) when = 'tomorrow';
+    else                 when = `${days} days left`;
 
-    const prefix = remaining <= 0 ? 'Overdue' : 'Deleted in';
-    return { label: `${prefix} ${_formatDhms(Math.abs(remaining))}`, chipClass, exactLabel };
+    return {
+        label: `Deletes ${shortDate(deleteAtMs)} · ${when}`,
+        // Today and tomorrow are the cases worth reacting to.
+        chipClass: days <= 1 ? 'aa-file-ttl aa-file-ttl--urgent' : 'aa-file-ttl',
+        exactLabel,
+    };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -568,10 +595,10 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
     // ── Transcript countdown clock ───────────────────────────────────────────
     // The countdown getters read this instead of calling Date.now() directly: a
     // getter over a live clock never re-renders, because nothing reactive changed.
-    // Ticking this field is what repaints the chips. 1 s, because the chips are
-    // precise to the second — see _formatDhms.
+    // The chips are day-level, so this only has to move when the calendar day does.
     @track _now = Date.now();
     _ttlTimerId = null;
+    _ttlDayKey  = null;   // local yyyy-mm-dd last rendered; see the ticker
 
     @api get inputEvents() { return this._inputEvents; }
     set inputEvents(val) {
@@ -704,17 +731,22 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
         this._boundKeyHandler = this._handleKeyDown.bind(this);
         document.addEventListener('keydown', this._boundKeyHandler);
 
-        // Repaints the transcript deletion countdowns. Torn down in disconnectedCallback.
+        // Keeps the transcript retention chips honest across a day boundary, for a
+        // tab left open overnight. Torn down in disconnectedCallback.
         //
-        // The GATE matters as much as the interval: assigning `_now` re-renders this
-        // whole template, and doing that every second for the component's lifetime is
-        // pure churn on an event with no transcripts. The timer still fires, but only
-        // writes state when there is a ticking chip on screen. `_now` is local, so
-        // children never re-render from it — their editors are untouched either way.
+        // Assigning `_now` re-renders this whole template, so it is written only when
+        // the LOCAL DAY actually changes — the labels are day-level, so anything more
+        // often repaints for an identical result. One re-render per day, and none at
+        // all on an event with no transcript. `_now` is local state, so children never
+        // re-render from it and their editors are untouched either way.
+        this._ttlDayKey = _localDayKey(Date.now());
         // eslint-disable-next-line @lwc/lwc/no-async-operation
         this._ttlTimerId = setInterval(() => {
+            const key = _localDayKey(Date.now());
+            if (key === this._ttlDayKey) return;
+            this._ttlDayKey = key;
             if (this._hasTickingTranscript) this._now = Date.now();
-        }, 1000);
+        }, 60000);
     }
 
     /**
@@ -3067,8 +3099,8 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
     /**
      * Is there a transcript chip on screen that needs repainting?
      *
-     * `artifactFiles` is memoized on the file ids, so this is cheap to ask once a
-     * second. Both file lists are checked because both render the chip.
+     * `artifactFiles` is memoized on the file ids, so this is cheap to ask. Both
+     * file lists are checked because both render the chip.
      */
     get _hasTickingTranscript() {
         const linked = this.artifactFiles || [];
