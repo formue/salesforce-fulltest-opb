@@ -99,6 +99,48 @@ duplicates**, so always save against `resolvedNoteId`, never a local guess.
 Shared by every tab: event picker, meeting category, context notes, **Meeting Files** (files
 already attached to the event) and **Document Upload**.
 
+### Meeting category — "Prospect Meeting" is a display name only
+
+The whiteboard category is shown to advisors as **Prospect Meeting**, but Salesforce still stores
+`Whiteboard Meeting`. That split is deliberate and load-bearing:
+
+`Event.MeetingType__c` is a **restricted** picklist. It contains `Whiteboard Meeting` and does not
+contain `Prospect Meeting`, and the chosen label is written straight into it by the save Flow —
+so renaming the label alone would fail every save of that category with
+`INVALID_OR_NULL_FOR_RESTRICTED_PICKLIST`.
+
+Three module constants carry this, in each of the three components:
+
+| Constant | Purpose |
+|---|---|
+| `MEETING_TYPE_LABELS` | what the advisor sees — `whiteboard → 'Prospect Meeting'` |
+| `MEETING_TYPE_STORED` | what Salesforce stores — `whiteboard → 'Whiteboard Meeting'` |
+| `MEETING_TYPE_ALIASES` | stored value → internal key, accepting **both** spellings |
+
+`meetingTypeLabel` is display; `meetingTypeStoredValue` is what goes into the save payload. The AI
+prompt gets the display label, since that is prose for the model rather than a picklist value.
+
+**To finish the rename properly:** add `Prospect Meeting` to the picklist, migrate the existing
+records (3 at time of writing), then change the one line in `MEETING_TYPE_STORED`. Nothing else
+moves — `MEETING_TYPE_ALIASES` already reads both, so old records keep preselecting correctly.
+
+### Header attendees come from `Event.WhoId`
+
+The "Selected event" bar lists the people actually on the event. It previously listed the whole
+household — primary member plus every `inputHouseholdMembers` entry — regardless of who attended,
+so a two-person household showed two names on a meeting only one of them was in.
+
+Flow cannot traverse `Who.Name`, so the name is resolved locally: household members are person
+accounts and their `PersonContactId` is the Contact id `WhoId` points at. Both collections come
+from lookups using `storeOutputAutomatically`, so the field is present without a Flow change.
+
+`EventRelation` — the real multi-attendee list — was considered and rejected: the org has 118k of
+those rows but **none on the events this component works with**, so it would have emptied the chip
+rather than enriching it. If invitee data starts being written, that is the place to revisit.
+
+A `WhoId` outside the household (or a Lead) resolves to no name and the chip hides rather than
+guessing.
+
 ### Summary language pill
 
 The AI drifts between Norwegian and English, so the language is stated outright in the prompt

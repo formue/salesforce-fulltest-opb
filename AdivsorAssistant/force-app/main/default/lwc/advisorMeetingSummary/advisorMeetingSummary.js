@@ -333,6 +333,35 @@ function _fileKind(fileType) {
     return FILE_KINDS[(fileType || '').toUpperCase()] || 'generic';
 }
 
+// ── Meeting categories ──────────────────────────────────────────────────────
+/**
+ * Display label and stored value are deliberately DIFFERENT for the prospect
+ * category. `Event.MeetingType__c` is a RESTRICTED picklist holding "Whiteboard
+ * Meeting" and not "Prospect Meeting", so writing the new name into it fails the
+ * save. The advisor sees the new name; Salesforce keeps storing the old one.
+ *
+ * To finish the rename: add the picklist value, migrate existing records, then
+ * change the one line in MEETING_TYPE_STORED. MEETING_TYPE_ALIASES already reads
+ * both spellings.
+ */
+const MEETING_TYPE_LABELS = {
+    whiteboard: 'Prospect Meeting',
+    status:     'Status Meeting',
+    annual:     'Annual Review',
+};
+const MEETING_TYPE_STORED = {
+    whiteboard: 'Whiteboard Meeting',   // ← restricted picklist value; see above
+    status:     'Status Meeting',
+    annual:     'Annual Review',
+};
+/** Stored value → internal key. Both spellings, so legacy records still preselect. */
+const MEETING_TYPE_ALIASES = {
+    'Whiteboard Meeting': 'whiteboard',
+    'Prospect Meeting':   'whiteboard',
+    'Status Meeting':     'status',
+    'Annual Review':      'annual',
+};
+
 export default class AdvisorMeetingSummary extends NavigationMixin(LightningElement) {
     // ── Inputs ───────────────────────────────────────────────────────────────
     @api recordId;
@@ -1463,8 +1492,11 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
     get saveTodosLabel()       { return this._todosSaving ? 'Saving…' : (this._todosSaved ? '✓ Saved' : "Save to-do's"); }
     get msTodosChevronClass() { return this._msTodosExpanded ? 'wph-zone-collapse-chevron wph-zone-chevron--open' : 'wph-zone-collapse-chevron'; }
     get meetingTypeLabel() {
-        const labels = { whiteboard: 'Whiteboard Meeting', status: 'Status Meeting', annual: 'Annual Review' };
-        return this._selectedMeetingType ? (labels[this._selectedMeetingType] || null) : null;
+        return this._selectedMeetingType ? (MEETING_TYPE_LABELS[this._selectedMeetingType] || null) : null;
+    }
+    /** What Salesforce stores — a restricted picklist value, not the display label. */
+    get meetingTypeStoredValue() {
+        return this._selectedMeetingType ? (MEETING_TYPE_STORED[this._selectedMeetingType] || null) : null;
     }
     get meetingFormatBadges() { return this._hasTodos ? ["To-Do's"] : []; }
 
@@ -1721,8 +1753,8 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
         // Restore per-event meeting type — cache wins; fall back to MeetingType__c on the Event record
         const _evtForType = (this._inputEvents || []).find(e => e.Id === this._selectedEventId);
         const cachedType = this._selectedEventId ? this._meetingTypeCache[this._selectedEventId] : null;
-        const _labelToKey = { 'Whiteboard Meeting': 'whiteboard', 'Status Meeting': 'status', 'Annual Review': 'annual' };
-        const _typeFromEvent = _evtForType?.MeetingType__c ? (_labelToKey[_evtForType.MeetingType__c] || null) : null;
+
+        const _typeFromEvent = _evtForType?.MeetingType__c ? (MEETING_TYPE_ALIASES[_evtForType.MeetingType__c] || null) : null;
         this._selectedMeetingType = cachedType ? cachedType.type : _typeFromEvent;
         this._hasTodos            = cachedType ? cachedType.hasTodos : false;
         // Auto-open Meeting Type accordion when no type is set — draws attention to the glowing frame
@@ -2276,7 +2308,7 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
                     briefMarkdown: _htmlToMd(this._meetingBrief || ''),
                     eventId:       this._selectedEventId  || '',
                     published:     false,
-                    meetingType:   this.meetingTypeLabel || '',
+                    meetingType:   this.meetingTypeStoredValue || '',
                     deleteNote:    false
                 });
                 this._creatingNewVersion  = false;
@@ -2308,7 +2340,7 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
                 briefMarkdown: _htmlToMd(this._meetingBrief || ''),
                 eventId:       this._selectedEventId  || '',
                 published:     false,
-                meetingType:   this.meetingTypeLabel || '',
+                meetingType:   this.meetingTypeStoredValue || '',
                 deleteNote:    false
             });
             this._recordSaveSuccess(html, savedId, false);
@@ -2403,7 +2435,7 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
                     briefMarkdown: _htmlToMd(this._meetingBrief || ''),
                     eventId:       this._selectedEventId  || '',
                     published:     true,
-                    meetingType:   this.meetingTypeLabel || '',
+                    meetingType:   this.meetingTypeStoredValue || '',
                     deleteNote:    false
                 });
                 this._creatingNewVersion  = false;
@@ -2437,7 +2469,7 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
                 briefMarkdown: _htmlToMd(this._meetingBrief || ''),
                 eventId:       this._selectedEventId  || '',
                 published:     true,
-                meetingType:   this.meetingTypeLabel || '',
+                meetingType:   this.meetingTypeStoredValue || '',
                 deleteNote:    false
             });
             this._recordSaveSuccess(html, savedId, true);
@@ -2574,10 +2606,9 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
         this._startSummaryLoadingCycle();
         try {
             const files = this.noNoteFilesForFlow;
-            const typeLabel = { whiteboard: 'Whiteboard Meeting', status: 'Status Meeting', annual: 'Annual Review' };
             let ctx = this._freeText || '';
             if (this._selectedMeetingType)
-                ctx += (ctx ? '\n\n' : '') + `Meeting Category: ${typeLabel[this._selectedMeetingType]}`;
+                ctx += (ctx ? '\n\n' : '') + `Meeting Category: ${MEETING_TYPE_LABELS[this._selectedMeetingType]}`;
             if (this._hasTodos)
                 ctx += '\nInclude: To-Do\'s';
             const flowParams = {
@@ -3280,8 +3311,7 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
                 context += `Date: ${evt.ActivityDate || evt.StartDateTime || ''}\n`;
                 if (evt.Description) context += `Notes: ${evt.Description}\n`;
                 if (this._selectedMeetingType) {
-                    const typeLabel = { whiteboard: 'Whiteboard Meeting', status: 'Status Meeting', annual: 'Annual Review' };
-                    context += `Meeting Category: ${typeLabel[this._selectedMeetingType] || this._selectedMeetingType}\n`;
+                            context += `Meeting Category: ${MEETING_TYPE_LABELS[this._selectedMeetingType] || this._selectedMeetingType}\n`;
                 }
                 if (this._hasTodos) context += `Include: To-Do's\n`;
                 context += '\n';
@@ -4750,7 +4780,7 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
     // ── Tour Guide ───────────────────────────────────────────────────────────
     _tourDefs = [
         { selector: '.wph-event-selector-bar',       title: 'Step 1 — Select an Event',      text: 'Start here. Choose the meeting event you want to document. This anchors all context for the AI.',                                     position: 'bottom' },
-        { selector: '[data-tour="ms-category"]',     title: 'Step 2 — Meeting Category',          text: 'Tell the AI what kind of meeting this is. This shapes how the summary is structured — Whiteboard, Status, or Annual Review.',         position: 'right'  },
+        { selector: '[data-tour="ms-category"]',     title: 'Step 2 — Meeting Category',          text: 'Tell the AI what kind of meeting this is. This shapes how the summary is structured — Prospect, Status, or Annual Review.',         position: 'right'  },
         { selector: '[data-tour="action-items"]',    title: "Step 3 — To-Do's",               text: "Toggle To-Do's on to have the AI automatically extract and list to-do's from the meeting summary.",                               position: 'right'  },
         { selector: '[data-tour="ms-input"]',        title: 'Step 4 — Input & Context',       text: 'Attach supporting files and event documents here. These are sent to the AI as additional context alongside your notes.',              position: 'right'  },
         { selector: '[data-tour="ms-notes"]',        title: 'Step 5 — Manual Notes',          text: 'Type your own free-text notes from the meeting here. The richer and more detailed your notes, the better the AI summary.',           position: 'right'  },

@@ -386,6 +386,39 @@ function _stripHtmlToText(html) {
     return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').trim();
 }
 
+// ── Meeting categories ──────────────────────────────────────────────────────
+/**
+ * Display label and stored value are deliberately DIFFERENT for the prospect
+ * category.
+ *
+ * `Event.MeetingType__c` is a RESTRICTED picklist. It contains "Whiteboard Meeting"
+ * and does not contain "Prospect Meeting", so writing the new name straight into it
+ * fails the save with INVALID_OR_NULL_FOR_RESTRICTED_PICKLIST. Until that picklist
+ * gains the value, the advisor sees the new name and Salesforce keeps storing the
+ * old one.
+ *
+ * To finish the rename properly: add "Prospect Meeting" to the picklist, migrate the
+ * existing records, then change the one line in MEETING_TYPE_STORED. Nothing else
+ * needs to move — MEETING_TYPE_ALIASES already accepts both spellings on read.
+ */
+const MEETING_TYPE_LABELS = {
+    whiteboard: 'Prospect Meeting',
+    status:     'Status Meeting',
+    annual:     'Annual Review',
+};
+const MEETING_TYPE_STORED = {
+    whiteboard: 'Whiteboard Meeting',   // ← restricted picklist value; see above
+    status:     'Status Meeting',
+    annual:     'Annual Review',
+};
+/** Stored value → internal key. Both spellings, so legacy records still preselect. */
+const MEETING_TYPE_ALIASES = {
+    'Whiteboard Meeting': 'whiteboard',
+    'Prospect Meeting':   'whiteboard',
+    'Status Meeting':     'status',
+    'Annual Review':      'annual',
+};
+
 // ── Meeting language ────────────────────────────────────────────────────────
 /**
  * The AI drifts between Norwegian and English, so the language is stated outright
@@ -1521,31 +1554,43 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
     get selectedEventSubject() { return this._selectedEventItem?.subject || ''; }
     get selectedEventDate()    { return this._selectedEventItem?.date || ''; }
 
-    // Participants shown in the header chip — household members by name.
-    get selectedEventParticipants() {
-        if (!this._selectedEventId) return '';
-        const names = [];
-        if (this.inputPrimaryMember?.Name) names.push(this.inputPrimaryMember.Name);
-        for (const m of (this.inputHouseholdMembers || [])) {
-            if (m?.Name && !names.includes(m.Name)) names.push(m.Name);
+    /**
+     * The people actually ON the selected event — not the household.
+     *
+     * This used to list the primary member plus every `inputHouseholdMembers` entry
+     * regardless of who attended, so a two-person household showed two names on a
+     * meeting only one of them was in.
+     *
+     * The attendee is `Event.WhoId`. Flow cannot traverse `Who.Name`, so the name is
+     * resolved locally: household Accounts are person accounts, and their
+     * `PersonContactId` is the Contact id `WhoId` points at. Both collections come
+     * from lookups using `storeOutputAutomatically`, so that field is present.
+     *
+     * A WhoId outside the household (or a Lead) resolves to no name, and the chip is
+     * hidden rather than guessed at.
+     */
+    get selectedEventAttendees() {
+        if (!this._selectedEventId) return [];
+        const evt = (this.allKnownEvents || []).find(e => e.Id === this._selectedEventId);
+        const whoId = evt?.WhoId;
+        if (!whoId) return [];
+
+        const people = [this.inputPrimaryMember, ...(this.inputHouseholdMembers || [])];
+        for (const p of people) {
+            if (p?.PersonContactId === whoId || p?.Id === whoId) {
+                return p.Name ? [p.Name] : [];
+            }
         }
-        return names.join(', ');
+        return [];
     }
-    get selectedEventParticipantCount() {
-        if (!this._selectedEventId) return 0;
-        const s = new Set();
-        if (this.inputPrimaryMember?.Id) s.add(this.inputPrimaryMember.Id);
-        for (const m of (this.inputHouseholdMembers || [])) {
-            if (m?.Id) s.add(m.Id);
-        }
-        return s.size;
-    }
-    get hasSelectedEventParticipants() { return this.selectedEventParticipantCount > 0; }
+    get selectedEventParticipants()      { return this.selectedEventAttendees.join(', '); }
+    get selectedEventParticipantCount()  { return this.selectedEventAttendees.length; }
+    get hasSelectedEventParticipants()   { return this.selectedEventParticipantCount > 0; }
     get selectedEventParticipantLabel() {
-        const n = this.selectedEventParticipantCount;
-        if (n === 0) return '';
-        if (n === 1) return this.selectedEventParticipants;
-        return `${this.selectedEventParticipants} (${n})`;
+        const names = this.selectedEventAttendees;
+        if (!names.length) return '';
+        // No "(1)" suffix — a count is only worth showing when there is more than one.
+        return names.length === 1 ? names[0] : `${names.join(', ')} (${names.length})`;
     }
     get selectedEventMeta() {
         const ev = this._selectedEventItem;
@@ -1628,9 +1673,13 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
     get hasSomeAccepted()      { return this._meetingTodos.some(t => t._accepted && !t._saved); }
     get saveTodosLabel()       { return this._todosSaving ? 'Saving…' : (this._todosSaved ? '✓ Saved' : "Save to-do's"); }
     get msTodosChevronClass() { return this._msTodosExpanded ? 'wph-zone-collapse-chevron wph-zone-chevron--open' : 'wph-zone-collapse-chevron'; }
+    /** What the advisor sees. */
     get meetingTypeLabel() {
-        const labels = { whiteboard: 'Whiteboard Meeting', status: 'Status Meeting', annual: 'Annual Review' };
-        return this._selectedMeetingType ? (labels[this._selectedMeetingType] || null) : null;
+        return this._selectedMeetingType ? (MEETING_TYPE_LABELS[this._selectedMeetingType] || null) : null;
+    }
+    /** What Salesforce stores — a restricted picklist value, not the display label. */
+    get meetingTypeStoredValue() {
+        return this._selectedMeetingType ? (MEETING_TYPE_STORED[this._selectedMeetingType] || null) : null;
     }
     get meetingFormatBadges() { return this._hasTodos ? ["To-Do's"] : []; }
 
@@ -1870,8 +1919,9 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
         // Restore per-event meeting type — cache wins; fall back to MeetingType__c on the Event record
         const _evtForType = (this.allKnownEvents || []).find(e => e.Id === this._selectedEventId);
         const cachedType = this._selectedEventId ? this._meetingTypeCache[this._selectedEventId] : null;
-        const _labelToKey = { 'Whiteboard Meeting': 'whiteboard', 'Status Meeting': 'status', 'Annual Review': 'annual' };
-        const _typeFromEvent = _evtForType?.MeetingType__c ? (_labelToKey[_evtForType.MeetingType__c] || null) : null;
+        const _typeFromEvent = _evtForType?.MeetingType__c
+            ? (MEETING_TYPE_ALIASES[_evtForType.MeetingType__c] || null)
+            : null;
         this._selectedMeetingType = cachedType ? cachedType.type : _typeFromEvent;
         this._hasTodos            = cachedType ? cachedType.hasTodos : false;
         // Auto-open Meeting Type accordion when no type is set — draws attention to the glowing frame
@@ -2202,7 +2252,7 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
                     briefMarkdown: '',
                     eventId:       this._selectedEventId  || '',
                     published:     false,
-                    meetingType:   this.meetingTypeLabel || '',
+                    meetingType:   this.meetingTypeStoredValue || '',
                     deleteNote:    false
                 });
                 this._creatingNewVersion  = false;
@@ -2233,7 +2283,7 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
                 briefMarkdown: '',
                 eventId:       this._selectedEventId  || '',
                 published:     false,
-                meetingType:   this.meetingTypeLabel || '',
+                meetingType:   this.meetingTypeStoredValue || '',
                 deleteNote:    false
             });
             this._recordSaveSuccess(html, savedId, false);
@@ -2326,7 +2376,7 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
                     briefMarkdown: '',
                     eventId:       this._selectedEventId  || '',
                     published:     true,
-                    meetingType:   this.meetingTypeLabel || '',
+                    meetingType:   this.meetingTypeStoredValue || '',
                     deleteNote:    false
                 });
                 this._creatingNewVersion  = false;
@@ -2360,7 +2410,7 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
                 briefMarkdown: '',
                 eventId:       this._selectedEventId  || '',
                 published:     true,
-                meetingType:   this.meetingTypeLabel || '',
+                meetingType:   this.meetingTypeStoredValue || '',
                 deleteNote:    false
             });
             this._recordSaveSuccess(html, savedId, true);
@@ -2467,10 +2517,9 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
         this._startSummaryLoadingCycle();
         try {
             const files = this.noNoteFilesForFlow;
-            const typeLabel = { whiteboard: 'Whiteboard Meeting', status: 'Status Meeting', annual: 'Annual Review' };
             let ctx = this._freeText || '';
             if (this._selectedMeetingType)
-                ctx += (ctx ? '\n\n' : '') + `Meeting Category: ${typeLabel[this._selectedMeetingType]}`;
+                ctx += (ctx ? '\n\n' : '') + `Meeting Category: ${MEETING_TYPE_LABELS[this._selectedMeetingType]}`;
             if (this._hasTodos)
                 ctx += '\nInclude: To-Do\'s';
             const flowParams = {
@@ -3939,8 +3988,7 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
                 context += `Date: ${evt.ActivityDate || evt.StartDateTime || ''}\n`;
                 if (evt.Description) context += `Notes: ${evt.Description}\n`;
                 if (this._selectedMeetingType) {
-                    const typeLabel = { whiteboard: 'Whiteboard Meeting', status: 'Status Meeting', annual: 'Annual Review' };
-                    context += `Meeting Category: ${typeLabel[this._selectedMeetingType] || this._selectedMeetingType}\n`;
+                    context += `Meeting Category: ${MEETING_TYPE_LABELS[this._selectedMeetingType] || this._selectedMeetingType}\n`;
                 }
                 if (this._hasTodos) context += `Include: To-Do's\n`;
                 context += '\n';
@@ -5382,7 +5430,7 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
      */
     _tourDefs = [
         { selector: '.aa-header-event-zone',            title: 'Select an Event',    text: 'Start here. Choose the meeting event you want to document. This anchors all context for the AI. Use Range to look further back.',             position: 'bottom' },
-        { selector: '[data-card="category"]',           title: 'Meeting Category',   text: 'Tell the AI what kind of meeting this is. This shapes how the summary is structured — Whiteboard, Status, or Annual Review.',                  position: 'right'  },
+        { selector: '[data-card="category"]',           title: 'Meeting Category',   text: 'Tell the AI what kind of meeting this is. This shapes how the summary is structured — Prospect, Status, or Annual Review.',                  position: 'right'  },
         { selector: '[data-card="notes"]',              title: 'Manual Notes',       text: 'Type your own free-text notes from the meeting here. The richer and more detailed your notes, the better the AI summary.',                     position: 'right'  },
         { selector: '[data-card="files"]',              title: 'Meeting Files',      text: 'Pick documents already attached to the event. These are sent to the AI as context, and the eye icon previews one without leaving.',            position: 'right'  },
         { selector: '[data-card="docs"]',               title: 'Document Upload',    text: 'Upload supporting documents from your machine to give the AI extra material to work from.',                                                    position: 'right'  },
