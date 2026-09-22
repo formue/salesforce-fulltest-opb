@@ -113,16 +113,45 @@ Three module constants carry this, in each of the three components:
 
 | Constant | Purpose |
 |---|---|
-| `MEETING_TYPE_LABELS` | what the advisor sees — `whiteboard → 'Prospect Meeting'` |
-| `MEETING_TYPE_STORED` | what Salesforce stores — `whiteboard → 'Whiteboard Meeting'` |
-| `MEETING_TYPE_ALIASES` | stored value → internal key, accepting **both** spellings |
+| `MEETING_TYPE_LABELS` | what the advisor sees |
+| `MEETING_TYPE_STORED` | what Salesforce stores — a valid picklist value |
+| `MEETING_TYPE_ALIASES` | stored value → internal key, accepting every spelling |
+
+Order shown to advisors: **Prospect Meeting · Working Meeting · Status Meeting · Annual Review**.
+
+| Category | Advisor sees | Salesforce stores | Note |
+|---|---|---|---|
+| `whiteboard` | Prospect Meeting | `Whiteboard Meeting` | legacy value, still valid |
+| `working` | Working Meeting | **`Other`** | ⚠️ no matching picklist value exists |
+| `status` | Status Meeting | `Status Meeting` | |
+| `annual` | Annual Review | `Annual Review` | |
+
+⚠️ **Working Meeting stores `Other`.** Unlike the prospect category there is no legacy value to
+fall back on, so `Other` is the interim that lets the save succeed — at the cost of the Event not
+naming the category. `MEETING_TYPE_ALIASES` deliberately does **not** map `Other` back to
+`working`: `Other` is a real category in its own right that predates this component, and claiming
+those events were working meetings would be false. The visible consequence is that a saved working
+meeting does not preselect its radio on reopen. Adding `Working Meeting` to the picklist fixes
+both.
 
 `meetingTypeLabel` is display; `meetingTypeStoredValue` is what goes into the save payload. The AI
 prompt gets the display label, since that is prose for the model rather than a picklist value.
 
-**To finish the rename properly:** add `Prospect Meeting` to the picklist, migrate the existing
-records (3 at time of writing), then change the one line in `MEETING_TYPE_STORED`. Nothing else
-moves — `MEETING_TYPE_ALIASES` already reads both, so old records keep preselecting correctly.
+**To finish this properly:** add `Prospect Meeting` and `Working Meeting` to the picklist, migrate
+the existing records (3 `Whiteboard Meeting` at time of writing), then change those two lines in
+`MEETING_TYPE_STORED`. Nothing else moves — `MEETING_TYPE_ALIASES` already reads the new spellings,
+so old records keep preselecting correctly.
+
+### Regenerate with Instructions is parked
+
+The card is still in the Configuration column but **greyed out with a work-in-progress banner**
+rather than removed, so the capability stays discoverable. `REGENERATE_WIP` in
+`advisorAssistant.js` is the single switch: while true the card always renders, its textarea is
+disabled and the CTA is suppressed. Flip it to false and the card returns to its old behaviour
+(Meeting Summary tab, unpublished draft only) — the handlers, the CSS and the child's
+`regenerateSummaryWithInstructions` API are all still wired.
+
+The **in-modal** regenerate inside Edit Summary is a different feature and is unaffected.
 
 ### Header attendees come from `Event.WhoId`
 

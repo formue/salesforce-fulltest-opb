@@ -559,7 +559,8 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
     @api saveNote()           { return this.handleSaveSummary(); }
     @api saveNoteAndExit()    { return this.handleSaveAndExit(); }
     @api deleteNote()         { return this.handleShowDeleteNoteConfirm(); }
-    // Parent invokes this from its "Regenerate with Instructions" card.
+    // Parent's "Regenerate with Instructions" card. That card is currently WIP and
+    // greyed out, so nothing calls this today — kept wired for when it is re-enabled.
     @api regenerateSummaryWithInstructions(instructions) {
         this._summaryInstructions = instructions || '';
         return this.handleRegenerateSummary();

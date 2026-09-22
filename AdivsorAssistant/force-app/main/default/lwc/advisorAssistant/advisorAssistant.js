@@ -403,21 +403,41 @@ function _stripHtmlToText(html) {
  */
 const MEETING_TYPE_LABELS = {
     whiteboard: 'Prospect Meeting',
+    working:    'Working Meeting',
     status:     'Status Meeting',
     annual:     'Annual Review',
 };
 const MEETING_TYPE_STORED = {
     whiteboard: 'Whiteboard Meeting',   // ← restricted picklist value; see above
+    // 'Working Meeting' is NOT in the picklist either, and unlike the prospect
+    // category there is no legacy value to fall back on. 'Other' is the interim so
+    // the save succeeds; it does mean the Event reads "Other" rather than naming the
+    // category. Replace with 'Working Meeting' once the picklist gains the value.
+    working:    'Other',
     status:     'Status Meeting',
     annual:     'Annual Review',
 };
-/** Stored value → internal key. Both spellings, so legacy records still preselect. */
+/** Stored value → internal key. Every spelling we might read back. */
 const MEETING_TYPE_ALIASES = {
     'Whiteboard Meeting': 'whiteboard',
     'Prospect Meeting':   'whiteboard',
+    'Working Meeting':    'working',
     'Status Meeting':     'status',
     'Annual Review':      'annual',
+    // Deliberately NOT mapping 'Other' back to 'working': 'Other' is a real category
+    // in its own right and predates this component, so claiming those events were
+    // working meetings would be a lie. Until the picklist is fixed, a saved working
+    // meeting simply does not preselect on reopen.
 };
+
+/**
+ * Regenerate-with-instructions is parked, not deleted: the card stays visible and
+ * greyed with a work-in-progress banner so the capability is still discoverable.
+ *
+ * Flip this to false to bring it back — the handlers, the child's
+ * `regenerateSummaryWithInstructions` API and the CSS are all still wired.
+ */
+const REGENERATE_WIP = true;
 
 // ── Meeting language ────────────────────────────────────────────────────────
 /**
@@ -2875,8 +2895,8 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
     // ── Meeting type modal ───────────────────────────────────────────────────
     // Categories that exist in the UI but are not selectable yet. The radio is also
     // rendered disabled — this guard is the backstop so the value can never be set.
-    static _WIP_MEETING_TYPES = ['working'];
-    get isWorkingMeetingSelected() { return false; }
+    static _WIP_MEETING_TYPES = [];   // none — Working Meeting left beta
+    get isWorkingMeetingSelected() { return this._selectedMeetingType === 'working'; }
 
     handleMeetingTypeChange(event) {
         const btn = event.target.closest('[data-type]') || event.currentTarget;
@@ -2915,12 +2935,11 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
      * Meeting Notes textarea.
      *
      * The value is written as textarea child text (`>{_freeText}</textarea>`), which LWC only
-     * applies on the FIRST render — so assigning `_freeText` in JS would not update what the
-     * user sees. That is LATENT rather than a live bug: this handler and handleParentNotesInput
-     * both read FROM the DOM, and the only programmatic writers (handleWpTemplate,
-     * handleMsTemplate, handleToggleMicrophone) are not referenced in this template. If one of
-     * them is ever wired up, it must call _syncTextarea like
-     * handleRunRegenerateInstructions does.
+     * applies on the FIRST render — so assigning `_freeText` in JS does not update what the
+     * user sees. The language pill is the one live programmatic writer, and it pairs every
+     * assignment with `_syncTextarea('notesTextarea', …)`; anything else that writes
+     * `_freeText` must do the same. (handleWpTemplate / handleMsTemplate /
+     * handleToggleMicrophone also write it but are not referenced in this template.)
      */
     handleParentNotesTextarea(event) {
         this._freeText = event.target.value || '';
@@ -2987,7 +3006,7 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
     get whiteboardRowClass() { return this._selectedMeetingType === 'whiteboard' ? 'aa-radio-row aa-radio-row--selected' : 'aa-radio-row'; }
     get statusRowClass()     { return this._selectedMeetingType === 'status'     ? 'aa-radio-row aa-radio-row--selected' : 'aa-radio-row'; }
     get annualRowClass()     { return this._selectedMeetingType === 'annual'     ? 'aa-radio-row aa-radio-row--selected' : 'aa-radio-row'; }
-    get workingRowClass()    { return 'aa-radio-row aa-radio-row--wip'; }
+    get workingRowClass()    { return this.isWorkingMeetingSelected ? 'aa-radio-row aa-radio-row--selected' : 'aa-radio-row'; }
 
     // Rich file rows for the left-panel Pictures & Documents card.
     get aaArtifactFiles() {
@@ -3477,20 +3496,50 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
     get isTodosGenerating()      { return !!this._bgJobs.todos; }
     get isAnyJobRunning()        { return this.isSummaryGenerating || this.isWpGenerating || this.isTodosGenerating; }
 
-    // Regenerate-with-instructions state for the Configuration card
+    // ── Regenerate with Instructions (WORK IN PROGRESS — see REGENERATE_WIP) ────
     @track _regenInstructions = '';
     handleRegenInstructionsInput(event) { this._regenInstructions = event.target.value || ''; }
-    /** Meeting Summary tab only — the Wealth Plan has no regenerate-with-instructions. */
+    /** True while the feature is parked: the card renders greyed, with a banner. */
+    get regenerateIsWip() { return REGENERATE_WIP; }
+    /**
+     * While WIP the card is always shown, so the capability stays discoverable. Once
+     * live it reverts to Meeting Summary tab + an unpublished draft — the Wealth Plan
+     * has no regenerate-with-instructions.
+     */
     get showRegenerateInstructions() {
+        if (REGENERATE_WIP) return true;
         return this.activeTabValue === 'summary' && this.hasSummaryForEvent && !this.isNotePublished;
     }
     /**
      * Gates the CTA's very existence, not just its disabled state — an action that cannot do
-     * anything yet should not be on screen. See the template.
+     * anything yet should not be on screen.
      */
     get canRegenerateInstructions() {
-        return (this._regenInstructions || '').trim().length > 0;
+        return !REGENERATE_WIP && (this._regenInstructions || '').trim().length > 0;
     }
+    handleRunRegenerateInstructions() {
+        if (REGENERATE_WIP) return;
+        const instructions = (this._regenInstructions || '').trim();
+        if (!instructions) return;
+        const child = this._msChild('summary');
+        if (child && typeof child.regenerateSummaryWithInstructions === 'function') {
+            child.regenerateSummaryWithInstructions(instructions);
+        }
+        // Optimistic: clear the textarea and mark bg job running
+        this._regenInstructions = '';
+        this._syncTextarea('regenInstructions', '');
+        this._bgJobs = { ...this._bgJobs, summary: true };
+    }
+    get isRegenOpen() {
+        // Auto-open when the user has typed something; otherwise start collapsed.
+        return this._cardOpen.regen ?? ((this._regenInstructions || '').trim().length > 0);
+    }
+    get regenExpanded()  { return String(this.isRegenOpen); }
+    get regenCardClass() {
+        const open = this.isRegenOpen ? 'aa-card aa-card--open' : 'aa-card aa-card--closed';
+        return REGENERATE_WIP ? `${open} aa-card--wip` : open;
+    }
+
     /**
      * Push a value into a native <textarea> that LWC cannot update on its own.
      *
@@ -3507,19 +3556,6 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
         if (el) el.value = value || '';       // absent when that card is collapsed or hidden
     }
 
-    handleRunRegenerateInstructions() {
-        const instructions = (this._regenInstructions || '').trim();
-        if (!instructions) return;
-        const child = this._msChild('summary');
-        if (child && typeof child.regenerateSummaryWithInstructions === 'function') {
-            child.regenerateSummaryWithInstructions(instructions);
-        }
-        // Optimistic: clear the textarea and mark bg job running
-        this._regenInstructions = '';
-        this._syncTextarea('regenInstructions', '');
-        this._bgJobs = { ...this._bgJobs, summary: true };
-    }
-
     // Whole-Configuration-column collapse (session-only, defaults expanded).
     @track _configCollapsed = false;
     handleToggleConfigCollapsed() { this._configCollapsed = !this._configCollapsed; }
@@ -3534,13 +3570,6 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
     get notesExpanded()    { return String(this.isNotesOpen); }
     get filesExpanded()    { return String(this.isFilesOpen); }
     get docsExpanded()     { return String(this.isDocsOpen); }
-    get regenExpanded()    { return String(this.isRegenOpen); }
-
-    get isRegenOpen() {
-        // Auto-open when the user has typed something; otherwise start collapsed.
-        return this._cardOpen.regen ?? ((this._regenInstructions || '').trim().length > 0);
-    }
-    get regenCardClass() { return this.isRegenOpen ? 'aa-card aa-card--open' : 'aa-card aa-card--closed'; }
 
     get isCategoryOpen() {
         // Auto-open only once an event is selected and no category has been chosen —
