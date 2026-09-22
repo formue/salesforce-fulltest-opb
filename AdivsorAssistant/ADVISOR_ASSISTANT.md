@@ -145,11 +145,18 @@ guessing.
 
 The AI drifts between Norwegian and English, so the language is stated outright in the prompt
 rather than inferred. A pill row above the **Meeting Notes & Context** textarea offers **Norsk /
-English / Svenska / Dansk**, and the pick is written into that textarea as its **first line**:
+English / Svenska / Dansk**, and the pick is written into that textarea as its **first line** —
+**in the selected language**, not in English about that language:
 
-```
-Write the entire meeting summary in Norwegian (bokmål), including all headings, bullet points and to-dos.
-```
+| Pill | Sentence written into the notes |
+|---|---|
+| Norsk | `Skriv hele møtereferatet på norsk (bokmål), inkludert alle overskrifter, punktlister og gjøremål.` |
+| English | `Write the entire meeting summary in English, including all headings, bullet points and to-dos.` |
+| Svenska | `Skriv hela mötessammanfattningen på svenska, inklusive alla rubriker, punktlistor och uppgifter.` |
+| Dansk | `Skriv hele mødereferatet på dansk, inklusive alle overskrifter, punktopstillinger og opgaver.` |
+
+Each names its own language explicitly and calls out headings, bullets and to-dos, because those
+are where output drifts back to English.
 
 Keeping the line visible in the notes box is the whole point — the advisor can see, and edit,
 exactly what the model is being told. Because it lives in `_freeText`, it travels into
@@ -176,10 +183,18 @@ A hint under the pills says *"Default from Norway"* until the advisor picks for 
 defaulted value nobody can trace reads as a bug. A manual pick sets `_languageTouched` and then
 wins permanently for the session, including when the Flow re-pushes the household record.
 
-`_upsertLanguageSentence` is the piece with teeth. It matches on the fixed prefix
-`Write the entire meeting summary in `, replacing that line if the first non-empty line is one of
-ours and prepending otherwise. It is **idempotent**, never duplicates, never drops the advisor's
-text, and leaves alone a line that merely *mentions* a language.
+`_upsertLanguageSentence` is the piece with teeth. Each language carries its own `prefix`, and
+`_isLanguageLine` matches **any** of the four — which is what makes switching work at all, since
+the line being replaced is written in the language you are switching *away from*. If the first
+non-empty line is one of ours it is swapped, otherwise the sentence is prepended. It is
+**idempotent**, never duplicates, never drops the advisor's text, and leaves alone a line that
+merely *mentions* a language.
+
+The English prefix is unchanged from the feature's first version, so notes still holding the
+old English-only instruction are recognised and upgraded rather than left behind.
+
+The pill labels and the "Default from …" hint stay in English, matching the rest of the UI
+chrome; only the instruction itself is localised, because only it is read by the model.
 
 Two implementation notes worth keeping:
 

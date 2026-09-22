@@ -429,11 +429,36 @@ const MEETING_TYPE_ALIASES = {
  * Keeping the line VISIBLE in the notes box is the point: the advisor can see, and
  * edit, exactly what the model is being told.
  */
+/**
+ * Each language carries its own instruction, written IN that language — picking
+ * Norsk puts a Norwegian sentence in the notes, not an English one about Norwegian.
+ *
+ * `prefix` is how an existing line is recognised so it can be swapped rather than
+ * duplicated. The four are distinct strings, and the English one is unchanged from
+ * the first version of this feature, so notes already carrying that line are still
+ * matched and upgraded rather than left behind.
+ */
 const LANGUAGES = [
-    { key: 'no', pill: 'Norsk',   name: 'Norwegian (bokmål)' },
-    { key: 'en', pill: 'English', name: 'English'            },
-    { key: 'sv', pill: 'Svenska', name: 'Swedish'            },
-    { key: 'da', pill: 'Dansk',   name: 'Danish'             },
+    {
+        key: 'no', pill: 'Norsk',
+        prefix:   'Skriv hele møtereferatet på ',
+        sentence: 'Skriv hele møtereferatet på norsk (bokmål), inkludert alle overskrifter, punktlister og gjøremål.',
+    },
+    {
+        key: 'en', pill: 'English',
+        prefix:   'Write the entire meeting summary in ',
+        sentence: 'Write the entire meeting summary in English, including all headings, bullet points and to-dos.',
+    },
+    {
+        key: 'sv', pill: 'Svenska',
+        prefix:   'Skriv hela mötessammanfattningen på ',
+        sentence: 'Skriv hela mötessammanfattningen på svenska, inklusive alla rubriker, punktlistor och uppgifter.',
+    },
+    {
+        key: 'da', pill: 'Dansk',
+        prefix:   'Skriv hele mødereferatet på ',
+        sentence: 'Skriv hele mødereferatet på dansk, inklusive alle overskrifter, punktopstillinger og opgaver.',
+    },
 ];
 const DEFAULT_LANGUAGE_KEY = 'en';
 
@@ -455,27 +480,32 @@ function _languageForCountry(country) {
     return COUNTRY_LANGUAGE[key] || DEFAULT_LANGUAGE_KEY;
 }
 
-/** The prefix every generated line starts with — how the line is found again to replace it. */
-const LANGUAGE_SENTENCE_PREFIX = 'Write the entire meeting summary in ';
+/** Every prefix we might have written, in any language — used to find our own line. */
+const LANGUAGE_PREFIXES = LANGUAGES.map(l => l.prefix);
+
+/** Is this line one of ours, whichever language it was written in? */
+function _isLanguageLine(line) {
+    return LANGUAGE_PREFIXES.some(prefix => line.startsWith(prefix));
+}
 
 /**
- * The instruction as the model receives it. Written in English on purpose: an English
- * directive is followed more reliably than one written in the target language, and the
- * target is named explicitly. Headings, bullets and to-dos are called out because those
+ * The instruction as the model receives it, in the target language. Each names its
+ * own language explicitly and calls out headings, bullets and to-dos, because those
  * are where output drifts back to English.
  */
 function _languageSentence(key) {
-    const lang = LANGUAGES.find(l => l.key === key);
-    if (!lang) return '';
-    return `${LANGUAGE_SENTENCE_PREFIX}${lang.name}, including all headings, bullet points and to-dos.`;
+    return LANGUAGES.find(l => l.key === key)?.sentence || '';
 }
 
 /**
  * Put the instruction on the first line of `text`, replacing an earlier one if present.
  *
- * Replace-or-prepend, matched on LANGUAGE_SENTENCE_PREFIX:
+ * Replace-or-prepend, matched on any language's prefix:
  *   - first non-empty line is one of ours  → swap that line, leave everything else alone
  *   - otherwise                            → prepend the sentence and a blank line
+ *
+ * Matching every language, not just the selected one, is what makes switching work:
+ * the line being replaced is in the language you are switching AWAY from.
  *
  * Idempotent: re-applying the same language returns an identical string, so it is safe to
  * call on every render path. The advisor's own text is never dropped or duplicated — and a
@@ -490,7 +520,7 @@ function _upsertLanguageSentence(text, key) {
     const lines = body.split('\n');
     const first = lines.findIndex(l => l.trim().length > 0);
 
-    if (first !== -1 && lines[first].startsWith(LANGUAGE_SENTENCE_PREFIX)) {
+    if (first !== -1 && _isLanguageLine(lines[first])) {
         if (lines[first] === sentence) return body;   // already correct — no churn
         lines[first] = sentence;
         return lines.join('\n');
