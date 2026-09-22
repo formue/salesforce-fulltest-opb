@@ -4974,6 +4974,10 @@ b, strong { font-weight: 800; color: var(--text-main); }
     background: #fef3c7;
     color: #92400e;
     white-space: nowrap;
+    /* The label ticks once a second. Without tabular figures the digits have
+       unequal widths, so every roll-over nudges the filename beside it — the
+       zero-padded hh:mm:ss format is only half of holding a constant width. */
+    font-variant-numeric: tabular-nums;
 }
 .aa-file-ttl--urgent  { background: #fee2e2; color: #b91c1c; }
 .aa-file-ttl--overdue { background: #b91c1c; color: #ffffff; }

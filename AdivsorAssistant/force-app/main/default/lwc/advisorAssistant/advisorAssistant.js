@@ -422,11 +422,29 @@ function _isTranscriptFile(title, fileType) {
 }
 
 /**
- * Countdown chip for one transcript.
+ * Elapsed/remaining milliseconds as `6d 23:14:32`.
  *
- * Counts in both directions. Before the deadline it rounds UP — "7 days" means up
- * to seven days remain. After it, elapsed time rounds DOWN, so "Overdue 3 days"
- * means three FULL days have passed rather than some part of a third.
+ * Every unit is TRUNCATED off the total, never rounded, so the label always agrees
+ * with the raw dates — and, because the same truncation runs on both sides of the
+ * deadline, the same gap reads identically whether it is remaining or overdue.
+ * (The previous version rounded remaining UP and overdue DOWN, which made "6 d 1 h
+ * left" display as "7 days" and disagree with the dates.)
+ *
+ * The days part is always present, even `0d`, and hh:mm:ss are zero-padded, so the
+ * chip holds one width as it ticks instead of nudging the filename beside it.
+ */
+function _formatDhms(ms) {
+    const total = Math.floor(Math.max(0, ms) / 1000);
+    const days  = Math.floor(total / 86400);
+    const hours = Math.floor((total % 86400) / 3600);
+    const mins  = Math.floor((total % 3600) / 60);
+    const secs  = total % 60;
+    const pad   = n => String(n).padStart(2, '0');
+    return `${days}d ${pad(hours)}:${pad(mins)}:${pad(secs)}`;
+}
+
+/**
+ * Countdown chip for one transcript, precise to the second and counting both ways.
  *
  * Past the deadline the label is "Overdue", never "Deleted": these rows are built
  * from live ContentDocumentLink records, so a file that is on screen has not been
@@ -450,41 +468,20 @@ function _retentionChip(createdDate, nowMs) {
     let exactLabel;
     try {
         const d = deleteAt.toLocaleDateString('no-NO', { day: '2-digit', month: 'short', year: 'numeric' });
-        const t = deleteAt.toLocaleTimeString('no-NO', { hour: '2-digit', minute: '2-digit' });
+        const t = deleteAt.toLocaleTimeString('no-NO', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         exactLabel = `Scheduled for deletion ${d}, ${t}`;
     } catch {
         exactLabel = 'Scheduled for deletion after 7 days';
     }
 
-    // Past the deadline: count UP, rounding down, so the label states completed time.
-    if (remaining <= 0) {
-        const overdue = -remaining;
-        const cls = 'aa-file-ttl aa-file-ttl--overdue';
-        if (overdue < 60 * 60 * 1000) {
-            // max(1) so thirty seconds past reads "1 min", not "0 min".
-            const mins = Math.max(1, Math.floor(overdue / 60000));
-            return { label: `Overdue ${mins} min`, chipClass: cls, exactLabel };
-        }
-        if (overdue < 24 * 60 * 60 * 1000) {
-            const hours = Math.floor(overdue / 3600000);
-            return { label: `Overdue ${hours} ${hours === 1 ? 'hour' : 'hours'}`, chipClass: cls, exactLabel };
-        }
-        const days = Math.floor(overdue / 86400000);
-        return { label: `Overdue ${days} ${days === 1 ? 'day' : 'days'}`, chipClass: cls, exactLabel };
-    }
-    if (remaining < 60 * 60 * 1000) {
-        const mins = Math.ceil(remaining / 60000);
-        return { label: `Deleted in ${mins} min`, chipClass: 'aa-file-ttl aa-file-ttl--urgent', exactLabel };
-    }
-    if (remaining < 24 * 60 * 60 * 1000) {
-        const hours = Math.ceil(remaining / 3600000);
-        return { label: `Deleted in ${hours} ${hours === 1 ? 'hour' : 'hours'}`,
-                 chipClass: 'aa-file-ttl aa-file-ttl--urgent', exactLabel };
-    }
-    // Round up, so a file uploaded ten minutes ago reads "7 days", not "6".
-    const days = Math.ceil(remaining / 86400000);
-    return { label: `Deleted in ${days} ${days === 1 ? 'day' : 'days'}`,
-             chipClass: 'aa-file-ttl', exactLabel };
+    // Tier is decided by the precise remaining time; the label no longer influences it.
+    let chipClass;
+    if (remaining <= 0)                   chipClass = 'aa-file-ttl aa-file-ttl--overdue';
+    else if (remaining <= 24 * 3600000)   chipClass = 'aa-file-ttl aa-file-ttl--urgent';
+    else                                  chipClass = 'aa-file-ttl';
+
+    const prefix = remaining <= 0 ? 'Overdue' : 'Deleted in';
+    return { label: `${prefix} ${_formatDhms(Math.abs(remaining))}`, chipClass, exactLabel };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -571,8 +568,8 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
     // ── Transcript countdown clock ───────────────────────────────────────────
     // The countdown getters read this instead of calling Date.now() directly: a
     // getter over a live clock never re-renders, because nothing reactive changed.
-    // Ticking this field is what repaints the chips. 60 s is enough — the finest
-    // granularity the chip renders is whole minutes.
+    // Ticking this field is what repaints the chips. 1 s, because the chips are
+    // precise to the second — see _formatDhms.
     @track _now = Date.now();
     _ttlTimerId = null;
 
@@ -708,8 +705,16 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
         document.addEventListener('keydown', this._boundKeyHandler);
 
         // Repaints the transcript deletion countdowns. Torn down in disconnectedCallback.
+        //
+        // The GATE matters as much as the interval: assigning `_now` re-renders this
+        // whole template, and doing that every second for the component's lifetime is
+        // pure churn on an event with no transcripts. The timer still fires, but only
+        // writes state when there is a ticking chip on screen. `_now` is local, so
+        // children never re-render from it — their editors are untouched either way.
         // eslint-disable-next-line @lwc/lwc/no-async-operation
-        this._ttlTimerId = setInterval(() => { this._now = Date.now(); }, 60000);
+        this._ttlTimerId = setInterval(() => {
+            if (this._hasTickingTranscript) this._now = Date.now();
+        }, 1000);
     }
 
     /**
@@ -3057,6 +3062,24 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
             clearInterval(this._progressTimerId);
             this._progressTimerId = null;
         }
+    }
+
+    /**
+     * Is there a transcript chip on screen that needs repainting?
+     *
+     * `artifactFiles` is memoized on the file ids, so this is cheap to ask once a
+     * second. Both file lists are checked because both render the chip.
+     */
+    get _hasTickingTranscript() {
+        const linked = this.artifactFiles || [];
+        for (const f of linked) {
+            if (f.createdDate && _isTranscriptFile(f.title, f.fileType)) return true;
+        }
+        const shared = this._sharedFiles || [];
+        for (const f of shared) {
+            if (f.createdDate && _isTranscriptFile(f.name, f.extension)) return true;
+        }
+        return false;
     }
 
     /** Stops the transcript countdown clock. Called from disconnectedCallback. */
