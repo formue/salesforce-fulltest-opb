@@ -99,6 +99,56 @@ duplicates**, so always save against `resolvedNoteId`, never a local guess.
 Shared by every tab: event picker, meeting category, context notes, **Meeting Files** (files
 already attached to the event) and **Document Upload**.
 
+### Summary language pill
+
+The AI drifts between Norwegian and English, so the language is stated outright in the prompt
+rather than inferred. A pill row above the **Meeting Notes & Context** textarea offers **Norsk /
+English / Svenska / Dansk**, and the pick is written into that textarea as its **first line**:
+
+```
+Write the entire meeting summary in Norwegian (bokmål), including all headings, bullet points and to-dos.
+```
+
+Keeping the line visible in the notes box is the whole point — the advisor can see, and edit,
+exactly what the model is being told. Because it lives in `_freeText`, it travels into
+`additionalContext` with everything else the advisor typed.
+
+**Default comes from `Account.ShippingCountry`** on the household's primary member, which already
+reaches the component: `GET_Primary_Member` in the subflow uses `storeOutputAutomatically`, so
+every Account field is on `inputPrimaryMember` — no Flow change was needed.
+
+| `ShippingCountry` | Pill |
+|---|---|
+| `Norway` | Norsk |
+| `Sweden` | Svenska |
+| `Denmark` | Dansk |
+| anything else, or blank | English |
+
+The org stores **English country names**, not ISO codes, across 31 distinct values — including
+free text like `Något land` and `Utvandret`. `COUNTRY_LANGUAGE` is therefore a three-entry
+allowlist with English as the catch-all, never a lookup that assumes clean data. There is no
+language field anywhere in the org (`FinServ__LanguagesSpoken__pc` exists but is free text and
+empty on every Account), which is why country is the proxy.
+
+A hint under the pills says *"Default from Norway"* until the advisor picks for themselves — a
+defaulted value nobody can trace reads as a bug. A manual pick sets `_languageTouched` and then
+wins permanently for the session, including when the Flow re-pushes the household record.
+
+`_upsertLanguageSentence` is the piece with teeth. It matches on the fixed prefix
+`Write the entire meeting summary in `, replacing that line if the first non-empty line is one of
+ours and prepending otherwise. It is **idempotent**, never duplicates, never drops the advisor's
+text, and leaves alone a line that merely *mentions* a language.
+
+Two implementation notes worth keeping:
+
+- The textarea is uncontrolled (DEFECTS #3), so assigning `_freeText` changes what the Flow
+  receives but not what the advisor sees. It now carries `lwc:ref="notesTextarea"` and writes go
+  through `_syncTextarea`.
+- That sync is guarded by `_hasRendered`. The default is seeded from the `inputPrimaryMember`
+  setter, which runs **before** first render — and touching `this.refs` that early is an LWC
+  error, not merely a no-op. Before first render nothing needs pushing anyway, since the textarea
+  renders `_freeText` as its child text.
+
 ### Transcript retention countdown
 
 An org-side retention process deletes meeting transcripts 7 days after they are created. Any file

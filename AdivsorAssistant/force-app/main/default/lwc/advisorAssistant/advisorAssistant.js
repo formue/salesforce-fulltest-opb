@@ -386,6 +386,88 @@ function _stripHtmlToText(html) {
     return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').trim();
 }
 
+// ── Meeting language ────────────────────────────────────────────────────────
+/**
+ * The AI drifts between Norwegian and English, so the language is stated outright
+ * in the prompt rather than inferred. The advisor picks it with a pill; this module
+ * turns that pick into one explicit instruction line at the top of the Meeting Notes
+ * & Context box, which is what actually reaches the Flow as `additionalContext`.
+ *
+ * Keeping the line VISIBLE in the notes box is the point: the advisor can see, and
+ * edit, exactly what the model is being told.
+ */
+const LANGUAGES = [
+    { key: 'no', pill: 'Norsk',   name: 'Norwegian (bokmål)' },
+    { key: 'en', pill: 'English', name: 'English'            },
+    { key: 'sv', pill: 'Svenska', name: 'Swedish'            },
+    { key: 'da', pill: 'Dansk',   name: 'Danish'             },
+];
+const DEFAULT_LANGUAGE_KEY = 'en';
+
+/**
+ * Account.ShippingCountry → language key.
+ *
+ * The org stores English country NAMES, not ISO codes, across 31 distinct values —
+ * including free-text junk like "Något land" and "Utvandret". So this is a small
+ * allowlist with English as the catch-all, never a lookup that assumes clean data.
+ */
+const COUNTRY_LANGUAGE = {
+    NORWAY:  'no',
+    SWEDEN:  'sv',
+    DENMARK: 'da',
+};
+
+function _languageForCountry(country) {
+    const key = String(country || '').trim().toUpperCase();
+    return COUNTRY_LANGUAGE[key] || DEFAULT_LANGUAGE_KEY;
+}
+
+/** The prefix every generated line starts with — how the line is found again to replace it. */
+const LANGUAGE_SENTENCE_PREFIX = 'Write the entire meeting summary in ';
+
+/**
+ * The instruction as the model receives it. Written in English on purpose: an English
+ * directive is followed more reliably than one written in the target language, and the
+ * target is named explicitly. Headings, bullets and to-dos are called out because those
+ * are where output drifts back to English.
+ */
+function _languageSentence(key) {
+    const lang = LANGUAGES.find(l => l.key === key);
+    if (!lang) return '';
+    return `${LANGUAGE_SENTENCE_PREFIX}${lang.name}, including all headings, bullet points and to-dos.`;
+}
+
+/**
+ * Put the instruction on the first line of `text`, replacing an earlier one if present.
+ *
+ * Replace-or-prepend, matched on LANGUAGE_SENTENCE_PREFIX:
+ *   - first non-empty line is one of ours  → swap that line, leave everything else alone
+ *   - otherwise                            → prepend the sentence and a blank line
+ *
+ * Idempotent: re-applying the same language returns an identical string, so it is safe to
+ * call on every render path. The advisor's own text is never dropped or duplicated — and a
+ * line that merely mentions a language, rather than starting with our prefix, is not ours
+ * to touch.
+ */
+function _upsertLanguageSentence(text, key) {
+    const sentence = _languageSentence(key);
+    if (!sentence) return text || '';
+
+    const body  = text || '';
+    const lines = body.split('\n');
+    const first = lines.findIndex(l => l.trim().length > 0);
+
+    if (first !== -1 && lines[first].startsWith(LANGUAGE_SENTENCE_PREFIX)) {
+        if (lines[first] === sentence) return body;   // already correct — no churn
+        lines[first] = sentence;
+        return lines.join('\n');
+    }
+    // Left-trim only: a box containing nothing but blank lines must not leave a gap,
+    // and the advisor's own content is never altered.
+    const rest = body.replace(/^\s+/, '');
+    return rest.length ? `${sentence}\n\n${rest}` : sentence;
+}
+
 // ── File kinds ──────────────────────────────────────────────────────────────
 /**
  * `ContentDocument.FileType` is NOT the file extension, which is easy to assume
@@ -633,7 +715,16 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
     @api inputCompanies = [];   // Account records — used as options for Company_Owned__c
     @api inputPersons   = [];   // Person/Account records — used as options for Company_Owner__c
     // Single Account record (preferred) — use .Id for owner defaulting and dropdown selection
-    @api inputPrimaryMember = null;
+    // Setter, not a plain field: the client's ShippingCountry is what defaults the
+    // language pill, so the instruction line can only be seeded once this arrives.
+    // Seeding here — before the notes card first renders — means the textarea's
+    // initial child text already carries the sentence.
+    _inputPrimaryMember = null;
+    @api get inputPrimaryMember() { return this._inputPrimaryMember; }
+    set inputPrimaryMember(val) {
+        this._inputPrimaryMember = val || null;
+        this._applyLanguageSentence();
+    }
     // Legacy: keep for backwards compatibility, but inputPrimaryMember.Id takes precedence
     @api inputPrimaryMemberId = '';
 
@@ -761,6 +852,7 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
      * dead. The live editor is in advisorMeetingSummary.
      */
     renderedCallback() {
+        this._hasRendered = true;
         // Focus the absorber when the component overlay first opens
         if (this._modalOpen && !this._prevModalOpen) {
             this._prevModalOpen = true;
@@ -859,6 +951,13 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
     @track _step = 'input';         // 'input' | 'loading' | 'review'
     @track _wpGenerating = false;   // wealth plan generation in-progress (loading shown inline in right panel)
     @track _freeText = '';
+
+    // ── Meeting language ────────────────────────────────────────────────────
+    // Defaults from the client's ShippingCountry, but a manual pick wins and must
+    // survive switching events — hence the `touched` flag rather than re-deriving.
+    @track _languageKey = null;
+    _languageTouched    = false;
+    _hasRendered        = false;
     @track _stagedFile  = null;   // single file for Advanced section regeneration (unchanged)
     @track _sharedFiles = [];    // shared file pool — visible in both WP and MS upload zones
     @track _uploadFeedback = null; // { latestName, totalFiles } — shown for 3s after upload
@@ -2746,6 +2845,58 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
      */
     handleParentNotesTextarea(event) {
         this._freeText = event.target.value || '';
+    }
+
+    // ── Meeting language pill ───────────────────────────────────────────────
+
+    /** The language actually in force: the advisor's pick, else the client's country. */
+    get _effectiveLanguageKey() {
+        return this._languageKey || _languageForCountry(this.inputPrimaryMember?.ShippingCountry);
+    }
+
+    get languageOptions() {
+        const active = this._effectiveLanguageKey;
+        return LANGUAGES.map(l => ({
+            key: l.key,
+            pill: l.pill,
+            isSelected: l.key === active,
+            rowClass: l.key === active ? 'aa-lang-pill aa-lang-pill--selected' : 'aa-lang-pill',
+        }));
+    }
+
+    /**
+     * Says WHY the pill landed where it did. Same lesson as the upload date on the
+     * retention chip: a defaulted value nobody can trace looks like a bug.
+     */
+    get languageHint() {
+        if (this._languageTouched) return '';
+        const country = (this.inputPrimaryMember?.ShippingCountry || '').trim();
+        return country ? `Default from ${country}` : 'Default — no country on the client';
+    }
+
+    handleLanguageChange(event) {
+        const key = event.currentTarget.dataset.key;
+        if (!key || key === this._languageKey) return;
+        this._languageKey     = key;
+        this._languageTouched = true;
+        this._applyLanguageSentence();
+    }
+
+    /**
+     * Writes the instruction into the notes box and pushes it to the DOM.
+     *
+     * The textarea is uncontrolled, so assigning `_freeText` alone changes what the
+     * Flow receives but not what the advisor sees — the sync is what keeps the two
+     * honest. Safe to call repeatedly: the upsert is idempotent.
+     */
+    _applyLanguageSentence() {
+        const next = _upsertLanguageSentence(this._freeText, this._effectiveLanguageKey);
+        if (next === this._freeText) return;
+        this._freeText = next;
+        // Before the first render there is no ref to push to — and none is needed, since
+        // the textarea renders `_freeText` as its child text. Touching `this.refs` that
+        // early is also an LWC error, not just a no-op.
+        if (this._hasRendered) this._syncTextarea('notesTextarea', next);
     }
     get hasNotesText() { return (this._freeText || '').trim().length > 0; }
     get filesCountBadge() {

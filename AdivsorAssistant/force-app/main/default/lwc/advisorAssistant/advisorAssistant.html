@@ -757,14 +757,31 @@
                         </button>
                         <template lwc:if={isNotesOpen}>
                         <div class="aa-card-body">
-                            <!-- FIXME (DEFECTS.md #3): the value is written as textarea
-                                 CHILD TEXT, which LWC applies only on the first render.
-                                 This is an uncontrolled field: setting `_freeText` in JS
-                                 will not update what the user sees. Binding `value=` on
-                                 the element is the controlled form. -->
+                            <!-- Output language. The pick is written into the notes below
+                                 as the first line, so what the model is told is visible and
+                                 editable rather than hidden in the prompt. -->
+                            <div class="aa-lang-row">
+                                <span class="aa-lang-label">Summary language</span>
+                                <template for:each={languageOptions} for:item="lang">
+                                    <button key={lang.key}
+                                            type="button"
+                                            class={lang.rowClass}
+                                            data-key={lang.key}
+                                            aria-pressed={lang.isSelected}
+                                            onclick={handleLanguageChange}>{lang.pill}</button>
+                                </template>
+                            </div>
+                            <template lwc:if={languageHint}>
+                                <span class="aa-lang-hint">{languageHint}</span>
+                            </template>
+                            <!-- Still uncontrolled (DEFECTS.md #3): the value is textarea CHILD
+                                 TEXT, which LWC applies only on first render. `lwc:ref` is what
+                                 lets _syncTextarea push later changes — the language line — into
+                                 the DOM. Binding `value=` would be the full controlled form. -->
                             <textarea
                                 class="aa-textarea"
                                 rows="4"
+                                lwc:ref="notesTextarea"
                                 placeholder="Add meeting notes, key topics or extra context for AI…"
                                 oninput={handleParentNotesTextarea}>{_freeText}</textarea>
                         </div>

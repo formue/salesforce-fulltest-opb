@@ -4885,6 +4885,46 @@ b, strong { font-weight: 800; color: var(--text-main); }
 .aa-radio-row--selected .aa-radio-label { font-weight: 600; }
 
 /* ── Textarea ─────────────────────────────────────── */
+/* ── Summary language pills ─────────────────────────────────────────────────
+   Sits above the notes textarea, because the pick is written into that text as
+   its first line. Buttons rather than radios: there is no form to submit and the
+   selected state is the only affordance needed. */
+.aa-lang-row {
+    display: flex; align-items: center; flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+.aa-lang-label {
+    font-size: 0.68rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.06em;
+    color: #64748b;
+    margin-right: 2px;
+}
+.aa-lang-pill {
+    padding: 3px 10px;
+    border: 1px solid #e5eaf3;
+    border-radius: 999px;
+    background: #ffffff;
+    font-size: 0.75rem; font-weight: 600;
+    color: #475569;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.aa-lang-pill:hover { border-color: #bfdbfe; background: #eff6ff; color: #1d4ed8; }
+.aa-lang-pill:focus-visible { outline: 2px solid #1d4ed8; outline-offset: 1px; }
+.aa-lang-pill--selected {
+    background: #1d4ed8; border-color: #1d4ed8; color: #ffffff;
+}
+.aa-lang-pill--selected:hover { background: #1d4ed8; border-color: #1d4ed8; color: #ffffff; }
+/* Says why the default landed where it did — a defaulted value nobody can trace
+   reads as a bug. Hidden once the advisor picks for themselves. */
+.aa-lang-hint {
+    display: block;
+    font-size: 0.7rem; color: #94a3b8;
+    margin: -4px 0 8px 2px;
+}
+
 .aa-textarea {
     width: 100%;
     min-height: 92px;
