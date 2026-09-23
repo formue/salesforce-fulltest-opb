@@ -589,7 +589,7 @@
                             </div>
                             <div>
                                 <span class="wph-feat-title"><b>Smaller fixes</b></span>
-                                <span class="wph-guide-desc">The <b>Internal Notes</b> tab now shows a dot while notes are unsaved or saving. The regeneration instructions box clears after you use it, so the same instructions cannot be sent twice by accident. Attached files can be previewed.</span>
+                                <span class="wph-guide-desc">The <b>Internal Notes</b> tab now shows a dot while notes are unsaved or saving. Attached files can be previewed.</span>
                             </div>
                         </div>
                     </div>
@@ -684,7 +684,7 @@
                            open state    = is<Key>Open  (auto: open if the card has
                                            data, until the user overrides it)
                            aria-expanded = <key>Expanded (string mirror of the above)
-                         Cards: category · notes · files · docs · regen.
+                         Cards: category · notes · files · docs.
                          Everything the advisor sets here becomes input to whichever
                          generation the footer CTA fires. -->
                     <section class="aa-config">
@@ -899,60 +899,6 @@
                     </section>
 
 
-
-                    <!-- Regenerate with Instructions — PARKED. Rendered greyed with a
-                         work-in-progress banner rather than removed, so the capability
-                         stays discoverable. Flip REGENERATE_WIP to bring it back. -->
-                    <template lwc:if={showRegenerateInstructions}>
-                    <section class={regenCardClass}>
-                        <button type="button" class="aa-card-header" data-card="regen" onclick={handleCardToggle} aria-expanded={regenExpanded}>
-                            <span class="aa-card-icon aa-icon-amber">
-                                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-                            </span>
-                            <span class="aa-card-title">Regenerate with Instructions</span>
-                            <template lwc:if={regenerateIsWip}>
-                                <span class="aa-wip-pill" title="Not available yet">
-                                    <svg viewBox="0 0 24 24" width="10" height="10" stroke="currentColor" stroke-width="2.5" fill="none"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
-                                    Coming soon
-                                </span>
-                            </template>
-                            <svg class="aa-card-chevron" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6 9 12 15 18 9"/></svg>
-                        </button>
-                        <template lwc:if={isRegenOpen}>
-                        <div class="aa-card-body">
-                            <template lwc:if={regenerateIsWip}>
-                                <div class="aa-wip-banner" role="status">
-                                    <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2.5" fill="none"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
-                                    <span>Work in progress — not available yet</span>
-                                </div>
-                            </template>
-                            <!-- LWC writes a textarea's value as CHILD TEXT, applied only on the
-                                 first render, so clearing `_regenInstructions` in JS never reached
-                                 the DOM (DEFECTS.md #3). The lwc:ref lets
-                                 handleRunRegenerateInstructions clear the element itself. -->
-                            <textarea class="aa-textarea"
-                                rows="3"
-                                lwc:ref="regenInstructions"
-                                disabled={regenerateIsWip}
-                                placeholder="Add context or corrections for the next regeneration…"
-                                oninput={handleRegenInstructionsInput}>{_regenInstructions}</textarea>
-                            <!-- Appears only once there are instructions to send: an always-on
-                                 button that can do nothing until you type reads as broken. Amber,
-                                 not the navy of the main Generate CTA — regenerating an existing
-                                 summary is a secondary, destructive-ish action. Suppressed
-                                 entirely while WIP. -->
-                            <template lwc:if={canRegenerateInstructions}>
-                                <button class="aa-primary-cta aa-primary-cta--compact aa-primary-cta--regen"
-                                        disabled={_bgJobs.summary}
-                                        onclick={handleRunRegenerateInstructions}>
-                                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><polyline points="23 4 23 10 17 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
-                                    <span>Regenerate Meeting Summary with Instructions</span>
-                                </button>
-                            </template>
-                        </div>
-                        </template>
-                    </section>
-                    </template>
 
                         </div><!-- end aa-config-body -->
                     </section><!-- end aa-config -->

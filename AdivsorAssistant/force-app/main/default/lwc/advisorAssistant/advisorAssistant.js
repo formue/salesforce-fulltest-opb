@@ -430,15 +430,6 @@ const MEETING_TYPE_ALIASES = {
     // meeting simply does not preselect on reopen.
 };
 
-/**
- * Regenerate-with-instructions is parked, not deleted: the card stays visible and
- * greyed with a work-in-progress banner so the capability is still discoverable.
- *
- * Flip this to false to bring it back — the handlers, the child's
- * `regenerateSummaryWithInstructions` API and the CSS are all still wired.
- */
-const REGENERATE_WIP = true;
-
 // ── Meeting language ────────────────────────────────────────────────────────
 /**
  * The AI drifts between Norwegian and English, so the language is stated outright
@@ -3496,50 +3487,6 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
     get isTodosGenerating()      { return !!this._bgJobs.todos; }
     get isAnyJobRunning()        { return this.isSummaryGenerating || this.isWpGenerating || this.isTodosGenerating; }
 
-    // ── Regenerate with Instructions (WORK IN PROGRESS — see REGENERATE_WIP) ────
-    @track _regenInstructions = '';
-    handleRegenInstructionsInput(event) { this._regenInstructions = event.target.value || ''; }
-    /** True while the feature is parked: the card renders greyed, with a banner. */
-    get regenerateIsWip() { return REGENERATE_WIP; }
-    /**
-     * While WIP the card is always shown, so the capability stays discoverable. Once
-     * live it reverts to Meeting Summary tab + an unpublished draft — the Wealth Plan
-     * has no regenerate-with-instructions.
-     */
-    get showRegenerateInstructions() {
-        if (REGENERATE_WIP) return true;
-        return this.activeTabValue === 'summary' && this.hasSummaryForEvent && !this.isNotePublished;
-    }
-    /**
-     * Gates the CTA's very existence, not just its disabled state — an action that cannot do
-     * anything yet should not be on screen.
-     */
-    get canRegenerateInstructions() {
-        return !REGENERATE_WIP && (this._regenInstructions || '').trim().length > 0;
-    }
-    handleRunRegenerateInstructions() {
-        if (REGENERATE_WIP) return;
-        const instructions = (this._regenInstructions || '').trim();
-        if (!instructions) return;
-        const child = this._msChild('summary');
-        if (child && typeof child.regenerateSummaryWithInstructions === 'function') {
-            child.regenerateSummaryWithInstructions(instructions);
-        }
-        // Optimistic: clear the textarea and mark bg job running
-        this._regenInstructions = '';
-        this._syncTextarea('regenInstructions', '');
-        this._bgJobs = { ...this._bgJobs, summary: true };
-    }
-    get isRegenOpen() {
-        // Auto-open when the user has typed something; otherwise start collapsed.
-        return this._cardOpen.regen ?? ((this._regenInstructions || '').trim().length > 0);
-    }
-    get regenExpanded()  { return String(this.isRegenOpen); }
-    get regenCardClass() {
-        const open = this.isRegenOpen ? 'aa-card aa-card--open' : 'aa-card aa-card--closed';
-        return REGENERATE_WIP ? `${open} aa-card--wip` : open;
-    }
-
     /**
      * Push a value into a native <textarea> that LWC cannot update on its own.
      *
@@ -3600,8 +3547,7 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
             key === 'category' ? this.isCategoryOpen :
             key === 'notes'    ? this.isNotesOpen    :
             key === 'files'    ? this.isFilesOpen    :
-            key === 'docs'     ? this.isDocsOpen     :
-            key === 'regen'    ? this.isRegenOpen    : false;
+            key === 'docs'     ? this.isDocsOpen     : false;
         this._cardOpen = { ...this._cardOpen, [key]: !currentlyOpen };
     }
 

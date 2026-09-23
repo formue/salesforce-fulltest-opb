@@ -26,7 +26,7 @@
  * PUBLIC SURFACE (what the parent may call / listen to)
  *   Commands  generateSummary() · generateTodos() · saveNote() · saveNoteAndExit()
  *             publishNote() · publishNoteAndExit() · deleteNote()
- *             regenerateSummaryWithInstructions(text) · resetState()
+ *             resetState()
  *   State     msCanPublish · msCanDelete · msHasUnpublishedSummary
  *             msHasUnsavedChanges
  *   Events    summarychange {summaryHtml} · todoschange {todos, acceptedCount}
@@ -559,12 +559,6 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
     @api saveNote()           { return this.handleSaveSummary(); }
     @api saveNoteAndExit()    { return this.handleSaveAndExit(); }
     @api deleteNote()         { return this.handleShowDeleteNoteConfirm(); }
-    // Parent's "Regenerate with Instructions" card. That card is currently WIP and
-    // greyed out, so nothing calls this today — kept wired for when it is re-enabled.
-    @api regenerateSummaryWithInstructions(instructions) {
-        this._summaryInstructions = instructions || '';
-        return this.handleRegenerateSummary();
-    }
     // Parent calls this on disconnect to clear generated data between sessions.
     @api resetState() {
         this._currentNoteHtml = null;

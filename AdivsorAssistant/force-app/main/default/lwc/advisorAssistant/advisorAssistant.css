@@ -4889,29 +4889,6 @@ b, strong { font-weight: 800; color: var(--text-main); }
    Sits above the notes textarea, because the pick is written into that text as
    its first line. Buttons rather than radios: there is no form to submit and the
    selected state is the only affordance needed. */
-/* ── Work-in-progress card ──────────────────────────────────────────────────
-   For a capability that is parked rather than removed: the card stays visible so
-   it is discoverable, but reads as unavailable. The banner states it outright —
-   a greyed control with no explanation looks broken rather than deliberate. */
-.aa-card--wip .aa-card-title { color: #94a3b8; }
-.aa-card--wip .aa-card-icon  { filter: grayscale(1); opacity: 0.6; }
-.aa-card--wip .aa-textarea {
-    background: #f8fafc;
-    color: #94a3b8;
-    cursor: not-allowed;
-}
-.aa-wip-banner {
-    display: flex; align-items: center; gap: 7px;
-    margin-bottom: 8px;
-    padding: 7px 10px;
-    border: 1px solid #fde68a;
-    border-radius: 8px;
-    background: #fffbeb;
-    color: #92400e;
-    font-size: 0.72rem; font-weight: 600;
-}
-.aa-wip-banner svg { flex-shrink: 0; }
-
 .aa-lang-row {
     display: flex; align-items: center; flex-wrap: wrap;
     gap: 6px;
@@ -5392,16 +5369,6 @@ b, strong { font-weight: 800; color: var(--text-main); }
 .aa-wip-pill svg { flex-shrink: 0; }
 .aa-tab-btn .aa-wip-pill { margin-left: 6px; }
 
-/* Disabled Working Meeting row */
-.aa-radio-row--wip {
-    opacity: 0.6;
-    cursor: not-allowed;
-    background: #f8fafc;
-    border-style: dashed;
-}
-.aa-radio-row--wip input,
-.aa-radio-row--wip .aa-radio-label { cursor: not-allowed; }
-.aa-radio-row--wip:hover { border-color: #e5eaf3; background: #f8fafc; box-shadow: none; }
 
 
 

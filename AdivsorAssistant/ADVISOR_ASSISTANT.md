@@ -142,16 +142,17 @@ the existing records (3 `Whiteboard Meeting` at time of writing), then change th
 `MEETING_TYPE_STORED`. Nothing else moves — `MEETING_TYPE_ALIASES` already reads the new spellings,
 so old records keep preselecting correctly.
 
-### Regenerate with Instructions is parked
+### Regenerate with Instructions lives only in the editor
 
-The card is still in the Configuration column but **greyed out with a work-in-progress banner**
-rather than removed, so the capability stays discoverable. `REGENERATE_WIP` in
-`advisorAssistant.js` is the single switch: while true the card always renders, its textarea is
-disabled and the CTA is suppressed. Flip it to false and the card returns to its old behaviour
-(Meeting Summary tab, unpublished draft only) — the handlers, the CSS and the child's
-`regenerateSummaryWithInstructions` API are all still wired.
+There is **no regenerate card in the Configuration column**. Regeneration happens inside the
+**Edit Summary** modal (`handleModalRegenerate` in `advisorMeetingSummary`), where the advisor can
+see the result replace the editor content before committing — Cancel discards it, only
+**Apply & Save** keeps it.
 
-The **in-modal** regenerate inside Edit Summary is a different feature and is unaffected.
+The column card was briefly parked behind a `REGENERATE_WIP` flag with a "coming soon" banner;
+that was removed rather than shipped, along with the child's `regenerateSummaryWithInstructions`
+API, whose only caller it was. `.aa-wip-pill` survives as a general "coming soon" primitive for
+tab labels and rows.
 
 ### Header attendees come from `Event.WhoId`
 
