@@ -352,6 +352,41 @@ on the To-Do's tab instead).
 
 ---
 
+### Reading the wealth plan's JSON
+
+The plan comes back as JSON inside a text response, and reading it is the single biggest source
+of *"No wealth plan data was returned"* — **the data is there, the parse fails**. Two rules:
+
+**1. Try the least destructive repair first.** The previous version normalised smart quotes up
+front, which corrupts valid JSON whenever the model writes curly quotes inside a string value:
+
+```
+{"note":"Kunden sa “vi vil spare mer”"}     parses
+{"note":"Kunden sa "vi vil spare mer""}     ← after the "fix", broken
+```
+
+Because the model only *sometimes* writes curly quotes, the same input worked one run and failed
+the next. `_parseAiJson` now tiers the repairs — `as-is` → `trailing-comma` → `smart-quotes` →
+`truncation` — each tried only once the cheaper one has failed, so a response that would have
+parsed is never mangled.
+
+**2. Match brackets, don't `lastIndexOf`.** `_extractJson` walks the text tracking string state
+and escapes, so prose written after the JSON is excluded even when it contains a brace, and a
+response cut off by a token limit is *reported* as truncated rather than silently mis-sliced.
+`_repairTruncated` then discards only the incomplete tail, so a half-written record costs that
+record instead of the whole plan.
+
+Failure is no longer one message. `_noStructuredDataReason` is `no-json` / `truncated` /
+`unparseable`, and the banner says which. This matters: the old copy always read *"too little to
+work from"* and told the advisor to add **more** input — wrong when the content was there and
+failed to parse, and actively counterproductive after a truncation, where more input makes a
+repeat likelier. The "add a document / add context" suggestions now appear only for `no-json`.
+
+`advisorWealthPlan/__tests__/wealthPlanParsing.test.js` drives the real component with a mocked
+Apex response and covers every payload shape that used to fail.
+
+---
+
 ## 5. Configuration — for admins
 
 `advisorAssistant` targets three surfaces:

@@ -338,16 +338,18 @@
                                     <div class="wph-nodata fade-in">
                                         <svg class="wph-nodata-icon" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
                                         <div class="wph-nodata-body">
-                                            <b class="wph-nodata-title">No wealth plan data was returned</b>
-                                            <p class="wph-nodata-text">
-                                                The analysis did not come back in the expected format, so there is
-                                                nothing to review. This usually means it had too little to work from.
-                                            </p>
-                                            <ul class="wph-nodata-list">
-                                                <li>Select a document under Meeting Files</li>
-                                                <li>Add context in the input field</li>
-                                                <li>Include the meeting summary, or generate one first</li>
-                                            </ul>
+                                            <b class="wph-nodata-title">{noDataTitle}</b>
+                                            <p class="wph-nodata-text">{noDataText}</p>
+                                            <!-- Only shown when the input really was thin. Telling an
+                                                 advisor to add more after a truncated response makes the
+                                                 next attempt likelier to fail the same way. -->
+                                            <template lwc:if={showNoDataSuggestions}>
+                                                <ul class="wph-nodata-list">
+                                                    <li>Select a document under Meeting Files</li>
+                                                    <li>Add context in the input field</li>
+                                                    <li>Include the meeting summary, or generate one first</li>
+                                                </ul>
+                                            </template>
                                             <button class="wph-nodata-retry" onclick={handleGenerate}>Try Again</button>
                                         </div>
                                     </div>

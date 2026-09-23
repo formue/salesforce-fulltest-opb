@@ -336,6 +336,143 @@ const MEETING_TYPE_ALIASES = {
     'Annual Review':      'annual',
 };
 
+// ── Parsing the model's JSON ────────────────────────────────────────────────
+/**
+ * The wealth plan comes back as JSON in a text response, and reading it is the
+ * single biggest source of "No wealth plan data was returned" — the data is there,
+ * the parse fails.
+ *
+ * The rule that matters: TRY THE LEAST DESTRUCTIVE THING FIRST. The previous version
+ * normalised smart quotes up front, which corrupts perfectly valid JSON whenever the
+ * model uses curly quotes inside a string value —
+ *
+ *   {"note":"Kunden sa “vi vil spare mer”"}   parses
+ *   {"note":"Kunden sa "vi vil spare mer""}   ← after the "fix", broken
+ *
+ * — and since the model only sometimes writes curly quotes, the same input would
+ * work one run and fail the next. Repairs are now tiered, each tried only once the
+ * cheaper one has failed.
+ */
+
+/** Wrappers that are never part of the JSON: BOM, zero-width chars, markdown fences. */
+function _stripWrappers(text) {
+    return (text || '')
+        .replace(/^\uFEFF/, '')
+        .replace(/[\u200B-\u200D\uFEFF]/g, '')
+        .replace(/^\s*```(?:json)?\s*/i, '')
+        .replace(/\s*```\s*$/i, '')
+        .trim();
+}
+
+/**
+ * First complete JSON value, found by matching brackets while tracking string state
+ * and escapes.
+ *
+ * Replaces `lastIndexOf('}')`, which swallowed any prose written after the JSON if it
+ * happened to contain a brace. Also reports truncation honestly instead of returning
+ * a mis-sliced fragment.
+ */
+function _extractJson(text) {
+    const start = text.search(/[[{]/);
+    if (start === -1) return { found: false, json: '', preamble: text.trim(), truncated: false };
+    const preamble = text.slice(0, start).trim();
+    const open = text[start];
+    const close = open === '{' ? '}' : ']';
+    let depth = 0, inStr = false, esc = false;
+    for (let i = start; i < text.length; i++) {
+        const c = text[i];
+        if (esc) { esc = false; continue; }
+        if (c === '\\') { esc = true; continue; }
+        if (c === '"') { inStr = !inStr; continue; }
+        if (inStr) continue;
+        if (c === open) depth++;
+        else if (c === close && --depth === 0) {
+            return { found: true, json: text.slice(start, i + 1), preamble, truncated: false };
+        }
+    }
+    return { found: true, json: text.slice(start), preamble, truncated: true };
+}
+
+const _dropTrailingCommas = s => s.replace(/,(\s*[}\]])/g, '$1');
+
+/** Bracket depth still open, and whether the string ended mid-quote. */
+function _scanJson(s) {
+    const stack = [];
+    let inStr = false, esc = false;
+    for (const c of s) {
+        if (esc) { esc = false; continue; }
+        if (c === '\\') { esc = true; continue; }
+        if (c === '"') { inStr = !inStr; continue; }
+        if (inStr) continue;
+        if (c === '{' || c === '[') stack.push(c === '{' ? '}' : ']');
+        else if (c === '}' || c === ']') stack.pop();
+    }
+    return { closers: stack.reverse().join(''), inStr };
+}
+
+/** Cut back past the last element boundary, discarding a partially-written element. */
+function _cutBackOneElement(s) {
+    let inStr = false, esc = false, lastComma = -1, lastOpen = -1;
+    for (let i = 0; i < s.length; i++) {
+        const c = s[i];
+        if (esc) { esc = false; continue; }
+        if (c === '\\') { esc = true; continue; }
+        if (c === '"') { inStr = !inStr; continue; }
+        if (inStr) continue;
+        if (c === ',') lastComma = i;
+        else if (c === '{' || c === '[') lastOpen = i;
+    }
+    if (lastComma > lastOpen) return s.slice(0, lastComma);
+    if (lastOpen !== -1) return s.slice(0, lastOpen + 1);
+    return null;
+}
+
+/**
+ * Salvage a response cut off by a token limit: drop the incomplete tail, close what
+ * is still open, and keep everything that did arrive. A half-written record costs
+ * that record, not the whole plan.
+ */
+function _repairTruncated(json) {
+    let cut = json;
+    for (let i = 0; i < 80; i++) {
+        const { closers, inStr } = _scanJson(cut);
+        if (!inStr) {
+            const candidate = _dropTrailingCommas(
+                cut.replace(/,\s*$/, '').replace(/:\s*$/, ': null')
+            ) + closers;
+            try { JSON.parse(candidate); return candidate; } catch { /* cut back further */ }
+        }
+        const next = _cutBackOneElement(cut);
+        if (next === null) return null;
+        cut = next;
+    }
+    return null;
+}
+
+/**
+ * @returns {{ok: true, data: *, preamble: string, tier: string, truncated: boolean}
+ *          |{ok: false, reason: 'no-json'|'truncated'|'unparseable'}}
+ */
+function _parseAiJson(raw) {
+    const { found, json, preamble, truncated } = _extractJson(_stripWrappers(raw));
+    if (!found) return { ok: false, reason: 'no-json' };
+
+    const tiers = [
+        ['as-is',          json],
+        ['trailing-comma', _dropTrailingCommas(json)],
+        // Smart quotes LAST: only a response that has already failed to parse can be
+        // improved by rewriting quote characters, and doing it earlier breaks valid JSON.
+        ['smart-quotes',   _dropTrailingCommas(json.replace(/[\u201C\u201D]/g, '"').replace(/[\u2018\u2019]/g, "'"))],
+        ['truncation',     _repairTruncated(json)],
+    ];
+    for (const [tier, candidate] of tiers) {
+        if (candidate == null) continue;
+        try { return { ok: true, data: JSON.parse(candidate), preamble, tier, truncated }; }
+        catch { /* try the next repair */ }
+    }
+    return { ok: false, reason: truncated ? 'truncated' : 'unparseable' };
+}
+
 export default class AdvisorWealthPlan extends NavigationMixin(LightningElement) {
     // ── Inputs ───────────────────────────────────────────────────────────────
     @api recordId;
@@ -614,6 +751,11 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
      * on event change and on the next generation attempt.
      */
     @track _noStructuredData = false;
+    // Why the parse failed, so the banner can say something true rather than always
+    // blaming thin input: 'no-json' | 'truncated' | 'unparseable'.
+    @track _noStructuredDataReason = null;
+    // True when the response parsed only after repair — records may be missing.
+    @track _resultWasRepaired = false;
 
     @track _step = 'input';         // 'input' | 'loading' | 'review'
     @track _wpGenerating = false;   // wealth plan generation in-progress (loading shown inline in right panel)
@@ -2703,6 +2845,8 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
         }
 
         this._noStructuredData = false;   // clear any previous failure state
+        this._noStructuredDataReason = null;
+        this._resultWasRepaired = false;
         this._cancelled = false;
         this._wpGenerating = true;
         this._leftPanelCollapsed = true;
@@ -2852,52 +2996,29 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
      */
     // ── Parse AI result ──────────────────────────────────────────────────────
     _parseResult(raw) {
-        let cleaned = (raw || '').trim();
+        const result = _parseAiJson(raw);
 
-        // Aggressively sanitize: strip BOM, zero-width chars, smart quotes
-        cleaned = cleaned
-            .replace(/^\uFEFF/, '')                    // BOM
-            .replace(/[\u200B-\u200D\uFEFF]/g, '')     // zero-width chars
-            .replace(/[\u201C\u201D]/g, '"')            // smart double quotes → standard
-            .replace(/[\u2018\u2019]/g, "'")            // smart single quotes → standard
-            .replace(/^```(?:json)?\s*/i, '')           // opening markdown fence
-            .replace(/\s*```\s*$/i, '')                 // closing markdown fence
-            .trim();
-
-        // Find the first JSON structure: { or [
-        let summaryPart = '';
-        const matchObj = cleaned.match(/[\[{]/);
-        if (matchObj && matchObj.index > 0) {
-            summaryPart = cleaned.substring(0, matchObj.index).trim();
-            cleaned = cleaned.substring(matchObj.index);
-        }
-
-        // Find the LAST matching bracket to handle trailing text after JSON
-        let jsonStr = cleaned;
-        if (cleaned.startsWith('[')) {
-            const lastBracket = cleaned.lastIndexOf(']');
-            if (lastBracket > 0) jsonStr = cleaned.substring(0, lastBracket + 1);
-        } else if (cleaned.startsWith('{')) {
-            const lastBrace = cleaned.lastIndexOf('}');
-            if (lastBrace > 0) jsonStr = cleaned.substring(0, lastBrace + 1);
-        }
-
-        // Try to parse
-        let parsed;
-        try {
-            parsed = JSON.parse(jsonStr);
-        } catch (e) {
-            console.error('[AdvisorWealthPlan] JSON.parse failed:', e.message, '| Input:', jsonStr.substring(0, 300));
-            // Keep the raw response for debugging, but do NOT present it as a summary — it is
-            // the model explaining itself, not advisor-facing content. The template renders
-            // the _noStructuredData state instead.
+        if (!result.ok) {
+            // Keep the raw response in the console for diagnosis, but never show it to the
+            // advisor — it is the model explaining itself, not reviewable content.
+            console.error('[AdvisorWealthPlan] Could not read the response:', result.reason);
             console.error('[AdvisorWealthPlan] Raw response was:', raw);
             this._summary = '';
             this._noStructuredData = true;
+            this._noStructuredDataReason = result.reason;
             this._sections = this._buildEmptySections();
             return;
         }
+        if (result.tier !== 'as-is' || result.truncated) {
+            // Worth knowing: a plan that needed repair may be missing records.
+            console.warn(`[AdvisorWealthPlan] Response needed repair (${result.tier}${result.truncated ? ', truncated' : ''}).`);
+        }
+
+        const parsed = result.data;
+        const summaryPart = result.preamble;
         this._noStructuredData = false;
+        this._noStructuredDataReason = null;
+        this._resultWasRepaired = result.tier !== 'as-is' || result.truncated;
 
         // ── Normalize to { sectionKey: [...records] } ────────────────────────
         const KEY_ALIASES = {
@@ -2994,6 +3115,33 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
         if (keys.some(k => k.includes('greeting') || k.includes('subject'))) return 'greetings';
         return 'goals'; // fallback
     }
+
+    /**
+     * The failure text has to name the failure that actually happened. The old copy always
+     * said "too little to work from" and told the advisor to add MORE input — wrong for a
+     * response that failed to parse (the content was there), and actively counterproductive
+     * for one that was cut off, where more input makes a repeat more likely.
+     */
+    get noDataTitle() {
+        if (this._noStructuredDataReason === 'no-json')   return 'No wealth plan data was returned';
+        if (this._noStructuredDataReason === 'truncated') return 'The response was cut off';
+        return 'The response could not be read';
+    }
+    get noDataText() {
+        if (this._noStructuredDataReason === 'no-json') {
+            return 'The analysis came back as plain text with no structured data, which usually '
+                 + 'means it had too little to work from.';
+        }
+        if (this._noStructuredDataReason === 'truncated') {
+            return 'The analysis started correctly but stopped partway, so too little of it '
+                 + 'survived to review. Trying again usually works; narrowing the input helps '
+                 + 'if it keeps happening.';
+        }
+        return 'The analysis came back in a format that could not be read. The content was '
+             + 'there, so trying again will usually work.';
+    }
+    /** Only the genuinely-thin-input case is helped by adding more. */
+    get showNoDataSuggestions() { return this._noStructuredDataReason === 'no-json'; }
 
     _buildEmptySections() {
         return SECTIONS.map(def => ({
