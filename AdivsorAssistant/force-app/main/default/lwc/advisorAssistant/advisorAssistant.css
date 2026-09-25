@@ -4580,7 +4580,35 @@ b, strong { font-weight: 800; color: var(--text-main); }
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
+    /* Reserve the scrollbar gutter up front so the cards do not jump sideways the
+       moment the column grows past the fold. */
+    scrollbar-gutter: stable;
+    /* A scroll region nobody can see is only half a fix. Quiet, but present —
+       unlike .aa-range-track further down, which deliberately hides its bar. */
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
 }
+.aa-config-body::-webkit-scrollbar { width: 8px; }
+.aa-config-body::-webkit-scrollbar-track { background: transparent; }
+.aa-config-body::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 99px;
+    /* Inset the thumb so it reads as a hairline rather than a slab against the card edge. */
+    border: 2px solid transparent;
+    background-clip: content-box;
+}
+.aa-config-body::-webkit-scrollbar-thumb:hover { background: #94a3b8; background-clip: content-box; }
+
+/* THE fix for the squashed left panel on short screens.
+   .aa-config-body is a flex column, so its card children default to flex-shrink:1 and
+   the browser compresses them to fit rather than letting the column overflow. Content
+   then never exceeds the container, `overflow-y: auto` above never engages, and
+   `.aa-card { overflow: hidden }` clips whatever was squeezed out — which is why
+   choices disappeared instead of merely looking cramped.
+   Inert when there is room: these are natural-height accordions with no flex-grow, so
+   a tall viewport renders identically. `> *` rather than `> .aa-card` so anything added
+   to the column later gets the same treatment. */
+.aa-config-body > * { flex-shrink: 0; }
 
 /* ── Empty file-list state ─────────────────────────── */
 .aa-file-empty {
@@ -5319,6 +5347,17 @@ b, strong { font-weight: 800; color: var(--text-main); }
 .aa-footer-btn--danger:hover {
     background: #fef2f2;
     border-color: #b91c1c;
+}
+
+/* Short viewports: claw back vertical space in the Configuration column.
+   Scrolling (see .aa-config-body) is what guarantees every choice is reachable; this
+   reduces how often the advisor has to scroll at all — roughly 40-50px, about one
+   collapsed card. Height-based, unlike every other breakpoint in this file: .aa-root
+   is capped at max-height:90vh, so it is viewport HEIGHT that squeezes this column. */
+@media (max-height: 820px) {
+    .aa-config-body    { padding: 10px; gap: 8px; }
+    .aa-config-eyebrow { padding: 8px 14px; }
+    .aa-config .aa-card-header { padding: 9px 14px; }
 }
 
 /* Small viewports: stack columns, unstick footer */

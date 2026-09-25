@@ -99,6 +99,38 @@ duplicates**, so always save against `resolvedNoteId`, never a local guess.
 Shared by every tab: event picker, meeting category, context notes, **Meeting Files** (files
 already attached to the event) and **Document Upload**.
 
+### Why the column scrolls instead of squashing
+
+`.aa-config-body` is a flex column with `overflow-y: auto`, and every ancestor
+(`.aa-body`, `.aa-left-col`, `.aa-config`) carries `min-height: 0` — the usual flexbox-scroll
+gotcha, already handled. That was never enough on its own:
+
+```css
+.aa-config-body > * { flex-shrink: 0; }
+```
+
+Without it the cards default to `flex-shrink: 1`, so on a short screen the browser **compressed
+them to fit** rather than letting the column overflow. Content never exceeded the container, so
+`overflow-y: auto` had nothing to scroll, and `.aa-card { overflow: hidden }` clipped the
+remainder — choices disappeared rather than merely looking cramped.
+
+It only showed up at low resolution because the panel is height-capped
+(`.aa-root { height: 780px; max-height: 90vh }`): at a 768px viewport the column has roughly
+450px for an eyebrow plus four cards.
+
+Two supporting pieces:
+
+- The scrollbar is styled to be **visible but quiet** (`scrollbar-width: thin`, an 8px
+  `#cbd5e1` thumb), plus `scrollbar-gutter: stable` so cards do not shift sideways when it
+  appears. Note `.aa-range-track` nearby deliberately *hides* its scrollbar — opposite case,
+  do not copy it.
+- A `@media (max-height: 820px)` block trims padding in the column. It is the only
+  **height**-based breakpoint in the file; every other one is width-based. That is deliberate —
+  `max-height: 90vh` means viewport height is what squeezes this column.
+
+`max-height: 90vh` is intentionally left alone: it keeps the panel inside the window and the
+footer CTA on screen.
+
 ### Meeting category — "Prospect Meeting" is a display name only
 
 The whiteboard category is shown to advisors as **Prospect Meeting**, but Salesforce still stores
