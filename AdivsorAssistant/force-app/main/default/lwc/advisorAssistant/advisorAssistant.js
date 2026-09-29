@@ -432,7 +432,7 @@ const TRANSCRIPT_STATUS = {
         bannerClass: 'aa-transcript-banner aa-transcript-banner--failed',
         title:       'Transcript could not be processed',
         text:        'No transcript file will arrive for this meeting. You can still upload '
-                   + 'documents manually below.',
+                   + 'documents manually below, or create a support case if it needs looking into.',
     },
 };
 

@@ -111,7 +111,7 @@ bar and a banner in the Meeting Files card.
 | `Waiting` | `Transcript queued` — neutral | queued, not started; reload to check |
 | `Started` | `Transcript processing` + pulsing dot — brand blue | being processed; reload to check |
 | `Completed` | *(nothing)* | *(nothing)* — the files are the confirmation |
-| `Failed` | `Transcript failed` — red | will not arrive; upload manually below |
+| `Failed` | `Transcript failed` — red | will not arrive; upload manually below, or raise a support case |
 | blank / unrecognised | *(nothing)* | *(nothing)* — the ordinary empty state stands |
 
 Driven by one `TRANSCRIPT_STATUS` table so nothing is decided in the template. `Completed` and
