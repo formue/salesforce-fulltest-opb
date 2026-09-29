@@ -99,6 +99,47 @@ duplicates**, so always save against `resolvedNoteId`, never a local guess.
 Shared by every tab: event picker, meeting category, context notes, **Meeting Files** (files
 already attached to the event) and **Document Upload**.
 
+### Transcript processing status
+
+A transcript can be in flight for a long time, during which the event has no files — and
+*"No files attached to this event yet"* reads as "there is nothing here" rather than "it is still
+coming". `Event.Transcript_Status__c` (restricted picklist) drives a chip on the Selected Event
+bar and a banner in the Meeting Files card.
+
+| Status | Header chip | Files-card banner |
+|---|---|---|
+| `Waiting` | `Transcript queued` — neutral | queued, not started; reload to check |
+| `Started` | `Transcript processing` + pulsing dot — brand blue | being processed; reload to check |
+| `Completed` | *(nothing)* | *(nothing)* — the files are the confirmation |
+| `Failed` | `Transcript failed` — red | will not arrive; upload manually below |
+| blank / unrecognised | *(nothing)* | *(nothing)* — the ordinary empty state stands |
+
+Driven by one `TRANSCRIPT_STATUS` table so nothing is decided in the template. `Completed` and
+blank are deliberately absent from it: a green banner on every past meeting would be permanent
+clutter, and blank is the normal state for a meeting that never had a transcript — currently
+every event in the org. An unrecognised value also resolves to nothing rather than a half-built
+chip, since the picklist can grow.
+
+**Waiting and Started suppress the empty state** (`showFilesEmptyState`) because it contradicts
+the banner. `Failed` keeps it — no files are coming, so "none attached" is true.
+
+**`isFilesOpen` also opens on a transcript status**, not only on having files:
+
+```js
+return this._cardOpen.files ?? (this.hasArtifactFiles || this.hasTranscriptStatus);
+```
+
+Without that the card auto-collapses exactly when the explanation matters most — it opened on
+having *files*, and a transcript still being produced is precisely the case where there are none.
+
+No Flow change was needed: the four event lookups use `storeOutputAutomatically`, so the field
+already arrives (as with `CreatedDate` and `ShippingCountry`).
+
+**The status is read once**, when the Flow supplies the events, and never refreshes — hence the
+banner telling the advisor to reload. Do not reword that to imply it self-updates. Making it live
+would mean an Apex method re-querying the Event plus the gated-ticker pattern the retention chip
+already uses.
+
 ### Why the column scrolls instead of squashing
 
 `.aa-config-body` is a flex column with `overflow-y: auto`, and every ancestor

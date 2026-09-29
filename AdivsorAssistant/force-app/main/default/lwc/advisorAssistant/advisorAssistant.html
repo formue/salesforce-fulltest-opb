@@ -136,6 +136,18 @@
                                         <span class="aa-event-participants-text">{selectedEventParticipantLabel}</span>
                                     </span>
                                 </template>
+                                <!-- Transcript state, so it stays visible when the Meeting
+                                     Files card is collapsed or another tab is open. Silent
+                                     unless the transcript is queued, running or failed. -->
+                                <template lwc:if={hasTranscriptStatus}>
+                                    <span class="aa-event-info-dot">·</span>
+                                    <span class={transcriptStatusInfo.chipClass}>
+                                        <template lwc:if={transcriptStatusInfo.pulse}>
+                                            <span class="wph-phase-dot"></span>
+                                        </template>
+                                        {transcriptStatusInfo.chip}
+                                    </span>
+                                </template>
                             </div>
                         </div>
                         <span class="aa-event-pill-divider"></span>
@@ -794,6 +806,25 @@
                         </button>
                         <template lwc:if={isFilesOpen}>
                         <div class="aa-card-body aa-files-body">
+                            <!-- Why the list is empty. Sits ABOVE the list rather than
+                                 replacing it, in case files exist alongside an in-flight
+                                 transcript. -->
+                            <template lwc:if={hasTranscriptStatus}>
+                                <div class={transcriptStatusInfo.bannerClass} role="status">
+                                    <span class="aa-transcript-banner-icon">
+                                        <template lwc:if={transcriptStatusInfo.pulse}>
+                                            <span class="wph-phase-dot"></span>
+                                        </template>
+                                        <template lwc:else>
+                                            <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
+                                        </template>
+                                    </span>
+                                    <div class="aa-transcript-banner-body">
+                                        <b>{transcriptStatusInfo.title}</b>
+                                        <span>{transcriptStatusInfo.text}</span>
+                                    </div>
+                                </div>
+                            </template>
                             <template lwc:if={hasArtifactFiles}>
                                 <ul class="aa-file-list">
                                     <template for:each={aaArtifactFiles} for:item="af">
@@ -827,7 +858,7 @@
                                     </template>
                                 </ul>
                             </template>
-                            <template lwc:else>
+                            <template lwc:elseif={showFilesEmptyState}>
                                 <div class="aa-file-empty">No files attached to this event yet.</div>
                             </template>
                         </div>

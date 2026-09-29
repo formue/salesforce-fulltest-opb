@@ -107,7 +107,8 @@
                  option to the range selector in the event picker; an empty one
                  is simply not offered. Query the same Event fields for all five
                  (Id, Subject, ActivityDate, StartDateTime, Location, WhoId,
-                 MeetingNote__c, MeetingArtifacts__c, MeetingType__c).            -->
+                 MeetingNote__c, MeetingArtifacts__c, MeetingType__c,
+                 Transcript_Status__c).                                          -->
             <property name="inputEvents"              type="@salesforce/schema/Event[]" label="Meeting Events" role="inputOnly" description="Default list of Event records to choose from. The component starts loading automatically — no separate loading flag needed. Shown under the 'Default' range option."/>
             <property name="inputEventsLast3Months"   type="@salesforce/schema/Event[]" label="Meeting Events — Last 3 Months" role="inputOnly" description="Optional. Events from the last 3 months. Populate to offer a 'Last 3 months' option in the event picker; leave empty to hide that option."/>
             <property name="inputEventsLast6Months"   type="@salesforce/schema/Event[]" label="Meeting Events — Last 6 Months" role="inputOnly" description="Optional. Events from the last 6 months. Populate to offer a 'Last 6 months' option in the event picker; leave empty to hide that option."/>

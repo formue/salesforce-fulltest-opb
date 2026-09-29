@@ -386,6 +386,56 @@ function _stripHtmlToText(html) {
     return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').trim();
 }
 
+// ── Transcript processing status ────────────────────────────────────────────
+/**
+ * `Event.Transcript_Status__c` (restricted picklist: Waiting/Started/Completed/Failed)
+ * says whether a transcript is still being produced. Without it the Meeting Files card
+ * reads "No files attached to this event yet" during a long transcription, which says
+ * "there is nothing here" when the truth is "it is still coming".
+ *
+ * Two entries are deliberately absent:
+ *   - Completed — the files ARE the confirmation; a green banner on every past meeting
+ *     would be permanent clutter.
+ *   - null      — the normal state for a meeting that never had a transcript, which is
+ *     currently every event in the org. Must stay completely silent.
+ *
+ * An unrecognised value also resolves to null rather than a half-built chip: the
+ * picklist is restricted today, but nothing stops a value being added later.
+ *
+ * NOTE the copy. The component reads the status once, when the Flow supplies the events,
+ * and never refreshes — so the banner tells the advisor to reload. Saying it updates by
+ * itself would be false and would leave them waiting on something that cannot happen.
+ */
+const TRANSCRIPT_STATUS = {
+    Waiting: {
+        chip:        'Transcript queued',
+        chipClass:   'aa-chip aa-chip-neutral',
+        pulse:       false,
+        bannerClass: 'aa-transcript-banner aa-transcript-banner--waiting',
+        title:       'Transcript queued',
+        text:        'The transcript has not started processing yet. Files will appear here once '
+                   + 'it finishes — reload the page to check progress.',
+    },
+    Started: {
+        chip:        'Transcript processing',
+        chipClass:   'aa-chip aa-chip-brand',
+        pulse:       true,
+        bannerClass: 'aa-transcript-banner aa-transcript-banner--started',
+        title:       'Transcript is being processed',
+        text:        'This can take a while. Files will appear here once it finishes — reload the '
+                   + 'page to check progress.',
+    },
+    Failed: {
+        chip:        'Transcript failed',
+        chipClass:   'aa-chip aa-chip-danger',
+        pulse:       false,
+        bannerClass: 'aa-transcript-banner aa-transcript-banner--failed',
+        title:       'Transcript could not be processed',
+        text:        'No transcript file will arrive for this meeting. You can still upload '
+                   + 'documents manually below.',
+    },
+};
+
 // ── Meeting categories ──────────────────────────────────────────────────────
 /**
  * Display label and stored value are deliberately DIFFERENT for the prospect
@@ -1610,9 +1660,36 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
      * A WhoId outside the household (or a Lead) resolves to no name, and the chip is
      * hidden rather than guessed at.
      */
+    /** The selected Event record itself — several getters need fields off it. */
+    get _selectedEventRecord() {
+        if (!this._selectedEventId) return null;
+        return (this.allKnownEvents || []).find(e => e.Id === this._selectedEventId) || null;
+    }
+
+    // ── Transcript processing status ────────────────────────────────────────
+
+    /**
+     * The row from TRANSCRIPT_STATUS for this event, or null when nothing should show —
+     * which covers Completed, a blank field, and any value the picklist grows later.
+     */
+    get transcriptStatusInfo() {
+        return TRANSCRIPT_STATUS[this._selectedEventRecord?.Transcript_Status__c] || null;
+    }
+    get hasTranscriptStatus()   { return !!this.transcriptStatusInfo; }
+    /** Waiting/Started only — Failed keeps its banner but the files genuinely are not coming. */
+    get transcriptInProgress()  {
+        const st = this._selectedEventRecord?.Transcript_Status__c;
+        return st === 'Waiting' || st === 'Started';
+    }
+    /**
+     * "No files attached to this event yet" is misleading while a transcript is still
+     * being produced — the banner says the true thing instead.
+     */
+    get showFilesEmptyState()   { return !this.transcriptInProgress; }
+
     get selectedEventAttendees() {
         if (!this._selectedEventId) return [];
-        const evt = (this.allKnownEvents || []).find(e => e.Id === this._selectedEventId);
+        const evt = this._selectedEventRecord;
         const whoId = evt?.WhoId;
         if (!whoId) return [];
 
@@ -3529,7 +3606,10 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
         return this._cardOpen.notes ?? ((this._freeText || '').trim().length > 0);
     }
     get isFilesOpen() {
-        return this._cardOpen.files ?? this.hasArtifactFiles;
+        // Also auto-open when a transcript is queued/running/failed. Otherwise the card
+        // stays shut exactly when the explanation matters most: it opens on having FILES,
+        // and a transcript still being produced is precisely the case where there are none.
+        return this._cardOpen.files ?? (this.hasArtifactFiles || this.hasTranscriptStatus);
     }
     get isDocsOpen() {
         return this._cardOpen.docs ?? ((this._sharedFiles || []).length > 0);
