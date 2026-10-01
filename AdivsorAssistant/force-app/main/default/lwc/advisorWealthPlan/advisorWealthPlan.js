@@ -245,7 +245,11 @@ const FIELD_ALIASES = {
     },
 };
 
-// ── HTML → Markdown converter (DOMParser-based, browser-only) ────────────────
+// ── HTML → Markdown converter (DOMParser-based, browser-only) ───────────────
+// NOTE: this copy is unreachable — this component binds no save handler in its template.
+// The LIVE implementation is the one in advisorMeetingSummary.js, which was fixed
+// to JOIN block elements instead of concatenating them. Do not fix this copy in
+// isolation — if it ever becomes reachable, take that version.
 function _nodeToMd(node) {
     if (node.nodeType === 3) return node.textContent; // TEXT_NODE
     if (node.nodeType !== 1) return '';               // not ELEMENT_NODE

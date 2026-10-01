@@ -24,7 +24,7 @@ It supersedes `wealthPlanHelper`, which remains in the org and is out of scope f
 **Apex:** `MeetingSummaryController` (9 `@AuraEnabled` methods, `with sharing`) and
 `MeetingSummaryControllerTest` (21 tests, 100% pass, 83% class coverage).
 
-**Flows in the repo:** 11, listed in section 9.
+**Flows in the repo:** 11, listed in section 10.
 
 ---
 
@@ -373,7 +373,63 @@ route it through `_fileKind()`.
 
 ---
 
-## 4. The four tabs
+---
+
+## 4. The Markdown mirror
+
+Every save writes the summary twice: `Note__c` (HTML, what the advisor edits) and
+`NoteMarkdown__c`, produced by `_htmlToMd` and read by the customer-facing web app. Confirmed via
+the Dependency API that **nothing in Salesforce renders the markdown** — the only dependents are
+the two Flows here, which write and copy it.
+
+It reaches the field by two routes, both from the same function:
+
+```
+noteMarkdown: _htmlToMd(html)  →  saveMeetingNote Apex  →  Flow var  →  NoteMarkdown__c
+_applyNoteOutputs              →  outputNoteMarkdown  and  outputMeetingNote.NoteMarkdown__c
+```
+
+### The rule: blocks are JOINED, not concatenated
+
+`_nodeToMd` returns `{ md, block }` rather than a bare string. That exists for one reason: the
+original had every tag append its own **trailing** `\n\n` with nothing guaranteeing a **leading**
+one, so any block following inline text welded onto it:
+
+```
+slutten av en setning.<h3>heading 3</h3>   ->  "slutten av en setning.### heading 3"
+<div>a</div><div>b</div>                   ->  "ab"
+Intro:<ul><li>a</li></ul>                  ->  "Intro:- a"
+```
+
+Returning `block` lets the child-joiner insert a blank line wherever a block meets anything. One
+change, and the glued heading, welded `div`/`blockquote`/`table` and glued list all go away.
+
+Four more rules follow from it:
+
+- **Whitespace-only text between blocks is layout, not content** — dropped. Emitting it verbatim
+  is what produced runs of three or more newlines (13 and 14 of them in real records).
+- **List continuations are indented by the marker width.** At column 0 markdown ends the list, so
+  `<li>a<br>second line</li>` used to break the list; nested lists collapsed into `- a- nested`.
+- **`table` emits one line per row**, cells joined by ` | ` — deliberately not GFM pipe syntax,
+  since the consumer is an external app whose renderer is unknown.
+- `\n{3,}` is collapsed to `\n\n` as a final pass.
+
+`_htmlToMd` keeps its `(html) => string` signature, so all 10 call sites and the Flow plumbing are
+untouched. It carries a named `export` purely so the conversion can be unit-tested directly; LWC
+consumes only the default export.
+
+**Three stale copies exist** in `advisorAssistant`, `advisorWealthPlan` and `wealthPlanHelper`.
+The first two are unreachable (no save handler bound in their templates) and the third is
+superseded. Each now carries a comment pointing here. Do not fix one in isolation.
+
+`advisorMeetingSummary/__tests__/markdownConversion.test.js` pins every case above plus controls
+that were already correct. The conversion was additionally replayed over the four live
+`MeetingNote__c` records: each reproduces its stored markdown exactly, minus the collapsed blank
+runs.
+
+---
+
+## 5. The four tabs
 
 ### Meeting Summary
 
@@ -421,7 +477,7 @@ on the To-Do's tab instead).
   tab is amber throughout
 - **Autosaves** ~3 seconds after typing stops, with a visible countdown. A manual save cancels a
   pending one
-- Warns before the field's **32,768** character limit (see section 6 — the counter measures HTML,
+- Warns before the field's **32,768** character limit (see section 7 — the counter measures HTML,
   not visible text)
 
 ---
@@ -461,7 +517,7 @@ Apex response and covers every payload shape that used to fail.
 
 ---
 
-## 5. Configuration — for admins
+## 6. Configuration — for admins
 
 `advisorAssistant` targets three surfaces:
 
@@ -517,7 +573,7 @@ Assistant Flexipage.
 
 ---
 
-## 6. Data model
+## 7. Data model
 
 ### `MeetingNote__c`
 
@@ -544,7 +600,7 @@ Wealth Plan objects `Household_Milestones__c`, `Company_Ownership__c`,
 
 ---
 
-## 7. Apex API reference
+## 8. Apex API reference
 
 `MeetingSummaryController`, `public with sharing`. Every method takes the Flow's API name as its
 first parameter and invokes it via `Flow.Interview`, so the component is not bound to any specific
@@ -591,7 +647,7 @@ therefore possible and intentional: one bad section does not lose the rest.
 
 ---
 
-## 8. Security
+## 9. Security
 
 - **`with sharing`** on the controller; record access follows the running user
 - **`advisorHtmlSanitizer`** scrubs all AI-authored HTML before it is injected. The input is not
@@ -612,7 +668,7 @@ therefore possible and intentional: one bad section does not lose the rest.
 
 ---
 
-## 9. Flows
+## 10. Flows
 
 | Flow | Used for |
 |---|---|
@@ -629,7 +685,7 @@ therefore possible and intentional: one bad section does not lose the rest.
 
 ---
 
-## 10. Gotchas for the next developer
+## 11. Gotchas for the next developer
 
 These are all real defects that have already cost time. They are non-obvious and easy to
 reintroduce.
@@ -673,7 +729,7 @@ detection over-reports. Every candidate needs individual verification.
 
 ---
 
-## 11. Testing and verification
+## 12. Testing and verification
 
 **Apex:** 21 tests, 100% pass, **83%** coverage on `MeetingSummaryController`. The uncovered lines
 are all after `Flow.Interview.start()` and cannot be reached without the org's Flows, so that is
@@ -696,7 +752,7 @@ bundles), ESLint against fixed baselines (77 / 68 / 70 / 0 / 0), a comment-aware
 
 ---
 
-## 12. Related documents
+## 13. Related documents
 
 - `DEFECTS.md` — current findings with status, plus the full changelog
 - The improvement backlog, tiered by risk, covering the committed-tests gap, the `saveMode`

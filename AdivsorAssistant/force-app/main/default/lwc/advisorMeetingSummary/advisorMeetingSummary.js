@@ -271,37 +271,117 @@ const FIELD_ALIASES = {
     },
 };
 
-// ── HTML → Markdown converter (DOMParser-based, browser-only) ────────────────
+// ── HTML → Markdown converter (DOMParser-based, browser-only) ───────────────
+/**
+ * Produces the `NoteMarkdown__c` mirror the client web app reads.
+ *
+ * THE RULE THAT MATTERS: block elements are JOINED with a blank line, not
+ * concatenated. The previous version had each tag append its own TRAILING "\n\n"
+ * and nothing guaranteed a LEADING one, so any block following inline text welded
+ * onto it:
+ *
+ *   slutten av en setning.<h3>heading 3</h3>  ->  "slutten av en setning.### heading 3"
+ *   <div>a</div><div>b</div>                  ->  "ab"
+ *
+ * Hence `_nodeToMd` returns { md, block } rather than a bare string: the joiner
+ * needs to know whether either side of a boundary is a block before deciding to
+ * separate them. `_htmlToMd` keeps its (html) => string signature, so every call
+ * site and the Flow plumbing are unaffected.
+ */
+
+/** Tags whose output must be separated from its neighbours by a blank line. */
+const _MD_BLOCK_TAGS = new Set([
+    'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'hr',
+    'div', 'section', 'article', 'figure', 'blockquote', 'table', 'tr', 'pre',
+]);
+
+/** Indent every non-empty line — keeps list continuations inside their item. */
+function _mdIndent(text, pad) {
+    return text.split('\n').map(l => (l ? pad + l : l)).join('\n');
+}
+
+/**
+ * @returns {{md: string, block: boolean}} `block` tells the caller's joiner whether
+ *          this output needs a blank line between it and its neighbours.
+ */
 function _nodeToMd(node) {
-    if (node.nodeType === 3) return node.textContent; // TEXT_NODE
-    if (node.nodeType !== 1) return '';               // not ELEMENT_NODE
+    if (node.nodeType === 3) {
+        // Collapse runs of whitespace. Source-formatting newlines between tags are
+        // not content, and emitting them verbatim is what produced "\n\n\n" runs.
+        return { md: node.textContent.replace(/\s+/g, ' '), block: false };
+    }
+    if (node.nodeType !== 1) return { md: '', block: false };
+
     const tag = node.tagName.toLowerCase();
-    const inner = () => Array.from(node.childNodes).map(_nodeToMd).join('');
+    const isBlock = _MD_BLOCK_TAGS.has(tag);
+
+    // Join children: a blank line wherever a block meets anything, inline runs
+    // concatenated as-is.
+    const kids = () => {
+        let out = '';
+        let prevBlock = false;
+        for (const child of node.childNodes) {
+            const r = _nodeToMd(child);
+            // Whitespace-only text between two blocks is layout, not content.
+            if (!r.md || (!r.block && !r.md.trim() && prevBlock)) continue;
+            if (out && (r.block || prevBlock)) out = out.replace(/\s+$/, '') + '\n\n';
+            out += r.md;
+            prevBlock = r.block;
+        }
+        return out.trim();
+    };
+    const B = md => ({ md, block: true });
+    const I = md => ({ md, block: false });
+
     switch (tag) {
-        case 'h1': return `# ${inner()}\n\n`;
-        case 'h2': return `## ${inner()}\n\n`;
-        case 'h3': return `### ${inner()}\n\n`;
-        case 'h4': return `#### ${inner()}\n\n`;
-        case 'h5': return `##### ${inner()}\n\n`;
-        case 'h6': return `###### ${inner()}\n\n`;
-        case 'p':  return `${inner()}\n\n`;
-        case 'br': return '\n';
-        case 'strong': case 'b': return `**${inner()}**`;
-        case 'em':     case 'i': return `*${inner()}*`;
-        case 'code': return `\`${inner()}\``;
-        case 'ul': return Array.from(node.children).map(li => `- ${_nodeToMd(li).trim()}\n`).join('') + '\n';
-        case 'ol': return Array.from(node.children).map((li, i) => `${i + 1}. ${_nodeToMd(li).trim()}\n`).join('') + '\n';
-        case 'li': return inner();
-        case 'hr': return '---\n\n';
-        case 'a':  { const h = node.getAttribute('href'); return h ? `[${inner()}](${h})` : inner(); }
-        default:   return inner();
+        case 'h1': case 'h2': case 'h3':
+        case 'h4': case 'h5': case 'h6':
+            return B(`${'#'.repeat(Number(tag[1]))} ${kids()}`);
+        case 'p': case 'div': case 'section': case 'article': case 'figure':
+            return B(kids());
+        case 'br': return I('\n');
+        case 'strong': case 'b': return I(`**${kids()}**`);
+        case 'em':     case 'i': return I(`*${kids()}*`);
+        case 'code':             return I(`\`${kids()}\``);
+        case 'hr':               return B('---');
+        case 'blockquote':
+            return B(kids().split('\n').map(l => `> ${l}`.trimEnd()).join('\n'));
+        case 'ul': case 'ol': {
+            const items = Array.from(node.children)
+                .filter(c => c.tagName.toLowerCase() === 'li');
+            return B(items.map((li, i) => {
+                const marker = tag === 'ol' ? `${i + 1}. ` : '- ';
+                // Indent by the marker width so a <br> or a nested list stays part of
+                // THIS item; at column 0 markdown would end the list instead. Tight
+                // lists (single \n between item and nested list) are the convention.
+                const body = _nodeToMd(li).md.trim().replace(/\n{2,}/g, '\n');
+                return marker + _mdIndent(body, ' '.repeat(marker.length)).slice(marker.length);
+            }).join('\n'));
+        }
+        case 'li': return B(kids());
+        case 'table':
+            // One line per row, cells separated by " | ". Deliberately not a GFM pipe
+            // table: nothing in Salesforce reads this field and the consumer is an
+            // external app, so plain lines are the safe choice over an extension.
+            return B(Array.from(node.querySelectorAll('tr'))
+                .map(tr => Array.from(tr.children)
+                    .map(cell => _nodeToMd(cell).md.trim()).join(' | '))
+                .filter(Boolean).join('\n'));
+        case 'a': {
+            const h = node.getAttribute('href');
+            return I(h ? `[${kids()}](${h})` : kids());
+        }
+        default: return isBlock ? B(kids()) : I(kids());
     }
 }
-function _htmlToMd(html) {
+
+// Exported purely so the conversion can be unit-tested directly. LWC consumes only
+// the default export, so a named export alongside it has no runtime effect.
+export function _htmlToMd(html) {
     if (!html) return '';
     try {
         const doc = new DOMParser().parseFromString(html, 'text/html');
-        return _nodeToMd(doc.body).trim();
+        return _nodeToMd(doc.body).md.replace(/\n{3,}/g, '\n\n').trim();
     } catch(e) {
         return html; // safe fallback if DOMParser unavailable
     }

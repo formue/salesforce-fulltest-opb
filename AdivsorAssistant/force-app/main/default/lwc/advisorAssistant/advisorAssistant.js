@@ -326,6 +326,10 @@ const FIELD_ALIASES = {
 // advisor edits) and as Markdown (NoteMarkdown__c, consumed by the customer-facing
 // web app). These functions produce the Markdown copy on every save.
 
+// NOTE: this copy is unreachable — this component binds no save handler in its
+// template. The LIVE implementation is the one in advisorMeetingSummary.js, which
+// was fixed to JOIN block elements instead of concatenating them. Do not fix this
+// copy in isolation — if it ever becomes reachable, take that version.
 /**
  * Recursively converts one DOM node to Markdown.
  * Unknown tags fall through to their children, so unsupported markup degrades to
