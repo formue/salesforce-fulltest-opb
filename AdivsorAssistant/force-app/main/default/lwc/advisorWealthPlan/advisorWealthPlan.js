@@ -778,7 +778,6 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
     @track _lockedRows = {};        // keyed by record._id (stable across reorders)
     @track _lockedSections = {};    // { 'goals': true }
     @track _editedRows = {};        // { 'goals_0': true } — tracks manually edited AI records
-    @track _meetingType = '';       // 'first' | 'status' | 'other'
     @track _allExpanded = false;
     @track _showExistingData = false;
     @track _existingLoaded = false;
@@ -858,8 +857,6 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
     @track _selectedMeetingType  = null;   // 'whiteboard' | 'status' | 'annual'
     @track _hasTodos             = false;
     @track _eventsLoadedAt       = null;   // Date when events finished loading
-    @track _msNotesExpanded      = false;
-    @track _msFilesExpanded      = false;
     @track _msTodosExpanded      = false;
     @track _todosGenerating      = false;
     @track _todosSaved           = false;
@@ -1346,7 +1343,6 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
     get canDeleteNote()       { return !!(this._backgroundSavedNoteId || this.selectedEventNote?.Id) && !this.isNotePublished; }
     // Show the floating save bar when on the summary tab with a draft note that is not being regenerated
     get showMsSaveBar()       { return this.isSummaryTab && !this.noEventSelected && this.hasSummaryForEvent && !this.isNotePublished && !this._summaryGenerating; }
-    get _saveBarBusy()        { return this._summarySaving || this.isPreviewingHistoricalVersion; }
     // Button label for inline summary generation (no-note state)
     get summaryGenerateBtnLabel() { return this._summaryGenerating ? 'Generating…' : 'Generate Meeting Summary'; }
     // True when the selected event has a meeting summary available to use as Wealth Plan input
@@ -1765,9 +1761,6 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
         this._editorNeedsInit  = false;
     }
 
-    get _modalCardStyle() {
-        return this._modalHeightPx ? `height:${this._modalHeightPx}px;` : '';
-    }
 
     handleModalDragStart(event) {
         event.preventDefault();

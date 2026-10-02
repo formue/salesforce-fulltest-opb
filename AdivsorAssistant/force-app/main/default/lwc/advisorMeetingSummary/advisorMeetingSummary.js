@@ -891,7 +891,6 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
     @track _lockedRows = {};        // keyed by record._id (stable across reorders)
     @track _lockedSections = {};    // { 'goals': true }
     @track _editedRows = {};        // { 'goals_0': true } — tracks manually edited AI records
-    @track _meetingType = '';       // 'first' | 'status' | 'other'
     @track _allExpanded = false;
     @track _showExistingData = false;
     @track _existingLoaded = false;
@@ -971,8 +970,6 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
     @track _selectedMeetingType  = null;   // 'whiteboard' | 'status' | 'annual'
     @track _hasTodos             = false;
     @track _eventsLoadedAt       = null;   // Date when events finished loading
-    @track _msNotesExpanded      = false;
-    @track _msFilesExpanded      = false;
     @track _msTodosExpanded      = false;
     @track _todosGenerating      = false;
     @track _todosSaved           = false;
