@@ -2195,87 +2195,15 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
     // ║ separate, regression-tested change (DEFECTS.md #11).                   ║
     // ╚═══════════════════════════════════════════════════════════════════════╝
 
-    // ── Summary step handlers ────────────────────────────────────────────────
-    handleSummaryInstructionsInput(event) {
-        this._summaryInstructions = event.target.value;
-    }
-
-    async handleRegenerateSummary() {
-        if (!this.regenerateSummaryFlowApiName) {
-            this._showToast('Configuration Error', 'Regenerate Summary Flow API Name is not set.', 'error');
-            return;
-        }
-        this._summaryGenerating = true;
-        this._startSummaryLoadingCycle();
-        try {
-            const result = await regenerateMeetingSummary({
-                flowApiName:    this.regenerateSummaryFlowApiName,
-                currentSummary: this.summaryDisplayHtml || '',
-                instructions:   this._summaryInstructions || '',
-                documentId:     [...this._selectedArtifactFileIds][0] || (this._stagedFile ? this._stagedFile.documentId : '') || ''
-            });
-            this._currentNoteHtml    = _stripStyleBlocks(result);
-            this._noteDeletedLocally = false;
-            this.outputMeetingSummary = this._currentNoteHtml;
-            this.dispatchEvent(new FlowAttributeChangeEvent('outputMeetingSummary', this._currentNoteHtml));
-            this._summaryInstructions = '';
-            this._summarySaved        = false;
-        } catch (error) {
-            const msg = error.body ? error.body.message : error.message;
-            this._showToast('Regeneration Failed', msg, 'error');
-        } finally {
-            this._stopSummaryLoadingCycle();
-            this._summaryGenerating = false;
-        }
-    }
-
-    handleEditSummaryDirect() {
-        this._summaryEditValue = this.summaryDisplayHtml || '';
-        this._summaryEditMode  = true;
-        this._editorNeedsInit  = true;
-    }
-
-    handleEditorInput(event) {
-        this._summaryEditValue = event.currentTarget.innerHTML;
-    }
-
-    handleEditorKeyDown(event) {
-        event.stopPropagation();
-    }
-
-    handleEditorPaste(event) {
-        event.preventDefault();
-        const html = (event.clipboardData || window.clipboardData).getData('text/html');
-        const text = (event.clipboardData || window.clipboardData).getData('text/plain');
-        document.execCommand('insertHTML', false, html || text);
-    }
-
-    handleSaveSummaryEdit() {
-        this._modalHeightPx      = null;
-        this._noteDeletedLocally = false;
-        this._currentNoteHtml    = this._summaryEditValue;
-        this.outputMeetingSummary = this._currentNoteHtml;
-        this.dispatchEvent(new FlowAttributeChangeEvent('outputMeetingSummary', this._currentNoteHtml));
-        this._summaryEditMode = false;
-        this._summarySaved    = false;
-        this.handleSaveSummary();
-    }
-
-    handleCancelSummaryEdit() {
-        this._modalHeightPx    = null;
-        this._summaryEditMode  = false;
-        this._summaryEditValue = '';
-        this._editorNeedsInit  = false;
-    }
 
 
-    handleModalDragStart(event) {
-        event.preventDefault();
-        const card = this.template.querySelector('.wph-edit-modal-card');
-        this._modalDragStartH = card ? card.offsetHeight : Math.round(window.innerHeight * 0.82);
-        this._modalDragStartY = event.clientY;
-        this._modalDragging   = true;
-    }
+
+
+
+
+
+
+
 
     handleModalResizeDrag(event) {
         if (!this._modalDragging) return;
@@ -2289,21 +2217,6 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
         this._modalDragging = false;
     }
 
-    handleRevertSummary() {
-        this._summaryEditMode = false;
-        if (this._lastSavedHtml !== null) {
-            // Revert to the last background-saved version
-            this._currentNoteHtml = this._lastSavedHtml;
-            this._summarySaved    = true;  // back to a saved state
-        } else {
-            // No background save yet — revert to original from inputMeetingNotes
-            this._currentNoteHtml = null;
-            this._summarySaved    = false;
-        }
-        const html = this.summaryDisplayHtml || '';
-        this.outputMeetingSummary = html;
-        this.dispatchEvent(new FlowAttributeChangeEvent('outputMeetingSummary', html));
-    }
 
     // ── Private helper: record a successful background save in local state ───
     _recordSaveSuccess(html, noteId, published) {
@@ -2410,68 +2323,10 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
         }
     }
 
-    // Save & Exit — background save then navigate out / close modal
-    async handleSaveAndExit() {
-        await this.handleSaveSummary();
-        if (this.modalMode) {
-            this.handleCloseModal();
-        }
-        try { this.dispatchEvent(new FlowNavigationNextEvent()); } catch (e) { /* not in a flow */ }
-    }
 
-    handleMainTabSwitch(event) {
-        const tab = event.currentTarget.dataset.tab;
-        if (tab === 'existing') {
-            if (!this.hasExistingData) {
-                this._showToast('No Existing Data', 'There is no existing Wealth Plan data to load.', 'warning');
-                return;
-            }
-            // Preserve any generated draft before overwriting sections
-            if (!this._modeExistingOnly && this._step === 'review') {
-                this._savedDraftSections = this._sections;
-            }
-            this._activeTab        = 'existing';
-            this._modeExistingOnly = true;
-            this._sections = this._buildEmptySections();
-            this._mergeExistingData();
-            this._existingLoaded   = true;
-            this._showExistingData = true;
-            this._summaryTabOpen   = false;
-            const expanded = {};
-            this._sections.forEach(s => { if (s.hasRecords) expanded[s.key] = true; });
-            this._expandedSections = expanded;
-            this._step = 'review';
-            return;
-        }
-        this._activeTab = tab;
-        if (tab === 'summary') this._activeMsSection = 'meeting';
-        if (tab === 'wealthplan' && this._savedDraftSections) {
-            // Restore draft and return to review step
-            this._sections = this._savedDraftSections;
-            this._modeExistingOnly = false;
-            this._step = 'review';
-        } else if (this.isReviewStep) {
-            // Preserve the generated plan so it can be restored when switching back
-            if (!this._modeExistingOnly) this._savedDraftSections = this._sections;
-            this._modeExistingOnly = false;
-            this._step = 'summary';
-        }
-    }
 
-    handleDismissDraft() {
-        this._savedDraftSections = null;
-    }
 
-    handleMsSubtabSwitch(event) {
-        const section = event.currentTarget.dataset.section;
-        this._activeMsSection = section;
-        if (section === 'todos') this._hasTodos = true;
-    }
 
-    handleToggleAdvanced()     { this._advancedExpanded = !this._advancedExpanded; }
-    handleShowPublishConfirm() { this._showPublishConfirm = true; }
-    handleCancelPublish()      { this._showPublishConfirm = false; this._publishExitPending = false; }
-    handlePublishAndExit()     { this._publishExitPending = true; this._showPublishConfirm = true; }
 
     // Save & Publish — persists with Published__c:true in background, stays in modal
     async handlePublish() {
@@ -2546,45 +2401,6 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
         try { this.dispatchEvent(new FlowNavigationNextEvent()); } catch(e) { /* not in a flow */ }
     }
 
-    // ── Delete meeting note ──────────────────────────────────────────────────
-    handleShowDeleteNoteConfirm() { this._showDeleteNoteConfirm = true; }
-    handleCancelDeleteNote()      { this._showDeleteNoteConfirm = false; }
-    async handleConfirmDeleteNote() {
-        const noteId = this._backgroundSavedNoteId || this.selectedEventNote?.Id;
-        if (!noteId) return;
-        this._showDeleteNoteConfirm = false;
-        if (this.saveSummaryFlowApiName) {
-            this._summarySaving = true;
-            try {
-                await saveMeetingNote({
-                    flowApiName:   this.saveSummaryFlowApiName,
-                    noteId:        noteId,
-                    noteHtml:      '',
-                    noteMarkdown:  '',
-                    briefHtml:     '',
-                    briefMarkdown: '',
-                    eventId:       this._selectedEventId || '',
-                    published:     false,
-                    meetingType:   '',
-                    deleteNote:    true
-                });
-            } catch (e) {
-                const msg = e.body ? e.body.message : e.message;
-                this._showToast('Delete Failed', msg, 'error');
-                return;
-            } finally {
-                this._summarySaving = false;
-            }
-        }
-        this._currentNoteHtml       = null;
-        this._summarySaved          = false;
-        this._backgroundSavedNoteId = null;
-        this._lastSavedHtml         = null;
-        this._noteDeletedLocally    = true;
-        this._summaryEditMode       = false;
-        this._summaryEditValue      = '';
-        this._showToast('Meeting Note Deleted', 'The meeting note has been deleted.', 'success');
-    }
 
     // ── Create new version of a published note ───────────────────────────────
     handleCreateNewVersion() {
@@ -2610,73 +2426,8 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
             this._meetingNoteVersions = [];
         }
     }
-    handleToggleVersionHistory() { this._showVersionHistory = !this._showVersionHistory; }
-    handlePreviewVersion(evt)    { this._previewingVersionId = evt.currentTarget.dataset.id; }
-    handleExitVersionPreview()   { this._previewingVersionId = null; }
 
-    handleGenerateSummaryWithConfirm() { this._showGenerateOverwriteConfirm = true; }
-    async handleConfirmGenerateOverwrite() {
-        this._showGenerateOverwriteConfirm = false;
-        await this.handleGenerateSummaryDirect();
-    }
-    handleCancelGenerateOverwrite() { this._showGenerateOverwriteConfirm = false; }
 
-    // Inline summary generation when no MeetingNote__c exists for the selected event
-    async handleGenerateSummaryDirect() {
-        if (!this.meetingSummaryFlowApiName) {
-            this._showToast('Configuration Error', 'Meeting Summary Flow API Name is not set.', 'error');
-            return;
-        }
-        this._summaryGenerating = true;
-        this._leftPanelCollapsed = true;
-        this._startSummaryLoadingCycle();
-        try {
-            const files = this.noNoteFilesForFlow;
-            let ctx = this._freeText || '';
-            if (this._selectedMeetingType)
-                ctx += (ctx ? '\n\n' : '') + `Meeting Category: ${MEETING_TYPE_LABELS[this._selectedMeetingType]}`;
-            if (this._hasTodos)
-                ctx += '\nInclude: To-Do\'s';
-            const flowParams = {
-                flowApiName:        this.meetingSummaryFlowApiName,
-                eventId:            this._selectedEventId           || '',
-                accountId:          this._resolvedPrimaryMemberId   || '',
-                documentId1:        files[0]?.documentId            || '',
-                documentId2:        files[1]?.documentId            || '',
-                documentId3:        files[2]?.documentId            || '',
-                additionalContext:  ctx,
-                meetingType:        this._selectedMeetingType       || '',
-                hasTodos:           this._hasTodos,
-                saveDoc1AsArtifact: false,
-                saveDoc2AsArtifact: false,
-                saveDoc3AsArtifact: false
-            };
-            const raw = await generateSummary(flowParams);
-            // The older combined Flow returns JSON `{summary, brief}`; the split one
-            // returns plain HTML. The `brief` half is discarded — the feature is gone.
-            let summaryHtml = raw || '';
-            try {
-                const parsed = JSON.parse(raw);
-                if (parsed?.summary) summaryHtml = parsed.summary;
-            } catch (_) { /* plain string — no-op */ }
-            this._currentNoteHtml    = _stripStyleBlocks(summaryHtml);
-            this._noteDeletedLocally = false;  // new summary generated — note exists again
-            this._meetingTodos       = [];
-            this._panelEqualOverride = false;
-            this.outputMeetingSummary = this._currentNoteHtml;
-            this.dispatchEvent(new FlowAttributeChangeEvent('outputMeetingSummary', this._currentNoteHtml));
-            this._summarySaved = false;
-            if (this._hasTodos) {
-                this._generateTodos(flowParams);
-            }
-        } catch (error) {
-            const msg = error.body ? error.body.message : error.message;
-            this._showToast('Generation Failed', msg, 'error');
-        } finally {
-            this._stopSummaryLoadingCycle();
-            this._summaryGenerating = false;
-        }
-    }
 
     async _generateTodos(flowParams) {
         this._todosGenerating = true;
