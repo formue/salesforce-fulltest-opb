@@ -28,6 +28,24 @@ describe('HTML → Markdown', () => {
         ['empty input',            '', ''],
     ])('control (already correct): %s', (_l, html, expected) => expect(_htmlToMd(html)).toBe(expected));
 
+    // Added after an audit of what the prompt template actually emits.
+    it.each([
+        // The only live cosmetic defect: 6 of 48 real headings wrap their text in <b>.
+        ['bold spanning a whole heading is dropped', '<h3><b>Møteoversikt</b></h3>', '### Møteoversikt'],
+        ['…including <strong>',                      '<h2><strong>Tittel</strong></h2>', '## Tittel'],
+        // Partial emphasis inside a heading is meaningful — must survive.
+        ['partial emphasis in a heading survives',   '<h3>Plan for <b>2026</b></h3>', '### Plan for **2026**'],
+        // The prompt uses <u> as a pseudo-heading; markdown has no underline.
+        ['underline becomes bold',                   '<p><u>Team update:</u> ok</p>', '**Team update:** ok'],
+        // Never emitted today, but each fails badly if it ever is.
+        ['strikethrough is preserved',               '<p>Target <del>5%</del> now 7%</p>', 'Target ~~5%~~ now 7%'],
+        ['<s> too',                                  '<p><s>old</s></p>', '~~old~~'],
+        ['image keeps alt and src',                  '<p>See <img src="c.png" alt="Chart"></p>', 'See ![Chart](c.png)'],
+        ['image without src yields nothing',         '<p>a<img alt="x">b</p>', 'ab'],
+        ['pre keeps its newlines and indent',        '<pre><code>const a = 1;\n  const b = 2;</code></pre>',
+                                                     '```\nconst a = 1;\n  const b = 2;\n```'],
+    ])('%s', (_l, html, expected) => expect(_htmlToMd(html)).toBe(expected));
+
     it('handles null/undefined without throwing', () => {
         expect(_htmlToMd(null)).toBe('');
         expect(_htmlToMd(undefined)).toBe('');

@@ -335,11 +335,24 @@ function _nodeToMd(node) {
 
     switch (tag) {
         case 'h1': case 'h2': case 'h3':
-        case 'h4': case 'h5': case 'h6':
-            return B(`${'#'.repeat(Number(tag[1]))} ${kids()}`);
+        case 'h4': case 'h5': case 'h6': {
+            // The prompt often emits <h3><b>Tittel</b></h3>. Bold inside a heading is
+            // meaningless and renders as "### **Tittel**", so drop it when it wraps the
+            // whole text. Partial emphasis inside a heading is left alone.
+            let text = kids();
+            const whole = text.match(/^\*\*([\s\S]+)\*\*$/);
+            if (whole && !whole[1].includes('**')) text = whole[1];
+            return B(`${'#'.repeat(Number(tag[1]))} ${text}`);
+        }
         case 'p': case 'div': case 'section': case 'article': case 'figure':
             return B(kids());
         case 'br': return I('\n');
+        // Markdown has no underline. The prompt uses <u> as a pseudo-heading
+        // ("<u>Team update:</u>"), so bold preserves the intent rather than dropping it.
+        case 'u':  return I(`**${kids()}**`);
+        // Losing a strikethrough turns a retracted figure into a current one — the worst
+        // failure available here, so it is handled even though the prompt has never emitted it.
+        case 'del': case 's': case 'strike': return I(`~~${kids()}~~`);
         case 'strong': case 'b': return I(`**${kids()}**`);
         case 'em':     case 'i': return I(`*${kids()}*`);
         case 'code':             return I(`\`${kids()}\``);
@@ -367,6 +380,18 @@ function _nodeToMd(node) {
                 .map(tr => Array.from(tr.children)
                     .map(cell => _nodeToMd(cell).md.trim()).join(' | '))
                 .filter(Boolean).join('\n'));
+        case 'img': {
+            // Without this the image vanishes silently, alt text and all.
+            const src = node.getAttribute('src') || '';
+            const alt = node.getAttribute('alt') || '';
+            return I(src ? `![${alt}](${src})` : '');
+        }
+        case 'pre': {
+            // Must read textContent directly: the text-node branch collapses whitespace,
+            // which would destroy the newlines and indentation that make this a code block.
+            const code = (node.textContent || '').replace(/\s+$/, '');
+            return B(`\`\`\`\n${code}\n\`\`\``);
+        }
         case 'a': {
             const h = node.getAttribute('href');
             return I(h ? `[${kids()}](${h})` : kids());
