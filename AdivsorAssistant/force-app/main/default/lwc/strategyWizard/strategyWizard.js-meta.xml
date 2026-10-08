@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>66.0</apiVersion>
+    <isExposed>true</isExposed>
+    <masterLabel>Strategy Wizard (mockup)</masterLabel>
+    <description
+  >The full five-step Create Strategy journey on one flow screen. The Custodian step is live (c-custodian-menu over GraphQL); the other four steps are mocked for review and write nothing.</description>
+    <targets>
+        <target>lightning__FlowScreen</target>
+    </targets>
+    <targetConfigs>
+        <!--
+            Property order is the field order in Flow Builder; LWC has no
+            property-group, so the numbering in each label carries the order.
+
+            Inputs are first, then the custodian values the step genuinely
+            produces, then the mocked values from steps 1, 2 and 4. The mocked
+            outputs are real flow attributes so a calling flow can already be
+            wired up, but nothing in this component writes to
+            InvestmentStrategy__c.
+        -->
+        <targetConfig targets="lightning__FlowScreen">
+            <!-- Inputs -->
+            <property
+        name="countryCode"
+        type="String"
+        label="1. Customer Country Code"
+        description="ISO code of the customer's country, e.g. NO, SE or DK. Passed to the Custodian step to pick its default."
+        role="inputOnly"
+      />
+            <property
+        name="recordId"
+        type="String"
+        label="2. Record Id"
+        description="Record the flow was launched from. Carried for a future Update Records; not written to in this mockup."
+        role="inputOnly"
+      />
+
+            <property
+                name="uiStyle"
+                type="String"
+                label="3. Visual Style"
+                description="classic for the paged wizard matching today's screens, cockpit for the dark single canvas with a live portfolio panel. Defaults to classic."
+                default="classic"
+                role="inputOnly"
+            />
+            <property
+                name="showStyleToggle"
+                type="Boolean"
+                label="4. Show Style Switch"
+                description="Show an in-screen Classic/Cockpit switch so both can be compared in one run. For the mockup only."
+                role="inputOnly"
+            />
+
+            <!-- Outputs from the Custodian step (live data) -->
+            <property
+        name="custodian"
+        type="String"
+        label="5. Custodian"
+        description="API Name of the selected custodian."
+        role="outputOnly"
+      />
+            <property
+        name="accountType"
+        type="String"
+        label="6. Account Type"
+        description="API Name of the selected account type."
+        role="outputOnly"
+      />
+            <property
+        name="portfolioType"
+        type="String"
+        label="7. Portfolio Type"
+        role="outputOnly"
+      />
+            <property
+        name="tradexPortfolioType"
+        type="String"
+        label="8. Tradex Portfolio Type"
+        role="outputOnly"
+      />
+            <property
+        name="broker"
+        type="String"
+        label="9. Broker"
+        role="outputOnly"
+      />
+            <property
+        name="accountIssuer"
+        type="String"
+        label="10. Account Issuer"
+        role="outputOnly"
+      />
+            <property
+        name="nominee"
+        type="String"
+        label="11. Nominee"
+        role="outputOnly"
+      />
+            <property
+        name="requiresBankAccountDetails"
+        type="Boolean"
+        label="12. Requires Bank Account Details"
+        description="True when the account intake subflow must capture portfolio code and cash account."
+        role="outputOnly"
+      />
+
+            <!-- Outputs from the mocked steps -->
+            <property
+        name="strategyType"
+        type="String"
+        label="13. Strategy Type (mock)"
+        description="New or StartingPortfolio."
+        role="outputOnly"
+      />
+            <property
+        name="selectedAccountId"
+        type="String"
+        label="14. Account Id (mock)"
+        role="outputOnly"
+      />
+            <property
+        name="strategyName"
+        type="String"
+        label="15. Strategy Name (mock)"
+        role="outputOnly"
+      />
+            <property
+        name="totalPortfolio"
+        type="String"
+        label="16. Total Portfolio (mock)"
+        description="Digits only, unformatted."
+        role="outputOnly"
+      />
+            <property
+        name="managementType"
+        type="String"
+        label="17. Management Type (mock)"
+        role="outputOnly"
+      />
+            <property
+        name="investmentProfile"
+        type="String"
+        label="18. Investment Profile (mock)"
+        role="outputOnly"
+      />
+        </targetConfig>
+    </targetConfigs>
+</LightningComponentBundle>

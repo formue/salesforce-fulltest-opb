@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>66.0</apiVersion>
+    <description>Screen Flow hosting the Strategy Allocation Hub command centre. Calls the Strategy_Allocation_Hub_Fetch subflow to load portfolio drift data, then presents the strategyAllocationHub LWC for analysis and buyer/seller matching. The LWC fires FlowNavigationNextEvent when a match is confirmed.</description>
+    <environments>Default</environments>
+    <interviewLabel>Strategy Allocation Hub {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>Strategy - SCR - Allocation Hub</label>
+    <processMetadataValues>
+        <name>BuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>CanvasMode</name>
+        <value>
+            <stringValue>AUTO_LAYOUT_CANVAS</stringValue>
+        </value>
+    </processMetadataValues>
+    <processType>Flow</processType>
+    <subflows>
+        <name>Call_Allocation_Hub_Fetch</name>
+        <label>Call Allocation Hub Fetch</label>
+        <locationX>176</locationX>
+        <locationY>134</locationY>
+        <connector>
+            <targetReference>Allocation_Hub_Screen</targetReference>
+        </connector>
+        <flowName>Strategy_Allocation_Hub_Fetch</flowName>
+        <inputAssignments>
+            <name>assetGroupFilter</name>
+            <value>
+                <elementReference>assetGroupFilter</elementReference>
+            </value>
+        </inputAssignments>
+        <inputAssignments>
+            <name>managementTypeInput</name>
+            <value>
+                <elementReference>managementTypeFilter</elementReference>
+            </value>
+        </inputAssignments>
+        <outputAssignments>
+            <assignToReference>portfolioDataStr</assignToReference>
+            <name>portfolioDataStr</name>
+        </outputAssignments>
+    </subflows>
+    <screens>
+        <name>Allocation_Hub_Screen</name>
+        <label>Allocation Hub</label>
+        <locationX>176</locationX>
+        <locationY>266</locationY>
+        <allowBack>false</allowBack>
+        <allowFinish>true</allowFinish>
+        <allowPause>false</allowPause>
+        <fields>
+            <name>strategyAllocationHub</name>
+            <extensionName>c:strategyAllocationHub</extensionName>
+            <fieldType>ComponentInstance</fieldType>
+            <inputParameters>
+                <name>portfolioDataStr</name>
+                <value>
+                    <elementReference>portfolioDataStr</elementReference>
+                </value>
+            </inputParameters>
+            <inputParameters>
+                <name>defaultAssetClass</name>
+                <value>
+                    <elementReference>assetGroupFilter</elementReference>
+                </value>
+            </inputParameters>
+            <!-- The component owns its navigation — foot/header buttons are hidden. -->
+            <inputsOnNextNavToAssocScrn>UseStoredValues</inputsOnNextNavToAssocScrn>
+            <storeOutputAutomatically>true</storeOutputAutomatically>
+        </fields>
+        <showFooter>false</showFooter>
+        <showHeader>false</showHeader>
+    </screens>
+    <start>
+        <locationX>176</locationX>
+        <locationY>50</locationY>
+        <connector>
+            <targetReference>Call_Allocation_Hub_Fetch</targetReference>
+        </connector>
+    </start>
+    <status>Active</status>
+    <!-- ── Input variables ──────────────────────────────────────────────── -->
+    <variables>
+        <name>assetGroupFilter</name>
+        <description>Pre-filters the hub to a specific asset group on load (Stability / MarketGrowth / AlternativeGrowth). Blank shows all groups.</description>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+    </variables>
+    <variables>
+        <name>managementTypeFilter</name>
+        <description>Limits strategies to a specific management type (e.g. PortfolioManagement, Advisory). Blank returns all types.</description>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+    </variables>
+    <!-- ── Internal variable ────────────────────────────────────────────── -->
+    <variables>
+        <name>portfolioDataStr</name>
+        <description>JSON drift-row payload produced by the Fetch subflow and consumed by the LWC screen component.</description>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
+        <isOutput>false</isOutput>
+    </variables>
+    <!-- ── Output variables (populated from component via FlowAttributeChangeEvent) ── -->
+    <variables>
+        <name>selectedBuyerAccountId</name>
+        <description>Account Id of the confirmed buyer selected in the hub.</description>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
+        <isOutput>true</isOutput>
+    </variables>
+    <variables>
+        <name>selectedSellerAccountId</name>
+        <description>Account Id of the confirmed seller selected in the hub.</description>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
+        <isOutput>true</isOutput>
+    </variables>
+    <variables>
+        <name>proposedTradeVolume</name>
+        <description>Proposed cross-trade volume in the strategy currency (NOK by default).</description>
+        <dataType>Currency</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
+        <isOutput>true</isOutput>
+        <scale>2</scale>
+    </variables>
+    <variables>
+        <name>matchConfirmed</name>
+        <description>True when the advisor confirmed the buyer/seller match and navigated forward.</description>
+        <dataType>Boolean</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
+        <isOutput>true</isOutput>
+        <value>
+            <booleanValue>false</booleanValue>
+        </value>
+    </variables>
+</Flow>

@@ -1,0 +1,1384 @@
+/* ===========================================================================
+   c-strategy-wizard
+
+   Palette and shapes follow the existing Create Strategy wizard: navy chevron
+   path, mint completed states, Salesforce-blue selection, white ground. The
+   three allocation buckets each get their own hue so a stacked bar is
+   readable without reading the labels.
+
+   Sections below, in order:
+     tokens · path indicator · page head · layout · summary rail · tiles ·
+     rows · fields · allocation · review · nav
+   ========================================================================= */
+
+:host {
+  --sw-navy: #0b2d5c;
+  --sw-mint: #a8e6d2;
+  --sw-mint-ink: #0b4f3c;
+  --sw-blue: #1b6acb;
+  --sw-blue-ink: #14518f;
+  --sw-blue-wash: #eaf2fc;
+  --sw-ink: #16202e;
+  --sw-ink-soft: #5a6573;
+  --sw-ink-faint: #8c96a3;
+  --sw-line: #ccd4de;
+  --sw-line-soft: #e4e9ef;
+  --sw-surface: #ffffff;
+  --sw-surface-sunk: #eef2f7;
+  --sw-canvas: #e9eef4;
+  --sw-track: #cfd7e0;
+  --sw-stab: #2f6f9e;
+  --sw-mkt: #5b9bd5;
+  --sw-alt: #e0a33c;
+  --sw-danger: #b3261e;
+  --sw-danger-bg: #fdecea;
+  --sw-ok-bg: #e4f6ec;
+  --sw-ok-ink: #1c6b3d;
+  --sw-r: 6px;
+  --sw-shadow: 0 1px 3px rgba(11, 45, 92, 0.08);
+
+  display: block;
+  color: var(--sw-ink);
+}
+
+/* A tinted canvas behind the cards. The Flow screen itself is white, so
+   without this the whole step is paper-on-paper and nothing has an edge. */
+.sw-root {
+  font-size: 15px;
+  line-height: 1.5;
+  background: var(--sw-canvas);
+  padding: 1.25rem;
+  border-radius: 12px;
+}
+
+/* --------------------------------------------------------- path indicator */
+
+.sw-path {
+  display: flex;
+  list-style: none;
+  margin: 0 0 0.5rem;
+  padding: 0;
+}
+
+.sw-path__item {
+  flex: 1;
+  min-width: 0;
+}
+
+.sw-path__btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  width: 100%;
+  padding: 0.625rem 0.75rem 0.625rem 1.5rem;
+  border: 0;
+  background: var(--sw-line-soft);
+  color: var(--sw-ink-soft);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  cursor: default;
+}
+
+.sw-path__item:first-child .sw-path__btn {
+  border-radius: 999px 0 0 999px;
+  padding-left: 1rem;
+}
+
+.sw-path__item:last-child .sw-path__btn {
+  border-radius: 0 999px 999px 0;
+}
+
+/* The chevron notch is a rotated square masked by the segment behind it. */
+.sw-path__btn::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: -0.5rem;
+  width: 1.125rem;
+  height: 1.125rem;
+  margin-top: -0.5625rem;
+  background: inherit;
+  border-top: 1px solid var(--sw-surface);
+  border-right: 1px solid var(--sw-surface);
+  transform: rotate(45deg);
+  z-index: 2;
+}
+
+.sw-path__item:last-child .sw-path__btn::after {
+  display: none;
+}
+
+.sw-path__btn_done {
+  background: var(--sw-mint);
+  color: var(--sw-mint-ink);
+  cursor: pointer;
+}
+
+.sw-path__btn_current {
+  background: var(--sw-navy);
+  color: #fff;
+}
+
+.sw-path__btn:focus-visible {
+  outline: 2px solid var(--sw-blue);
+  outline-offset: -2px;
+  z-index: 3;
+}
+
+.sw-path__tick {
+  flex: none;
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.sw-path__lbl {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sw-counter {
+  margin: 0 0 1.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--sw-ink-faint);
+}
+
+/* ------------------------------------------------------------- page head */
+
+.sw-head {
+  padding: 0 0 1.25rem;
+  text-align: center;
+}
+
+.sw-head__title {
+  margin: 0;
+  font-size: 1.625rem;
+  font-weight: 700;
+  text-wrap: balance;
+}
+
+.sw-head__sub {
+  margin: 0.375rem 0 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--sw-ink-soft);
+}
+
+/* ---------------------------------------------------------------- layout */
+
+.sw-cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 17rem;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+/* The review step takes the full width — the rail would only repeat it. */
+.sw-cols_wide {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.sw-stage {
+  background: var(--sw-surface);
+  border: 1px solid var(--sw-line);
+  border-radius: 10px;
+  /* Two-layer shadow: a tight contact edge plus a soft lift. */
+  box-shadow:
+    0 1px 2px rgba(11, 45, 92, 0.1),
+    0 6px 18px rgba(11, 45, 92, 0.07);
+  padding: 1.75rem;
+}
+
+.sw-section {
+  margin: 0 0 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--sw-line-soft);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.sw-lead {
+  margin: 0 0 0.75rem;
+  font-size: 0.875rem;
+  color: var(--sw-ink-soft);
+}
+
+.sw-accent {
+  color: var(--sw-blue);
+}
+
+.sw-divider {
+  border: 0;
+  border-top: 1px solid var(--sw-line);
+  margin: 1.75rem 0;
+}
+
+.sw-hint {
+  margin: 0.3125rem 0 0;
+  font-size: 0.75rem;
+  color: var(--sw-ink-faint);
+}
+
+.sw-err {
+  margin: 0.5rem 0 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--sw-danger);
+}
+
+.sw-err_centre {
+  text-align: center;
+}
+
+.sw-errsum {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  margin: 0 0 1.25rem;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--sw-danger);
+  border-radius: var(--sw-r);
+  background: var(--sw-danger-bg);
+  color: var(--sw-danger);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.sw-errsum svg {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  margin-top: 0.0625rem;
+}
+
+/* ----------------------------------------------------------- summary rail */
+
+.sw-rail {
+  position: sticky;
+  top: 1rem;
+  background: var(--sw-surface);
+  border: 1px solid var(--sw-line);
+  border-radius: 10px;
+  box-shadow:
+    0 1px 2px rgba(11, 45, 92, 0.1),
+    0 6px 18px rgba(11, 45, 92, 0.07);
+  overflow: hidden;
+}
+
+/* Alternating rows so the recap reads as a list, not a wall. */
+.sw-sumgroup:nth-child(even) {
+  background: #fafbfd;
+}
+
+.sw-sumgroup_active:nth-child(even) {
+  background: var(--sw-blue-wash);
+}
+
+.sw-rail__head {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--sw-ink-soft);
+  border-bottom: 1px solid var(--sw-line-soft);
+  background: var(--sw-surface-sunk);
+}
+
+.sw-sumgroup {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--sw-line-soft);
+  border-left: 3px solid transparent;
+}
+
+.sw-sumgroup:last-child {
+  border-bottom: 0;
+}
+
+.sw-sumgroup_active {
+  border-left-color: var(--sw-blue);
+  background: var(--sw-blue-wash);
+}
+
+.sw-sumgroup__head {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin: 0 0 0.375rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--sw-ink-faint);
+}
+
+.sw-sumgroup_active .sw-sumgroup__head {
+  color: var(--sw-blue-ink);
+}
+
+.sw-sumgroup__dot {
+  flex: none;
+  width: 0.4375rem;
+  height: 0.4375rem;
+  border-radius: 50%;
+  background: var(--sw-track);
+}
+
+/* Filled in = every row in the group has an answer. */
+.sw-sumgroup__dot_full {
+  background: var(--sw-ok-ink);
+}
+
+.sw-sumgroup__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 0.8125rem;
+}
+
+.sw-sumgroup__list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.0625rem 0;
+}
+
+.sw-sumgroup__list b {
+  font-weight: 600;
+  text-align: right;
+  /* break-word keeps whole words together where it can; anywhere did not. */
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+.sw-sumgroup__pending {
+  margin: 0;
+  color: var(--sw-ink-faint);
+  font-style: italic;
+  font-size: 0.8125rem;
+}
+
+/* ----------------------------------------------------------------- tiles */
+
+.sw-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 1rem;
+}
+
+.sw-tiles_narrow {
+  max-width: 40rem;
+  margin: 0 auto;
+}
+
+.sw-tile {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 0;
+  border: 1px solid var(--sw-line);
+  border-radius: var(--sw-r);
+  background: linear-gradient(180deg, #ffffff, #f5f8fc);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  transition:
+    border-color 0.14s ease,
+    box-shadow 0.14s ease;
+}
+
+.sw-tile:hover {
+  border-color: var(--sw-blue);
+  box-shadow: 0 2px 8px rgba(27, 106, 203, 0.14);
+}
+
+.sw-tile:focus-visible {
+  outline: 2px solid var(--sw-blue);
+  outline-offset: 2px;
+}
+
+.sw-tile_selected,
+.sw-tile_selected:hover {
+  background: #f2f7fe;
+  border-color: var(--sw-blue);
+  box-shadow:
+    inset 0 0 0 1px var(--sw-blue),
+    0 2px 8px rgba(27, 106, 203, 0.14);
+}
+
+.sw-tile__chip {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 3.5rem;
+  align-self: stretch;
+  border-right: 1px solid var(--sw-line-soft);
+}
+
+.sw-tile__chip span {
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.sw-tile__label {
+  padding: 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+/* Corner fold on the chosen investment profile, as in the current wizard. */
+.sw-tile__fold {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  background: var(--sw-blue);
+  clip-path: polygon(100% 0, 100% 100%, 0 0);
+  display: none;
+}
+
+.sw-tile_selected .sw-tile__fold {
+  display: block;
+}
+
+.sw-tile__fold::after {
+  content: "";
+  position: absolute;
+  top: 0.1875rem;
+  right: 0.1875rem;
+  width: 0.625rem;
+  height: 0.375rem;
+  border-left: 2px solid #fff;
+  border-bottom: 2px solid #fff;
+  transform: rotate(-45deg);
+}
+
+/* ------------------------------------------------------------------ rows */
+
+.sw-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.sw-rows_narrow {
+  max-width: 28rem;
+}
+
+.sw-row {
+  display: grid;
+  grid-template-columns: 1.0625rem minmax(7rem, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--sw-line);
+  border-radius: var(--sw-r);
+  background: linear-gradient(180deg, #ffffff, #f5f8fc);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.14s ease,
+    box-shadow 0.14s ease;
+}
+
+.sw-row:hover {
+  border-color: var(--sw-blue);
+  box-shadow: 0 2px 8px rgba(27, 106, 203, 0.14);
+}
+
+.sw-row:focus-visible {
+  outline: 2px solid var(--sw-blue);
+  outline-offset: 2px;
+}
+
+.sw-row_selected,
+.sw-row_selected:hover {
+  background: #f2f7fe;
+  border-color: var(--sw-blue);
+  box-shadow: inset 0 0 0 1px var(--sw-blue);
+}
+
+.sw-row__radio {
+  width: 1.0625rem;
+  height: 1.0625rem;
+  border: 1.5px solid var(--sw-track);
+  border-radius: 50%;
+}
+
+.sw-row_selected .sw-row__radio {
+  border-color: var(--sw-blue);
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='3.2' fill='white'/%3E%3C/svg%3E")
+      center / 1rem no-repeat,
+    var(--sw-blue);
+}
+
+.sw-row__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.sw-row__name {
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.sw-row__flags {
+  display: flex;
+  gap: 0.3125rem;
+  justify-content: flex-end;
+}
+
+.sw-pill {
+  padding: 0.0625rem 0.4375rem;
+  border-radius: 999px;
+  background: var(--sw-surface-sunk);
+  border: 1px solid var(--sw-line);
+  font-size: 0.625rem;
+  font-weight: 700;
+  white-space: nowrap;
+  color: var(--sw-ink-soft);
+}
+
+/* ---------------------------------------------------------------- fields */
+
+.sw-grid2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  gap: 1.25rem 2rem;
+}
+
+.sw-field label {
+  display: block;
+  font-size: 0.8125rem;
+  color: var(--sw-ink-soft);
+  margin-bottom: 0.25rem;
+}
+
+.sw-field input {
+  width: 100%;
+  font: inherit;
+  font-size: 0.9375rem;
+  padding: 0.4375rem 0.75rem;
+  border: 1px solid var(--sw-line);
+  border-radius: 999px;
+  /* Faintly recessed, so an empty field looks fillable. */
+  background: #fbfcfe;
+  box-shadow: inset 0 1px 2px rgba(11, 45, 92, 0.06);
+  color: var(--sw-ink);
+}
+
+.sw-field input:focus-visible {
+  outline: 2px solid var(--sw-blue);
+  outline-offset: 1px;
+}
+
+.sw-field input[aria-invalid="true"] {
+  border-color: var(--sw-danger);
+}
+
+.sw-field_amount {
+  position: relative;
+}
+
+.sw-field_amount input {
+  padding-right: 3.25rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.sw-field__cur {
+  position: absolute;
+  right: 0.875rem;
+  top: 2rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--sw-ink-faint);
+}
+
+/* ------------------------------------------------------------ allocation */
+
+.sw-allocbar {
+  display: flex;
+  height: 1.5rem;
+  border-radius: var(--sw-r);
+  overflow: hidden;
+  border: 1px solid var(--sw-line);
+}
+
+.sw-allocbar span {
+  display: grid;
+  place-items: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.sw-alloclegend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.875rem;
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--sw-ink-soft);
+}
+
+.sw-alloclegend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.sw-alloclegend i {
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 2px;
+}
+
+.sw-alloc {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  gap: 1.75rem;
+  margin-top: 1.25rem;
+}
+
+.sw-alloc__head {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin: 0 0 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.sw-alloc__head i {
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 2px;
+  flex: none;
+}
+
+.sw-alloc__tot {
+  margin-left: auto;
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--sw-ok-ink);
+}
+
+/* A column that does not add up to 100% is an error the advisor must see. */
+.sw-alloc__tot[data-bad="true"] {
+  color: var(--sw-danger);
+}
+
+.sw-alloc__row {
+  display: grid;
+  grid-template-columns: 7rem 1fr 3.25rem;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.sw-alloc__lbl {
+  font-size: 0.75rem;
+  line-height: 1.25;
+}
+
+.sw-alloc__track {
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--sw-track);
+  overflow: hidden;
+}
+
+.sw-alloc__track i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+}
+
+.sw-alloc__row input {
+  width: 100%;
+  font: inherit;
+  font-size: 0.8125rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  padding: 0.1875rem 0.25rem;
+  border: 1px solid var(--sw-line);
+  border-radius: var(--sw-r);
+  background: var(--sw-surface);
+  color: var(--sw-ink);
+}
+
+.sw-alloc__row input:focus-visible {
+  outline: 2px solid var(--sw-blue);
+  outline-offset: 1px;
+}
+
+/* ---------------------------------------------------------------- review */
+
+.sw-review {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 1.5rem;
+}
+
+.sw-rev {
+  padding: 1rem 1.125rem;
+  border: 1px solid var(--sw-line);
+  border-radius: var(--sw-r);
+  background: var(--sw-surface-sunk);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.sw-rev__head {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin: 0 0 0.625rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--sw-ink-soft);
+}
+
+.sw-rev__edit {
+  margin-left: auto;
+  background: none;
+  border: 0;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--sw-blue);
+  cursor: pointer;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.sw-rev__edit:hover {
+  text-decoration: underline;
+}
+
+.sw-rev__edit:focus-visible {
+  outline: 2px solid var(--sw-blue);
+  outline-offset: 2px;
+}
+
+.sw-rev__list {
+  margin: 0;
+  display: grid;
+  gap: 0.3125rem;
+  font-size: 0.875rem;
+}
+
+.sw-rev__pair {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.875rem;
+}
+
+.sw-rev__pair dt {
+  color: var(--sw-ink-soft);
+  white-space: nowrap;
+}
+
+.sw-rev__val {
+  margin: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.sw-rev__val_na {
+  color: var(--sw-ink-faint);
+  font-weight: 400;
+}
+
+.sw-newflag {
+  padding: 0 0.3125rem;
+  border-radius: 3px;
+  background: var(--sw-blue);
+  color: #fff;
+  font-size: 0.5625rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.sw-riskrecap {
+  margin-top: 1.5rem;
+}
+
+/* ------------------------------------------------------------------- nav */
+
+.sw-nav {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.sw-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  background: none;
+  border: 0;
+  font: inherit;
+  font-size: 0.875rem;
+  color: var(--sw-blue);
+  cursor: pointer;
+  padding: 0.375rem 0;
+}
+
+.sw-ghost:hover {
+  text-decoration: underline;
+}
+
+.sw-ghost svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.sw-ghost:focus-visible,
+.sw-next:focus-visible {
+  outline: 2px solid var(--sw-blue);
+  outline-offset: 2px;
+}
+
+.sw-next {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+  padding: 0.4375rem 1.25rem;
+  border: 1px solid var(--sw-blue);
+  border-radius: 999px;
+  background: var(--sw-blue);
+  color: #fff;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.14s ease,
+    border-color 0.14s ease;
+}
+
+.sw-next:hover {
+  background: var(--sw-blue-ink);
+  border-color: var(--sw-blue-ink);
+}
+
+.sw-next__arrow {
+  width: 0.875rem;
+  height: 0.875rem;
+  transition: transform 0.14s ease;
+}
+
+.sw-next:hover .sw-next__arrow {
+  transform: translateX(2px);
+}
+
+.sw-toast {
+  margin: 1rem 0 0;
+  padding: 0.75rem 1rem;
+  border-radius: var(--sw-r);
+  background: var(--sw-ok-bg);
+  color: var(--sw-ok-ink);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+/* --------------------------------------------------------------- responsive */
+
+@media (max-width: 62rem) {
+  .sw-cols {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Above the step rather than beside it, so the recap stays visible. */
+  .sw-rail {
+    position: static;
+    order: -1;
+  }
+}
+
+@media (max-width: 48rem) {
+  .sw-path__lbl {
+    display: none;
+  }
+
+  .sw-path__btn_current .sw-path__lbl {
+    display: block;
+  }
+
+  .sw-stage {
+    padding: 1.125rem;
+  }
+
+  .sw-alloc__row {
+    grid-template-columns: 5.5rem 1fr 3rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sw-tile,
+  .sw-row,
+  .sw-next,
+  .sw-next__arrow {
+    transition: none;
+  }
+}
+
+/* ===========================================================================
+   COCKPIT — the alternative treatment, chosen with the uiStyle property.
+
+   Different premise, not a reskin. Classic pages through screens with a recap
+   beside them; Cockpit is one dark canvas where the five steps sit in a
+   vertical rail and a live panel shows what the choices add up to.
+
+   The three bucket hues are unchanged from Classic on purpose: the trio
+   #2563eb / #0d9488 / #d97706 was validated against both the light and the
+   dark chart surface and passes all six checks on each, so re-stepping it for
+   dark would only make it worse.
+   ========================================================================= */
+
+.sw-root_cockpit {
+  --sw-ink: #e8edf4;
+  --sw-ink-soft: #94a1b2;
+  --sw-ink-faint: #64717f;
+  --sw-line: #263040;
+  --sw-line-soft: #1f2836;
+  --sw-surface: #141b25;
+  --sw-surface-sunk: #1a2331;
+  --sw-canvas: #0c1118;
+  --sw-track: #39465a;
+  --sw-blue: #4d8df5;
+  --sw-blue-ink: #9cc3fb;
+  --sw-blue-wash: #1a2c42;
+  --sw-navy: #4d8df5;
+  --sw-mint: #1f5346;
+  --sw-mint-ink: #9fe0bd;
+  --sw-danger: #f0736a;
+  --sw-danger-bg: #3a1c19;
+  --sw-ok-bg: #103226;
+  --sw-ok-ink: #9fe0bd;
+
+  color: var(--sw-ink);
+}
+
+/* Flat panels on a dark ground; lift shadows read as grime, not elevation. */
+.sw-root_cockpit .sw-stage,
+.sw-root_cockpit .sw-rail {
+  box-shadow: none;
+}
+
+.sw-root_cockpit .sw-tile,
+.sw-root_cockpit .sw-row {
+  background: var(--sw-surface-sunk);
+}
+
+.sw-root_cockpit .sw-tile_selected,
+.sw-root_cockpit .sw-row_selected {
+  background: #1d2b40;
+}
+
+.sw-root_cockpit .sw-field input,
+.sw-root_cockpit .sw-alloc__row input {
+  background: var(--sw-surface-sunk);
+  box-shadow: none;
+  color: var(--sw-ink);
+}
+
+.sw-root_cockpit .sw-pill {
+  background: var(--sw-canvas);
+}
+
+.sw-root_cockpit .sw-rev {
+  box-shadow: none;
+}
+
+.sw-root_cockpit .sw-tile__chip span,
+.sw-root_cockpit .sw-newflag,
+.sw-root_cockpit .sw-next {
+  color: #06101c;
+}
+
+/* ------------------------------------------------------- cockpit header */
+
+.sw-ckhead {
+  padding: 0 0 1.25rem;
+}
+
+.sw-ckhead__title {
+  margin: 0;
+  font-size: 1.375rem;
+  font-weight: 700;
+}
+
+.sw-ckhead__sub {
+  margin: 0.25rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--sw-ink-soft);
+}
+
+/* --------------------------------------------------------- cockpit rail */
+
+/* Three columns: step rail, content, live panel. */
+.sw-root_cockpit .sw-cols {
+  grid-template-columns: 13rem minmax(0, 1fr) 18rem;
+}
+
+.sw-root_cockpit .sw-cols_wide {
+  grid-template-columns: 13rem minmax(0, 1fr);
+}
+
+.sw-cksteps {
+  position: relative;
+  list-style: none;
+  margin: 0;
+  padding: 0.25rem 0;
+}
+
+/* The spine that connects the step dots. */
+.sw-cksteps::before {
+  content: "";
+  position: absolute;
+  left: 0.8125rem;
+  top: 1.5rem;
+  bottom: 1.5rem;
+  width: 2px;
+  background: var(--sw-line);
+}
+
+.sw-ckstep {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.5rem;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--sw-ink-faint);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: default;
+}
+
+.sw-ckstep_done {
+  color: var(--sw-ink);
+  cursor: pointer;
+}
+
+.sw-ckstep_done:hover {
+  background: var(--sw-surface);
+}
+
+.sw-ckstep_current {
+  background: var(--sw-surface-sunk);
+  color: var(--sw-ink);
+}
+
+.sw-ckstep:focus-visible {
+  outline: 2px solid var(--sw-blue);
+  outline-offset: 2px;
+}
+
+.sw-ckstep__dot {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 1.625rem;
+  height: 1.625rem;
+  border-radius: 50%;
+  background: var(--sw-canvas);
+  border: 2px solid var(--sw-line);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--sw-ink-faint);
+}
+
+.sw-ckstep__dot svg {
+  width: 0.8125rem;
+  height: 0.8125rem;
+}
+
+.sw-ckstep__dot_done {
+  background: var(--sw-ok-ink);
+  border-color: var(--sw-ok-ink);
+  color: #052418;
+}
+
+.sw-ckstep__dot_current {
+  border-color: var(--sw-blue);
+  color: var(--sw-blue-ink);
+}
+
+/* --------------------------------------------------- cockpit live panel */
+
+.sw-cklive {
+  position: sticky;
+  top: 1rem;
+  background: var(--sw-surface);
+  border: 1px solid var(--sw-line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.sw-cklive__head {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--sw-line);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--sw-ink-faint);
+}
+
+.sw-cklive__body {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.125rem;
+}
+
+.sw-ckblock {
+  margin: 0 0 0.375rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--sw-ink-faint);
+}
+
+/* The one figure that frames every other choice. */
+.sw-ckhero {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.sw-ckhero small {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--sw-ink-soft);
+}
+
+.sw-ckhero_empty {
+  font-size: 1.125rem;
+  font-weight: 400;
+  color: var(--sw-ink-faint);
+}
+
+/* 2px surface gaps between segments, per the mark spec. */
+.sw-ckbar {
+  display: flex;
+  gap: 2px;
+  height: 1.625rem;
+}
+
+.sw-ckbar span {
+  display: grid;
+  place-items: center;
+  border-radius: 3px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: #06101c;
+  font-variant-numeric: tabular-nums;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* The legend is always present, so identity is never colour alone. */
+.sw-cklegend {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1875rem;
+  margin-top: 0.5rem;
+}
+
+.sw-cklegend span {
+  display: flex;
+  align-items: center;
+  gap: 0.4375rem;
+  font-size: 0.75rem;
+  color: var(--sw-ink-soft);
+}
+
+.sw-cklegend i {
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 2px;
+  flex: none;
+}
+
+.sw-cklegend b {
+  margin-left: auto;
+  color: var(--sw-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.sw-ckfacts {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3125rem;
+}
+
+.sw-ckfact {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+}
+
+.sw-ckfact dt {
+  color: var(--sw-ink-soft);
+}
+
+.sw-ckfact__val {
+  margin: 0;
+  font-weight: 600;
+  text-align: right;
+  overflow-wrap: break-word;
+}
+
+.sw-ckfact__val_pending {
+  color: var(--sw-ink-faint);
+  font-weight: 400;
+  font-style: italic;
+}
+
+/* Status carries an icon and a sentence, never colour on its own. */
+.sw-ckchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin: 0.75rem 0 0;
+  padding: 0.3125rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.sw-ckchip_warn {
+  background: #3a2c10;
+  color: #f0d79a;
+}
+
+.sw-ckchip_ok {
+  background: var(--sw-ok-bg);
+  color: var(--sw-ok-ink);
+}
+
+/* ------------------------------------------------------- style switcher */
+
+.sw-styleseg {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin-bottom: 0.75rem;
+}
+
+.sw-styleseg__lbl {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--sw-ink-faint);
+}
+
+.sw-styleseg__btn {
+  padding: 0.1875rem 0.75rem;
+  border: 1px solid var(--sw-line);
+  border-radius: 999px;
+  background: var(--sw-surface);
+  color: var(--sw-ink);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sw-styleseg__btn:hover {
+  border-color: var(--sw-blue);
+  color: var(--sw-blue);
+}
+
+.sw-styleseg__btn_on,
+.sw-styleseg__btn_on:hover {
+  background: var(--sw-blue);
+  border-color: var(--sw-blue);
+  color: #fff;
+}
+
+.sw-root_cockpit .sw-styleseg__btn_on,
+.sw-root_cockpit .sw-styleseg__btn_on:hover {
+  color: #06101c;
+}
+
+.sw-styleseg__btn:focus-visible {
+  outline: 2px solid var(--sw-blue);
+  outline-offset: 2px;
+}
+
+@media (max-width: 70rem) {
+  .sw-root_cockpit .sw-cols,
+  .sw-root_cockpit .sw-cols_wide {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* The rail becomes a horizontal strip above the content. */
+  .sw-cksteps {
+    display: flex;
+    overflow-x: auto;
+    padding: 0;
+  }
+
+  .sw-cksteps::before {
+    display: none;
+  }
+
+  .sw-ckstep {
+    width: auto;
+    white-space: nowrap;
+  }
+
+  .sw-cklive {
+    position: static;
+  }
+}

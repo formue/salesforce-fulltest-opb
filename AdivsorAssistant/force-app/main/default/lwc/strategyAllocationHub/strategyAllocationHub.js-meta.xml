@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>62.0</apiVersion>
+    <isExposed>true</isExposed>
+    <masterLabel>Strategy Allocation Hub</masterLabel>
+    <description>Command centre for drift analysis and buyer/seller matching across investment strategies. Designed for use in a Screen Flow receiving portfolio data from an Autolaunched subflow.</description>
+    <targets>
+        <target>lightning__FlowScreen</target>
+        <target>lightning__AppPage</target>
+        <target>lightning__RecordPage</target>
+    </targets>
+    <targetConfigs>
+        <targetConfig targets="lightning__FlowScreen">
+            <!-- Inputs -->
+            <property name="portfolioDataStr"
+                      type="String"
+                      role="inputOnly"
+                      label="Portfolio Data JSON"
+                      description="Serialised JSON array of drift rows produced by the Fetch Allocation Data Apex action." />
+            <property name="defaultAssetClass"
+                      type="String"
+                      role="inputOnly"
+                      label="Default Asset Class"
+                      description="Pre-selects a specific asset class filter on load. Leave blank to show all asset classes." />
+            <!-- Outputs (read back by the calling Flow after FlowNavigationNextEvent) -->
+            <property name="selectedBuyerId"
+                      type="String"
+                      role="outputOnly"
+                      label="Output: Selected Buyer Account ID" />
+            <property name="selectedSellerId"
+                      type="String"
+                      role="outputOnly"
+                      label="Output: Selected Seller Account ID" />
+            <property name="tradeVolume"
+                      type="String"
+                      role="outputOnly"
+                      label="Output: Proposed Trade Volume" />
+            <property name="isMatchConfirmed"
+                      type="Boolean"
+                      role="outputOnly"
+                      label="Output: Match Confirmed" />
+        </targetConfig>
+    </targetConfigs>
+</LightningComponentBundle>

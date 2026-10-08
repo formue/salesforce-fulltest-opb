@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>66.0</apiVersion>
+    <description>Autolaunched subflow called by Strategy_Allocation_Hub_SCR. Invokes the StrategyAllocationHubController Apex action and returns the portfolio drift data as a JSON string.</description>
+    <environments>Default</environments>
+    <interviewLabel>Strategy Allocation Hub Fetch {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>Strategy - SUB - Allocation Hub Fetch</label>
+    <processMetadataValues>
+        <name>BuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>CanvasMode</name>
+        <value>
+            <stringValue>AUTO_LAYOUT_CANVAS</stringValue>
+        </value>
+    </processMetadataValues>
+    <processType>AutoLaunchedFlow</processType>
+    <actionCalls>
+        <name>Fetch_Allocation_Data</name>
+        <label>Fetch Allocation Data</label>
+        <locationX>176</locationX>
+        <locationY>134</locationY>
+        <actionName>StrategyAllocationHubController</actionName>
+        <actionType>apex</actionType>
+        <inputParameters>
+            <name>assetGroup</name>
+            <value>
+                <elementReference>assetGroupFilter</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>managementType</name>
+            <value>
+                <elementReference>managementTypeInput</elementReference>
+            </value>
+        </inputParameters>
+        <outputParameters>
+            <assignToReference>portfolioDataStr</assignToReference>
+            <name>portfolioDataStr</name>
+        </outputParameters>
+    </actionCalls>
+    <start>
+        <locationX>176</locationX>
+        <locationY>50</locationY>
+        <connector>
+            <targetReference>Fetch_Allocation_Data</targetReference>
+        </connector>
+    </start>
+    <status>Active</status>
+    <variables>
+        <name>assetGroupFilter</name>
+        <description>Asset group filter passed in from the calling Screen Flow (Stability / MarketGrowth / AlternativeGrowth). Blank = return all groups.</description>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+    </variables>
+    <variables>
+        <name>managementTypeInput</name>
+        <description>Management type filter passed in from the calling Screen Flow. Blank = return all management types.</description>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+    </variables>
+    <variables>
+        <name>portfolioDataStr</name>
+        <description>JSON array of drift rows produced by StrategyAllocationHubController.fetchAllocationData. Consumed by the strategyAllocationHub LWC via its portfolioDataStr input property.</description>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
+        <isOutput>true</isOutput>
+    </variables>
+</Flow>

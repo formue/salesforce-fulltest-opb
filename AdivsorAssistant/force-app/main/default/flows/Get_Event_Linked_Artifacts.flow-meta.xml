@@ -1,0 +1,386 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>66.0</apiVersion>
+    <assignments>
+        <locationY>1058</locationY>
+        <connector>
+            <targetReference>Loop_ContentDocumentLinks</targetReference>
+        </connector>
+        <locationX>1628</locationX>
+        <assignmentItems>
+            <assignToReference>artifacts</assignToReference>
+            <operator>Add</operator>
+            <value>
+                <elementReference>Get_ContentVersion_Per_Link.TextPreview</elementReference>
+            </value>
+        </assignmentItems>
+        <name>Append_Note_Content</name>
+        <label>Append Note Content</label>
+    </assignments>
+    <assignments>
+        <locationY>1142</locationY>
+        <connector>
+            <targetReference>Loop_ContentDocumentLinks</targetReference>
+        </connector>
+        <locationX>1760</locationX>
+        <assignmentItems>
+            <assignToReference>artifacts</assignToReference>
+            <operator>Add</operator>
+            <value>
+                <elementReference>Formula_Text_CSV_Content</elementReference>
+            </value>
+        </assignmentItems>
+        <name>Append_Text_CSV_Content</name>
+        <label>Append Text CSV Content</label>
+    </assignments>
+    <assignments>
+        <locationY>1226</locationY>
+        <connector>
+            <targetReference>Loop_ContentDocumentLinks</targetReference>
+        </connector>
+        <locationX>1892</locationX>
+        <assignmentItems>
+            <assignToReference>artifacts</assignToReference>
+            <operator>Add</operator>
+            <value>
+                <elementReference>Formula_Unsupported_Content</elementReference>
+            </value>
+        </assignmentItems>
+        <name>Append_Unsupported_Type</name>
+        <label>Append Unsupported Type</label>
+    </assignments>
+    <assignments>
+        <locationY>1310</locationY>
+        <locationX>2024</locationX>
+        <assignmentItems>
+            <assignToReference>artifacts</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <elementReference>Formula_Final_Artifacts</elementReference>
+            </value>
+        </assignmentItems>
+        <name>Build_Final_Artifacts_String</name>
+        <label>Build Final Artifacts String</label>
+    </assignments>
+    <decisions>
+        <locationY>974</locationY>
+        <defaultConnector>
+            <targetReference>Append_Unsupported_Type</targetReference>
+        </defaultConnector>
+        <defaultConnectorLabel>Unsupported Type</defaultConnectorLabel>
+        <locationX>1496</locationX>
+        <name>Check_FileType</name>
+        <label>Check FileType</label>
+        <rules>
+            <connector>
+                <targetReference>Append_Note_Content</targetReference>
+            </connector>
+            <conditionLogic>or</conditionLogic>
+            <conditions>
+                <leftValueReference>Get_ContentVersion_Per_Link.FileType</leftValueReference>
+                <operator>EqualTo</operator>
+                <rightValue>
+                    <stringValue>SNOTE</stringValue>
+                </rightValue>
+            </conditions>
+            <conditions>
+                <leftValueReference>Get_ContentVersion_Per_Link.FileType</leftValueReference>
+                <operator>EqualTo</operator>
+                <rightValue>
+                    <stringValue>NOTE</stringValue>
+                </rightValue>
+            </conditions>
+            <label>Note</label>
+            <name>Note_FileType</name>
+        </rules>
+        <rules>
+            <connector>
+                <targetReference>Append_Text_CSV_Content</targetReference>
+            </connector>
+            <conditionLogic>or</conditionLogic>
+            <conditions>
+                <leftValueReference>Get_ContentVersion_Per_Link.FileType</leftValueReference>
+                <operator>EqualTo</operator>
+                <rightValue>
+                    <stringValue>TEXT</stringValue>
+                </rightValue>
+            </conditions>
+            <conditions>
+                <leftValueReference>Get_ContentVersion_Per_Link.FileType</leftValueReference>
+                <operator>EqualTo</operator>
+                <rightValue>
+                    <stringValue>CSV</stringValue>
+                </rightValue>
+            </conditions>
+            <label>Text or CSV</label>
+            <name>Text_CSV_FileType</name>
+        </rules>
+    </decisions>
+    <environments>Default</environments>
+    <formulas>
+        <dataType>String</dataType>
+        <expression>"
+--- DOCUMENT: " &amp; Get_ContentVersion_Per_Link.Title &amp; " ---
+" &amp; Get_ContentVersion_Per_Link.TextPreview</expression>
+        <name>Formula_Text_CSV_Content</name>
+    </formulas>
+    <formulas>
+        <dataType>String</dataType>
+        <expression>"
+--- DOCUMENT: " &amp; Get_ContentVersion_Per_Link.Title &amp; " (" &amp; Get_ContentVersion_Per_Link.FileType &amp; ") - not supported for extraction ---
+"</expression>
+        <name>Formula_Unsupported_Content</name>
+    </formulas>
+    <formulas>
+        <dataType>String</dataType>
+        <expression>"=== EVENT: " &amp; Get_Event_Record.Subject &amp; " (" &amp; TEXT(Get_Event_Record.StartDateTime) &amp; ") ===
+
+--- CONTACT ---
+" &amp; Get_Related_Contact.FirstName &amp; " " &amp; Get_Related_Contact.LastName &amp; "
+Email: " &amp; Get_Related_Contact.Email &amp; "
+
+--- ACCOUNT ---
+" &amp; Get_Related_Account.Name &amp; "
+Industry: " &amp; Get_Related_Account.Industry &amp; "
+
+--- DOCUMENTS ---
+" &amp; artifacts</expression>
+        <name>Formula_Final_Artifacts</name>
+    </formulas>
+    <interviewLabel>Get Event Linked Artifacts {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>Get Event Linked Artifacts</label>
+    <loops>
+        <locationY>890</locationY>
+        <collectionReference>Get_ContentDocumentLinks</collectionReference>
+        <iterationOrder>Asc</iterationOrder>
+        <locationX>1364</locationX>
+        <name>Loop_ContentDocumentLinks</name>
+        <label>Loop ContentDocumentLinks</label>
+        <nextValueConnector>
+            <targetReference>Get_ContentVersion_Per_Link</targetReference>
+        </nextValueConnector>
+        <noMoreValuesConnector>
+            <targetReference>Build_Final_Artifacts_String</targetReference>
+        </noMoreValuesConnector>
+    </loops>
+    <processMetadataValues>
+        <name>BuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>CanvasMode</name>
+        <value>
+            <stringValue>AUTO_LAYOUT_CANVAS</stringValue>
+        </value>
+    </processMetadataValues>
+    <processType>AutoLaunchedFlow</processType>
+    <recordLookups>
+        <locationY>134</locationY>
+        <locationX>182</locationX>
+        <assignNullValuesIfNoRecordsFound>true</assignNullValuesIfNoRecordsFound>
+        <connector>
+            <targetReference>Get_Related_Contact</targetReference>
+        </connector>
+        <filters>
+            <field>Id</field>
+            <operator>EqualTo</operator>
+            <value>
+                <elementReference>eventId</elementReference>
+            </value>
+        </filters>
+        <getFirstRecordOnly>true</getFirstRecordOnly>
+        <label>Get Event Record</label>
+        <name>Get_Event_Record</name>
+        <object>Event</object>
+        <queriedFields>Id</queriedFields>
+        <queriedFields>Subject</queriedFields>
+        <queriedFields>StartDateTime</queriedFields>
+        <queriedFields>Description</queriedFields>
+        <queriedFields>WhoId</queriedFields>
+        <queriedFields>WhatId</queriedFields>
+        <storeOutputAutomatically>true</storeOutputAutomatically>
+    </recordLookups>
+    <recordLookups>
+        <locationY>254</locationY>
+        <locationX>182</locationX>
+        <assignNullValuesIfNoRecordsFound>true</assignNullValuesIfNoRecordsFound>
+        <connector>
+            <targetReference>Get_Related_Account</targetReference>
+        </connector>
+        <filters>
+            <field>Id</field>
+            <operator>EqualTo</operator>
+            <value>
+                <elementReference>Get_Event_Record.WhoId</elementReference>
+            </value>
+        </filters>
+        <getFirstRecordOnly>true</getFirstRecordOnly>
+        <label>Get Related Contact</label>
+        <name>Get_Related_Contact</name>
+        <object>Contact</object>
+        <queriedFields>Id</queriedFields>
+        <queriedFields>FirstName</queriedFields>
+        <queriedFields>LastName</queriedFields>
+        <queriedFields>Email</queriedFields>
+        <queriedFields>AccountId</queriedFields>
+        <storeOutputAutomatically>true</storeOutputAutomatically>
+    </recordLookups>
+    <recordLookups>
+        <locationY>374</locationY>
+        <locationX>182</locationX>
+        <assignNullValuesIfNoRecordsFound>true</assignNullValuesIfNoRecordsFound>
+        <connector>
+            <targetReference>Get_Related_Opportunities</targetReference>
+        </connector>
+        <filters>
+            <field>Id</field>
+            <operator>EqualTo</operator>
+            <value>
+                <elementReference>Get_Related_Contact.AccountId</elementReference>
+            </value>
+        </filters>
+        <getFirstRecordOnly>true</getFirstRecordOnly>
+        <label>Get Related Account</label>
+        <name>Get_Related_Account</name>
+        <object>Account</object>
+        <queriedFields>Id</queriedFields>
+        <queriedFields>Name</queriedFields>
+        <queriedFields>Industry</queriedFields>
+        <storeOutputAutomatically>true</storeOutputAutomatically>
+    </recordLookups>
+    <recordLookups>
+        <locationY>494</locationY>
+        <locationX>182</locationX>
+        <assignNullValuesIfNoRecordsFound>true</assignNullValuesIfNoRecordsFound>
+        <connector>
+            <targetReference>Get_Related_Tasks</targetReference>
+        </connector>
+        <filters>
+            <field>AccountId</field>
+            <operator>EqualTo</operator>
+            <value>
+                <elementReference>Get_Related_Account.Id</elementReference>
+            </value>
+        </filters>
+        <getFirstRecordOnly>false</getFirstRecordOnly>
+        <label>Get Related Opportunities</label>
+        <limit>5</limit>
+        <name>Get_Related_Opportunities</name>
+        <object>Opportunity</object>
+        <queriedFields>Id</queriedFields>
+        <queriedFields>Name</queriedFields>
+        <queriedFields>StageName</queriedFields>
+        <queriedFields>Amount</queriedFields>
+        <queriedFields>CloseDate</queriedFields>
+        <storeOutputAutomatically>true</storeOutputAutomatically>
+    </recordLookups>
+    <recordLookups>
+        <locationY>614</locationY>
+        <locationX>182</locationX>
+        <assignNullValuesIfNoRecordsFound>true</assignNullValuesIfNoRecordsFound>
+        <connector>
+            <targetReference>Get_ContentDocumentLinks</targetReference>
+        </connector>
+        <filterLogic>and</filterLogic>
+        <filters>
+            <field>WhoId</field>
+            <operator>EqualTo</operator>
+            <value>
+                <elementReference>Get_Related_Contact.Id</elementReference>
+            </value>
+        </filters>
+        <filters>
+            <field>Status</field>
+            <operator>NotEqualTo</operator>
+            <value>
+                <stringValue>Completed</stringValue>
+            </value>
+        </filters>
+        <getFirstRecordOnly>false</getFirstRecordOnly>
+        <label>Get Related Tasks</label>
+        <limit>5</limit>
+        <name>Get_Related_Tasks</name>
+        <object>Task</object>
+        <queriedFields>Id</queriedFields>
+        <queriedFields>Subject</queriedFields>
+        <queriedFields>Status</queriedFields>
+        <queriedFields>ActivityDate</queriedFields>
+        <storeOutputAutomatically>true</storeOutputAutomatically>
+    </recordLookups>
+    <recordLookups>
+        <locationY>734</locationY>
+        <locationX>182</locationX>
+        <assignNullValuesIfNoRecordsFound>true</assignNullValuesIfNoRecordsFound>
+        <connector>
+            <targetReference>Loop_ContentDocumentLinks</targetReference>
+        </connector>
+        <filters>
+            <field>LinkedEntityId</field>
+            <operator>EqualTo</operator>
+            <value>
+                <elementReference>eventId</elementReference>
+            </value>
+        </filters>
+        <getFirstRecordOnly>false</getFirstRecordOnly>
+        <label>Get ContentDocumentLinks</label>
+        <limit>5</limit>
+        <name>Get_ContentDocumentLinks</name>
+        <object>ContentDocumentLink</object>
+        <queriedFields>Id</queriedFields>
+        <queriedFields>LinkedEntityId</queriedFields>
+        <queriedFields>ContentDocumentId</queriedFields>
+        <storeOutputAutomatically>true</storeOutputAutomatically>
+    </recordLookups>
+    <recordLookups>
+        <locationY>854</locationY>
+        <locationX>182</locationX>
+        <assignNullValuesIfNoRecordsFound>true</assignNullValuesIfNoRecordsFound>
+        <connector>
+            <targetReference>Check_FileType</targetReference>
+        </connector>
+        <filters>
+            <field>ContentDocumentId</field>
+            <operator>EqualTo</operator>
+            <value>
+                <elementReference>Loop_ContentDocumentLinks.ContentDocumentId</elementReference>
+            </value>
+        </filters>
+        <getFirstRecordOnly>true</getFirstRecordOnly>
+        <label>Get ContentVersion Per Link</label>
+        <name>Get_ContentVersion_Per_Link</name>
+        <object>ContentVersion</object>
+        <queriedFields>Id</queriedFields>
+        <queriedFields>Title</queriedFields>
+        <queriedFields>FileType</queriedFields>
+        <queriedFields>TextPreview</queriedFields>
+        <sortField>CreatedDate</sortField>
+        <sortOrder>Desc</sortOrder>
+        <storeOutputAutomatically>true</storeOutputAutomatically>
+    </recordLookups>
+    <start>
+        <locationY>50</locationY>
+        <locationX>182</locationX>
+        <connector>
+            <targetReference>Get_Event_Record</targetReference>
+        </connector>
+    </start>
+    <status>Draft</status>
+    <variables>
+        <dataType>String</dataType>
+        <description>Input parameter that receives the Event record Id.</description>
+        <isCollection>false</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+        <name>eventId</name>
+    </variables>
+    <variables>
+        <dataType>String</dataType>
+        <description>Output variable containing the complete concatenated artifacts string.</description>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
+        <isOutput>true</isOutput>
+        <name>artifacts</name>
+    </variables>
+</Flow>

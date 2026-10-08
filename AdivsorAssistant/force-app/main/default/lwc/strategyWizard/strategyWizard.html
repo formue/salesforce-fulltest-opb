@@ -1,0 +1,582 @@
+<!--
+  c-strategy-wizard — the full Create Strategy journey on one flow screen.
+
+  Layout: path indicator, page title, then a two-column body (the active step
+  on the left, the running summary rail on the right), then the nav bar. The
+  rail is dropped on the final step so the review gets the full width.
+
+  Each conditional isStep* block below is one step. Step 3 is the
+  only one backed by live data — it delegates to c-custodian-menu.
+-->
+<template>
+  <div class={rootClass}>
+    <!-- STYLE SWITCH — mockup only, hidden unless showStyleToggle is set -->
+    <template if:true={showStyleToggle}>
+      <div class="sw-styleseg" role="group" aria-label="Visual style">
+        <span class="sw-styleseg__lbl">Style</span>
+        <button
+          type="button"
+          class={classicToggleClass}
+          data-ui="classic"
+          aria-pressed={classicPressed}
+          onclick={handleStyleToggle}
+        >
+          Classic
+        </button>
+        <button
+          type="button"
+          class={cockpitToggleClass}
+          data-ui="cockpit"
+          aria-pressed={cockpitPressed}
+          onclick={handleStyleToggle}
+        >
+          Cockpit
+        </button>
+      </div>
+    </template>
+
+    <!-- PATH INDICATOR (classic) — completed steps clickable, future disabled -->
+    <template if:true={isClassic}>
+      <ul class="sw-path">
+        <template for:each={steps} for:item="s">
+          <li key={s.key} class="sw-path__item">
+            <button
+              type="button"
+              class={s.cls}
+              data-step={s.index}
+              disabled={s.notDone}
+              aria-current={s.ariaCurrent}
+              onclick={handleGoto}
+            >
+              <template if:true={s.isDone}>
+                <svg
+                  class="sw-path__tick"
+                  viewBox="0 0 16 16"
+                  aria-hidden="true"
+                  focusable="false"
+                >
+                  <path
+                    d="M3 8.5l3.5 3.5L13 5"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </template>
+              <span class="sw-path__lbl">{s.chip}</span>
+            </button>
+          </li>
+        </template>
+      </ul>
+
+      <p class="sw-counter">{stepCounter}</p>
+
+      <!-- PAGE TITLE — supplied by the wizard, not by the step components -->
+      <header class="sw-head">
+        <h1 class="sw-head__title">{stepTitle}</h1>
+        <p class="sw-head__sub">{stepSub}</p>
+      </header>
+    </template>
+
+    <!-- STEP RAIL (cockpit) — all five visible at once, down the left -->
+    <template if:true={isCockpit}>
+      <div class="sw-ckhead">
+        <h1 class="sw-ckhead__title">{stepTitle}</h1>
+        <p class="sw-ckhead__sub">{stepSub}</p>
+      </div>
+    </template>
+
+    <div class={columnsClass}>
+      <!-- COCKPIT STEP RAIL -->
+      <template if:true={isCockpit}>
+        <ul class="sw-cksteps">
+          <template for:each={railSteps} for:item="s">
+            <li key={s.key}>
+              <button
+                type="button"
+                class={s.cls}
+                data-step={s.index}
+                disabled={s.notDone}
+                aria-current={s.ariaCurrent}
+                onclick={handleGoto}
+              >
+                <span class={s.dotCls}>
+                  <template if:true={s.isDone}>
+                    <svg
+                      viewBox="0 0 16 16"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <path
+                        d="M3 8.5l3.5 3.5L13 5"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2.4"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+                  </template>
+                  <template if:false={s.isDone}>{s.number}</template>
+                </span>
+                <span>{s.chip}</span>
+              </button>
+            </li>
+          </template>
+        </ul>
+      </template>
+
+      <div class="sw-stage">
+        <!-- Error summary for the current step, announced and scrolled to -->
+        <template if:true={hasErrors}>
+          <div class="sw-errsum" role="alert">
+            <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+              <circle
+                cx="8"
+                cy="8"
+                r="7"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+              />
+              <path
+                d="M8 4.5v4.2M8 11v.9"
+                stroke="currentColor"
+                stroke-width="1.6"
+                stroke-linecap="round"
+              />
+            </svg>
+            <span>{errorSummary}</span>
+          </div>
+        </template>
+
+        <!-- ================================================= STEP 1 — ACCOUNT
+             Mocked. Strategy type tiles, then the account it belongs to. -->
+        <template if:true={isStepAccount}>
+          <h2 class="sw-section">Strategy type</h2>
+          <div
+            class="sw-tiles sw-tiles_narrow"
+            role="radiogroup"
+            aria-label="Strategy type"
+          >
+            <template for:each={strategyTypeTiles} for:item="t">
+              <button
+                key={t.value}
+                type="button"
+                class={t.cls}
+                data-group="strategyType"
+                data-value={t.value}
+                role="radio"
+                aria-checked={t.ariaChecked}
+                tabindex={t.tabIndex}
+                onclick={handleTileClick}
+                onkeydown={handleTileKeydown}
+              >
+                <span class="sw-tile__chip"
+                  ><span style={t.chipStyle}>{t.glyph}</span></span
+                >
+                <span class="sw-tile__label">{t.label}</span>
+              </button>
+            </template>
+          </div>
+          <template if:true={errStrategyType}>
+            <p class="sw-err sw-err_centre">{errStrategyType}</p>
+          </template>
+
+          <hr class="sw-divider" />
+
+          <h2 class="sw-section">Account</h2>
+          <div
+            class="sw-rows sw-rows_narrow"
+            role="radiogroup"
+            aria-label="Account"
+          >
+            <template for:each={accountRows} for:item="a">
+              <button
+                key={a.value}
+                type="button"
+                class={a.cls}
+                data-group="accountId"
+                data-value={a.value}
+                role="radio"
+                aria-checked={a.ariaChecked}
+                onclick={handleTileClick}
+                onkeydown={handleTileKeydown}
+              >
+                <span class="sw-row__radio" aria-hidden="true"></span>
+                <span class="sw-row__text"
+                  ><span class="sw-row__name">{a.label}</span></span
+                >
+                <span class="sw-row__flags"
+                  ><span class="sw-pill">{a.kind}</span></span
+                >
+              </button>
+            </template>
+          </div>
+          <template if:true={errAccountId}>
+            <p class="sw-err">{errAccountId}</p>
+          </template>
+        </template>
+
+        <!-- ================================================= STEP 2 — DETAILS
+             Mocked. Name and amount, management type, and the risk split
+             shown as a stacked bar rather than a row of numbers. -->
+        <template if:true={isStepDetails}>
+          <h2 class="sw-section">Strategy details</h2>
+          <div class="sw-grid2">
+            <div class="sw-field">
+              <label for="f-name">Name</label>
+              <input
+                id="f-name"
+                type="text"
+                data-field="name"
+                value={strategyName}
+                aria-invalid={nameInvalid}
+                placeholder="e.g. Anne Jacobsen — Core"
+                oninput={handleTextInput}
+              />
+              <template if:true={errName}>
+                <p class="sw-err">{errName}</p>
+              </template>
+            </div>
+
+            <div class="sw-field sw-field_amount">
+              <label for="f-total">Total portfolio</label>
+              <input
+                id="f-total"
+                type="text"
+                data-field="totalPortfolio"
+                inputmode="numeric"
+                value={formattedTotal}
+                aria-invalid={totalInvalid}
+                placeholder="0"
+                oninput={handleAmountInput}
+              />
+              <span class="sw-field__cur">{currencyCode}</span>
+              <template if:true={errTotalPortfolio}>
+                <p class="sw-err">{errTotalPortfolio}</p>
+              </template>
+              <template if:false={errTotalPortfolio}>
+                <p class="sw-hint">
+                  Currency follows the customer&apos;s country.
+                </p>
+              </template>
+            </div>
+          </div>
+
+          <hr class="sw-divider" />
+
+          <h2 class="sw-section">Management type</h2>
+          <div class="sw-tiles" role="radiogroup" aria-label="Management type">
+            <template for:each={managementTiles} for:item="t">
+              <button
+                key={t.value}
+                type="button"
+                class={t.cls}
+                data-group="managementType"
+                data-value={t.value}
+                role="radio"
+                aria-checked={t.ariaChecked}
+                tabindex={t.tabIndex}
+                onclick={handleTileClick}
+                onkeydown={handleTileKeydown}
+              >
+                <span class="sw-tile__chip"
+                  ><span style={t.chipStyle}>{t.glyph}</span></span
+                >
+                <span class="sw-tile__label">{t.label}</span>
+              </button>
+            </template>
+          </div>
+          <template if:true={errManagementType}>
+            <p class="sw-err">{errManagementType}</p>
+          </template>
+
+          <hr class="sw-divider" />
+
+          <h2 class="sw-section">Risk &amp; lock-in profile</h2>
+          <p class="sw-lead">
+            Predefined level
+            <strong class="sw-accent">{riskLabel}</strong> splits the portfolio
+            like this:
+          </p>
+          <div class="sw-allocbar" role="img" aria-label={riskBarLabel}>
+            <template for:each={riskSegments} for:item="seg">
+              <span key={seg.key} style={seg.barStyle}>{seg.label}</span>
+            </template>
+          </div>
+          <div class="sw-alloclegend">
+            <template for:each={riskSegments} for:item="seg">
+              <span key={seg.key}
+                ><i style={seg.swatchStyle}></i>{seg.key}</span
+              >
+            </template>
+          </div>
+        </template>
+
+        <!-- =============================================== STEP 3 — CUSTODIAN
+             The real thing. c-custodian-menu in embedded mode reads the two
+             custom metadata types over GraphQL and reports its selection
+             back through the selectionchange event. -->
+        <template if:true={isStepCustodian}>
+          <c-custodian-menu
+            embedded
+            theme={childTheme}
+            country-code={countryCode}
+            onselectionchange={handleCustodianChange}
+          ></c-custodian-menu>
+          <template if:true={errCustodian}>
+            <p class="sw-err">{errCustodian}</p>
+          </template>
+        </template>
+
+        <!-- ================================================= STEP 4 — PROFILE
+             Mocked. Profile tiles, then editable weights per bucket with a
+             running column total that flags anything other than 100%. -->
+        <template if:true={isStepProfile}>
+          <div
+            class="sw-tiles sw-tiles_narrow"
+            role="radiogroup"
+            aria-label="Investment profile"
+          >
+            <template for:each={profileTiles} for:item="t">
+              <button
+                key={t.value}
+                type="button"
+                class={t.cls}
+                data-group="profile"
+                data-value={t.value}
+                role="radio"
+                aria-checked={t.ariaChecked}
+                tabindex={t.tabIndex}
+                onclick={handleTileClick}
+                onkeydown={handleTileKeydown}
+              >
+                <span class="sw-tile__chip"
+                  ><span style={t.chipStyle}>{t.glyph}</span></span
+                >
+                <span class="sw-tile__label">{t.label}</span>
+                <span class="sw-tile__fold" aria-hidden="true"></span>
+              </button>
+            </template>
+          </div>
+          <template if:true={errProfile}>
+            <p class="sw-err sw-err_centre">{errProfile}</p>
+          </template>
+
+          <template if:true={hasProfile}>
+            <hr class="sw-divider" />
+            <h2 class="sw-section">Asset class split</h2>
+            <p class="sw-lead">
+              Weights within each bucket. Each column should total 100%.
+            </p>
+            <div class="sw-alloc">
+              <template for:each={allocationColumns} for:item="col">
+                <div key={col.key} class="sw-alloc__col">
+                  <h3 class="sw-alloc__head">
+                    <i style={col.swatchStyle}></i>{col.key}
+                    <span class="sw-alloc__tot" data-bad={col.isOffTarget}
+                      >{col.total}</span
+                    >
+                  </h3>
+                  <template for:each={col.rows} for:item="row">
+                    <div key={row.key} class="sw-alloc__row">
+                      <span class="sw-alloc__lbl">{row.label}</span>
+                      <span class="sw-alloc__track"
+                        ><i style={row.barStyle}></i
+                      ></span>
+                      <input
+                        type="text"
+                        inputmode="numeric"
+                        value={row.value}
+                        data-bucket={row.bucket}
+                        data-index={row.index}
+                        aria-label={row.label}
+                        oninput={handleAllocationInput}
+                      />
+                    </div>
+                  </template>
+                </div>
+              </template>
+            </div>
+          </template>
+        </template>
+
+        <!-- ================================================== STEP 5 — REVIEW
+             Every choice, grouped, each with an Edit link back to its step.
+             The custodian panel is flagged NEW because it is the addition. -->
+        <template if:true={isStepCreate}>
+          <div class="sw-review">
+            <template for:each={reviewGroups} for:item="g">
+              <div key={g.key} class="sw-rev">
+                <h3 class="sw-rev__head">
+                  <template if:true={g.isNew}>
+                    <span class="sw-newflag">NEW</span>
+                  </template>
+                  {g.title}
+                  <button
+                    type="button"
+                    class="sw-rev__edit"
+                    data-step={g.editStep}
+                    onclick={handleGoto}
+                  >
+                    Edit
+                  </button>
+                </h3>
+                <dl class="sw-rev__list">
+                  <template for:each={g.rows} for:item="r">
+                    <div key={r.key} class="sw-rev__pair">
+                      <dt>{r.label}</dt>
+                      <dd class={r.cls}>{r.value}</dd>
+                    </div>
+                  </template>
+                </dl>
+              </div>
+            </template>
+          </div>
+
+          <div class="sw-riskrecap">
+            <h2 class="sw-section">Risk &amp; lock-in split</h2>
+            <div class="sw-allocbar" role="img" aria-label={riskBarLabel}>
+              <template for:each={riskSegments} for:item="seg">
+                <span key={seg.key} style={seg.barStyle}>{seg.label}</span>
+              </template>
+            </div>
+            <div class="sw-alloclegend">
+              <template for:each={riskSegments} for:item="seg">
+                <span key={seg.key}
+                  ><i style={seg.swatchStyle}></i>{seg.key}</span
+                >
+              </template>
+            </div>
+          </div>
+        </template>
+      </div>
+
+      <!-- LIVE PANEL (cockpit) — the consequences of the choices so far -->
+      <template if:true={isCockpit}>
+        <aside class="sw-cklive">
+          <h2 class="sw-cklive__head">Portfolio taking shape</h2>
+          <div class="sw-cklive__body">
+            <div>
+              <p class="sw-ckblock">Total portfolio</p>
+              <template if:true={hasHeroAmount}>
+                <p class="sw-ckhero">
+                  {heroAmount} <small>{currencyCode}</small>
+                </p>
+              </template>
+              <template if:false={hasHeroAmount}>
+                <p class="sw-ckhero sw-ckhero_empty">Not set</p>
+              </template>
+            </div>
+
+            <div>
+              <p class="sw-ckblock">Risk split — {riskLabel}</p>
+              <div class="sw-ckbar" role="img" aria-label={riskBarLabel}>
+                <template for:each={riskSegments} for:item="seg">
+                  <span key={seg.key} style={seg.barStyle}>{seg.label}</span>
+                </template>
+              </div>
+              <div class="sw-cklegend">
+                <template for:each={riskSegments} for:item="seg">
+                  <span key={seg.key}>
+                    <i style={seg.swatchStyle}></i>{seg.key}<b>{seg.label}</b>
+                  </span>
+                </template>
+              </div>
+            </div>
+
+            <div>
+              <p class="sw-ckblock">Registration</p>
+              <dl class="sw-ckfacts">
+                <template for:each={liveFacts} for:item="f">
+                  <div key={f.key} class="sw-ckfact">
+                    <dt>{f.label}</dt>
+                    <dd class={f.cls}>{f.value}</dd>
+                  </div>
+                </template>
+              </dl>
+              <template if:true={showBankChip}>
+                <p class={bankChipClass}>
+                  <lightning-icon
+                    icon-name={bankChipIcon}
+                    size="xx-small"
+                    alternative-text="Status"
+                  ></lightning-icon>
+                  {bankChipLabel}
+                </p>
+              </template>
+            </div>
+          </div>
+        </aside>
+      </template>
+
+      <!-- SUMMARY RAIL (classic) — the running recap; hidden on the review -->
+      <template if:true={showRail}>
+        <aside class="sw-rail">
+          <h2 class="sw-rail__head">Your strategy so far</h2>
+          <template for:each={summaryGroups} for:item="g">
+            <div key={g.key} class={g.cls}>
+              <h3 class="sw-sumgroup__head">
+                <span class={g.dotCls}></span>{g.title}
+              </h3>
+              <template if:true={g.hasRows}>
+                <ul class="sw-sumgroup__list">
+                  <template for:each={g.rows} for:item="r">
+                    <li key={r.key}><span>{r.label}</span><b>{r.value}</b></li>
+                  </template>
+                </ul>
+              </template>
+              <template if:false={g.hasRows}>
+                <p class="sw-sumgroup__pending">Not chosen yet</p>
+              </template>
+            </div>
+          </template>
+        </aside>
+      </template>
+    </div>
+
+    <!-- NAV BAR — the wizard owns navigation for every step -->
+    <div class="sw-nav">
+      <template if:false={isFirstStep}>
+        <button type="button" class="sw-ghost" onclick={handleBack}>
+          <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+            <path
+              d="M15 8H1m5-4L1 8l5 4"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+          Back
+        </button>
+      </template>
+      <button type="button" class="sw-next" onclick={handleNext}>
+        <span>{nextLabel}</span>
+        <svg
+          class="sw-next__arrow"
+          viewBox="0 0 16 16"
+          aria-hidden="true"
+          focusable="false"
+        >
+          <path
+            d="M1 8h12M9 4l4 4-4 4"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.75"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </button>
+    </div>
+
+    <template if:true={created}>
+      <p class="sw-toast" role="status">{createdMessage}</p>
+    </template>
+  </div>
+</template>

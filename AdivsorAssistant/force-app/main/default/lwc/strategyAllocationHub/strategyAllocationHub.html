@@ -1,0 +1,490 @@
+<template>
+    <lightning-card title="Strategy Allocation Command Centre" icon-name="standard:investment_account">
+
+        <!-- ── Header band ──────────────────────────────────────────────── -->
+        <div class="hub-header">
+            <div class="hub-header-left">
+                <div class="hub-breadcrumb">PRIVATE MARKETS / PORTFOLIO OPTIMIZATION</div>
+                <div class="hub-title">Allocation command centre.</div>
+            </div>
+            <div class="hub-header-right">
+                <div class="hub-status"><span class="hub-dot"></span> LIVE ANALYSIS</div>
+            </div>
+        </div>
+
+        <!-- ── Loading spinner ──────────────────────────────────────────── -->
+        <template lwc:if={isLoading}>
+            <div class="spinner-wrap">
+                <lightning-spinner alternative-text="Loading allocation data" size="medium"></lightning-spinner>
+            </div>
+        </template>
+
+        <div class={mainContentClass}>
+
+            <!-- ── AI briefing card ─────────────────────────────────────── -->
+            <div class="briefing-card slds-m-bottom_medium">
+                <div class="briefing-icon">&#x2261;</div>
+                <div class="briefing-body">
+                    <div class="briefing-source">FORMUE COPILOT / CLIENT BOOK ANALYZED</div>
+                    <div class="briefing-text">
+                        I have analyzed {portfoliosAnalysed} portfolios across your client book and identified
+                        <strong>{sellersCount}</strong> potential sellers and <strong>{buyersCount}</strong> potential buyers
+                        outside strategy borders. Indicative cross volume is <strong>{indicativeVolumeFormatted}</strong>.
+                    </div>
+                </div>
+                <div class="briefing-stats">
+                    <div class="briefing-stat">
+                        <div class="briefing-stat-value">{sellersCount}</div>
+                        <div class="briefing-stat-label">OVERALLOCATED</div>
+                    </div>
+                    <div class="briefing-stat-sep"></div>
+                    <div class="briefing-stat">
+                        <div class="briefing-stat-value briefing-stat-value--mono">{indicativeVolumeFormatted}</div>
+                        <div class="briefing-stat-label">INDICATIVE VOLUME</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Insight tiles ────────────────────────────────────────── -->
+            <div class="insight-row slds-m-bottom_large">
+                <div class="insight-tile insight-tile--sellers">
+                    <div class="insight-tile-top">
+                        <div class="insight-num">01</div>
+                        <div class="insight-arrow">&#x2197;</div>
+                    </div>
+                    <div class="insight-value">{sellersCount}</div>
+                    <div class="insight-label">Overallocated PE / RE</div>
+                    <div class="insight-sub">Consider selling where buyers exist</div>
+                </div>
+                <div class="insight-tile insight-tile--buyers">
+                    <div class="insight-tile-top">
+                        <div class="insight-num">02</div>
+                        <div class="insight-arrow">&#x2197;</div>
+                    </div>
+                    <div class="insight-value">{buyersCount}</div>
+                    <div class="insight-label">Underallocated PE / RE</div>
+                    <div class="insight-sub">Consider buying where sellers exist</div>
+                </div>
+                <div class="insight-tile insight-tile--total">
+                    <div class="insight-tile-top">
+                        <div class="insight-num">03</div>
+                        <div class="insight-arrow">&#x2197;</div>
+                    </div>
+                    <div class="insight-value insight-value--mono">{indicativeVolumeFormatted}</div>
+                    <div class="insight-label">Indicative Volume</div>
+                    <div class="insight-sub">Min(Buy, Sell) across book</div>
+                </div>
+                <div class="insight-tile insight-tile--neutral">
+                    <div class="insight-tile-top">
+                        <div class="insight-num">04</div>
+                        <div class="insight-arrow">&#x2197;</div>
+                    </div>
+                    <div class="insight-value">{withinBordersCount}</div>
+                    <div class="insight-label">Within Borders</div>
+                    <div class="insight-sub">of {portfoliosAnalysed} analysed</div>
+                </div>
+            </div>
+
+            <!-- ── Filter bar ───────────────────────────────────────────── -->
+            <div class="filter-bar slds-m-bottom_medium slds-p-around_small">
+                <lightning-layout multiple-rows>
+                    <lightning-layout-item size="3" class="slds-p-right_small">
+                        <lightning-slider
+                            label="Drift Threshold %"
+                            value={driftThreshold}
+                            min="1"
+                            max="15"
+                            step="0.5"
+                            onchange={handleThresholdChange}>
+                        </lightning-slider>
+                    </lightning-layout-item>
+                    <lightning-layout-item size="3" class="slds-p-right_small">
+                        <lightning-combobox
+                            label="Asset Class"
+                            value={selectedAssetClass}
+                            placeholder="All asset classes"
+                            options={assetClassOptions}
+                            onchange={handleAssetClassChange}>
+                        </lightning-combobox>
+                    </lightning-layout-item>
+                    <lightning-layout-item size="3" class="slds-p-right_small">
+                        <lightning-combobox
+                            label="Department"
+                            value={selectedDepartment}
+                            placeholder="All departments"
+                            options={departmentOptions}
+                            onchange={handleDepartmentChange}>
+                        </lightning-combobox>
+                    </lightning-layout-item>
+                    <lightning-layout-item size="3">
+                        <lightning-combobox
+                            label="Advisor"
+                            value={selectedAdvisor}
+                            placeholder="All advisors"
+                            options={advisorOptions}
+                            onchange={handleAdvisorChange}>
+                        </lightning-combobox>
+                    </lightning-layout-item>
+                </lightning-layout>
+            </div>
+
+            <!-- ── Tabs ─────────────────────────────────────────────────── -->
+            <lightning-tabset>
+
+                <!-- Drift Overview (keep datatable) -->
+                <lightning-tab label="Drift Overview" value="overview">
+                    <div class="slds-m-top_small" style="min-height: 400px;">
+                        <lightning-datatable
+                            key-field="rowId"
+                            data={overviewRows}
+                            columns={overviewColumns}
+                            sorted-by={sortedBy}
+                            sorted-direction={sortedDirection}
+                            onsort={handleOverviewSort}
+                            default-sort-direction="desc"
+                            hide-checkbox-column>
+                        </lightning-datatable>
+                    </div>
+                </lightning-tab>
+
+                <!-- Buyer / Seller Match (custom rows) -->
+                <lightning-tab label="Buyer / Seller Match" value="match">
+
+                    <template lwc:if={showMatchPrompt}>
+                        <div class="slds-box slds-theme_info slds-m-top_small slds-m-bottom_small slds-p-around_small">
+                            <p>Select an asset class above to narrow buyers and sellers to a specific instrument.</p>
+                        </div>
+                    </template>
+
+                    <div class="match-layout slds-m-top_small">
+
+                        <!-- ── Buyers column ──────────────────────────── -->
+                        <div class="match-col">
+                            <div class="match-col-header match-col-header--buyers">
+                                <span class="col-dir">&#x25BC;</span> POTENTIAL BUYERS
+                                <span class="col-count">{buyersCount}</span>
+                            </div>
+                            <template for:each={pagedEnrichedBuyers} for:item="row">
+                                <div key={row.rowId} class="client-row-outer">
+                                    <div class={row.rowClass} data-rowid={row.rowId} onclick={handleBuyerRowClick}>
+                                        <div class="client-avatar">{row.initials}</div>
+                                        <div class="client-main">
+                                            <div class="client-name-row">
+                                                <span class="client-name">{row.customerName}</span>
+                                                <span class="client-confidence">{row.confidenceLabel}</span>
+                                            </div>
+                                            <div class="client-meta">{row.strategyName} &middot; {row.assetClass} &middot; {row.ownerName}</div>
+                                            <div class="alloc-bar-wrap">
+                                                <div class="alloc-track">
+                                                    <div class="alloc-fill" style="width: {row.actualBarWidth}"></div>
+                                                    <div class="alloc-target-marker" style="left: {row.targetBarLeft}"></div>
+                                                    <template lwc:if={row.hasBounds}>
+                                                        <div class="alloc-lower-marker" style="left: {row.lowerBarLeft}"></div>
+                                                        <div class="alloc-upper-marker" style="left: {row.upperBarLeft}"></div>
+                                                    </template>
+                                                </div>
+                                                <div class="alloc-labels">
+                                                    <span>Actual {row.actualDisplay}</span>
+                                                    <span>Target {row.targetDisplay}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="client-stats">
+                                            <div class="drift-badge drift-badge--buy">{row.driftDisplay}</div>
+                                            <div class="client-amount">
+                                                <lightning-formatted-number
+                                                    value={row.actionAmount}
+                                                    format-style="currency"
+                                                    currency-code={row.currencyCode}
+                                                    maximum-fraction-digits="0">
+                                                </lightning-formatted-number>
+                                            </div>
+                                        </div>
+                                        <div class="chevron">{row.chevronSymbol}</div>
+                                    </div>
+                                    <template lwc:if={row.isExpanded}>
+                                        <div class="holdings-panel holdings-panel--buyers">
+                                            <div class="key-issue-row">
+                                                <div class="key-issue-label">KEY ISSUE</div>
+                                                <div class="key-issue-text">{row.keyIssue}</div>
+                                            </div>
+                                            <template lwc:if={row.holdingsLoading}>
+                                                <div class="holdings-loading">
+                                                    <lightning-spinner size="x-small" alternative-text="Loading products"></lightning-spinner>
+                                                    <span class="holdings-loading-label">Loading products&hellip;</span>
+                                                </div>
+                                            </template>
+                                            <template lwc:else>
+                                                <div class="holdings-title slds-m-top_small">PRODUCTS &#x2014; {row.assetClass}</div>
+                                                <template for:each={row.holdings} for:item="h">
+                                                    <div key={h.holdingId} class="holding-row">
+                                                        <span class="holding-name">{h.productName}</span>
+                                                        <span class="holding-class">{h.assetClass}</span>
+                                                        <span class="holding-value">
+                                                            <lightning-formatted-number
+                                                                value={h.marketValue}
+                                                                format-style="currency"
+                                                                currency-code={h.currencyCode}
+                                                                maximum-fraction-digits="0">
+                                                            </lightning-formatted-number>
+                                                        </span>
+                                                    </div>
+                                                </template>
+                                            </template>
+                                            <template lwc:if={row.isSelected}>
+                                                <div class="selected-badge">&#x2713; SELECTED AS BUYER</div>
+                                            </template>
+                                        </div>
+                                    </template>
+                                </div>
+                            </template>
+                            <!-- Buyers pagination -->
+                            <div class="pagination-bar">
+                                <span class="page-range">{buyerRangeLabel}</span>
+                                <div class="page-controls">
+                                    <lightning-button-icon
+                                        icon-name="utility:chevronleft"
+                                        variant="bare"
+                                        size="small"
+                                        alternative-text="Previous"
+                                        disabled={buyerPrevDisabled}
+                                        onclick={handleBuyerPrev}>
+                                    </lightning-button-icon>
+                                    <span class="page-label">{buyerPageLabel}</span>
+                                    <lightning-button-icon
+                                        icon-name="utility:chevronright"
+                                        variant="bare"
+                                        size="small"
+                                        alternative-text="Next"
+                                        disabled={buyerNextDisabled}
+                                        onclick={handleBuyerNext}>
+                                    </lightning-button-icon>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ── Sellers column ─────────────────────────── -->
+                        <div class="match-col">
+                            <div class="match-col-header match-col-header--sellers">
+                                <span class="col-dir">&#x25B2;</span> POTENTIAL SELLERS
+                                <span class="col-count">{sellersCount}</span>
+                            </div>
+                            <template for:each={pagedEnrichedSellers} for:item="row">
+                                <div key={row.rowId} class="client-row-outer">
+                                    <div class={row.rowClass} data-rowid={row.rowId} onclick={handleSellerRowClick}>
+                                        <div class="client-avatar client-avatar--seller">{row.initials}</div>
+                                        <div class="client-main">
+                                            <div class="client-name-row">
+                                                <span class="client-name">{row.customerName}</span>
+                                                <span class="client-confidence">{row.confidenceLabel}</span>
+                                            </div>
+                                            <div class="client-meta">{row.strategyName} &middot; {row.assetClass} &middot; {row.ownerName}</div>
+                                            <div class="alloc-bar-wrap">
+                                                <div class="alloc-track">
+                                                    <div class="alloc-fill alloc-fill--sell" style="width: {row.actualBarWidth}"></div>
+                                                    <div class="alloc-target-marker" style="left: {row.targetBarLeft}"></div>
+                                                    <template lwc:if={row.hasBounds}>
+                                                        <div class="alloc-lower-marker" style="left: {row.lowerBarLeft}"></div>
+                                                        <div class="alloc-upper-marker" style="left: {row.upperBarLeft}"></div>
+                                                    </template>
+                                                </div>
+                                                <div class="alloc-labels">
+                                                    <span>Actual {row.actualDisplay}</span>
+                                                    <span>Target {row.targetDisplay}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="client-stats">
+                                            <div class="drift-badge drift-badge--sell">{row.driftDisplay}</div>
+                                            <div class="client-amount">
+                                                <lightning-formatted-number
+                                                    value={row.actionAmount}
+                                                    format-style="currency"
+                                                    currency-code={row.currencyCode}
+                                                    maximum-fraction-digits="0">
+                                                </lightning-formatted-number>
+                                            </div>
+                                        </div>
+                                        <div class="chevron">{row.chevronSymbol}</div>
+                                    </div>
+                                    <template lwc:if={row.isExpanded}>
+                                        <div class="holdings-panel holdings-panel--sellers">
+                                            <div class="key-issue-row">
+                                                <div class="key-issue-label">KEY ISSUE</div>
+                                                <div class="key-issue-text">{row.keyIssue}</div>
+                                            </div>
+                                            <template lwc:if={row.holdingsLoading}>
+                                                <div class="holdings-loading">
+                                                    <lightning-spinner size="x-small" alternative-text="Loading products"></lightning-spinner>
+                                                    <span class="holdings-loading-label">Loading products&hellip;</span>
+                                                </div>
+                                            </template>
+                                            <template lwc:else>
+                                                <div class="holdings-title slds-m-top_small">
+                                                    PRODUCTS &#x2014; {row.assetClass}
+                                                    <span class="holdings-title-hint">click to select</span>
+                                                    <template lwc:if={row.selectedCount}>
+                                                        <span class="holdings-selected-count">{row.selectedCountLabel}</span>
+                                                    </template>
+                                                </div>
+                                                <template for:each={row.holdings} for:item="h">
+                                                    <div key={h.holdingId}
+                                                         class={h.productRowClass}
+                                                         data-holdingid={h.holdingId}
+                                                         onclick={handleSellerProductClick}>
+                                                        <span class="product-name">{h.productName}</span>
+                                                        <span class="product-class">{h.assetClass}</span>
+                                                        <span class="product-value">
+                                                            <lightning-formatted-number
+                                                                value={h.marketValue}
+                                                                format-style="currency"
+                                                                currency-code={h.currencyCode}
+                                                                maximum-fraction-digits="0">
+                                                            </lightning-formatted-number>
+                                                        </span>
+                                                        <template lwc:if={h.isSelectedProduct}>
+                                                            <span class="product-selected-badge">&#x2713; SELL</span>
+                                                        </template>
+                                                    </div>
+                                                </template>
+                                            </template>
+                                        </div>
+                                    </template>
+                                </div>
+                            </template>
+                            <!-- Sellers pagination -->
+                            <div class="pagination-bar">
+                                <span class="page-range">{sellerRangeLabel}</span>
+                                <div class="page-controls">
+                                    <lightning-button-icon
+                                        icon-name="utility:chevronleft"
+                                        variant="bare"
+                                        size="small"
+                                        alternative-text="Previous"
+                                        disabled={sellerPrevDisabled}
+                                        onclick={handleSellerPrev}>
+                                    </lightning-button-icon>
+                                    <span class="page-label">{sellerPageLabel}</span>
+                                    <lightning-button-icon
+                                        icon-name="utility:chevronright"
+                                        variant="bare"
+                                        size="small"
+                                        alternative-text="Next"
+                                        disabled={sellerNextDisabled}
+                                        onclick={handleSellerNext}>
+                                    </lightning-button-icon>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Selection cleared warning -->
+                    <template lwc:if={hasSelectionWarning}>
+                        <div class="slds-notify slds-notify_toast slds-theme_warning slds-m-top_small slds-p-around_small" role="alert">
+                            <p>{selectionWarning}</p>
+                        </div>
+                    </template>
+
+                </lightning-tab>
+
+            </lightning-tabset>
+
+        </div>
+
+    </lightning-card>
+
+    <!-- ── Floating action panel (fixed to viewport, outside card) ─────── -->
+    <template lwc:if={showActionPanel}>
+        <div class="action-float">
+            <div class={actionPanelClass}>
+                <div class="action-card-header" onclick={handleToggleActionPanel}>
+                    <span class="action-card-label">PROPOSED CROSS</span>
+                    <span class="action-card-summary">{actionPanelSummary}</span>
+                    <span class="action-collapse-btn">{actionCollapseLabel}</span>
+                </div>
+                <div class="action-card-body">
+                    <div class="action-match-detail">
+                        <div class="action-participants">
+                            <div class="action-participant action-participant--sell">
+                                <span class="action-participant-role">SELL &mdash; {expandedSellerRow.customerName}</span>
+                                <span class="action-participant-name">{expandedSellerRow.strategyName}</span>
+                                <span class="action-participant-class">{expandedSellerRow.assetClass}</span>
+                                <div class="action-product-chips">
+                                    <template for:each={selectedSellerProductsForPanel} for:item="sp">
+                                        <span key={sp.holdingId} class="action-product-chip action-product-chip--sell">{sp.productName}</span>
+                                    </template>
+                                </div>
+                            </div>
+                            <div class="action-arrow-center">&#x21E8;</div>
+                            <div class="action-participant action-participant--buy">
+                                <span class="action-participant-role">BUY &mdash; {selectedBuyer.customerName}</span>
+                                <span class="action-participant-name">{selectedBuyer.strategyName}</span>
+                                <span class="action-participant-class">{selectedBuyer.assetClass}</span>
+                            </div>
+                        </div>
+                        <div class="action-volume">
+                            <div class="action-volume-label">MAX EXECUTABLE VOLUME</div>
+                            <div class="action-volume-value">
+                                <lightning-formatted-number
+                                    value={calculatedTradeVolume}
+                                    format-style="currency"
+                                    currency-code={tradeCurrencyCode}
+                                    maximum-fraction-digits="0">
+                                </lightning-formatted-number>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Product-level comparison (appears once a row has been expanded) -->
+                    <template lwc:if={showProductComparison}>
+                        <div class="product-comparison">
+                            <div class="product-col">
+                                <div class="product-col-label product-col-label--sell">
+                                    SELLING &mdash; {selectedSellerProductCount} product(s)
+                                </div>
+                                <template for:each={selectedSellerProductsForPanel} for:item="h">
+                                    <div key={h.holdingId} class="product-row product-row--sell product-row--selected">
+                                        <span class="product-name">{h.productName}</span>
+                                        <span class="product-class">{h.assetClass}</span>
+                                        <span class="product-value">
+                                            <lightning-formatted-number value={h.marketValue} format-style="currency" currency-code={h.currencyCode} maximum-fraction-digits="0"></lightning-formatted-number>
+                                        </span>
+                                    </div>
+                                </template>
+                            </div>
+                            <div class="product-divider">&#x21E8;</div>
+                            <div class="product-col">
+                                <div class="product-col-label product-col-label--buy">
+                                    BUYER CURRENT HOLDINGS &mdash; {selectedBuyer.customerName}
+                                </div>
+                                <template lwc:if={buyerHoldingsEmpty}>
+                                    <div class="product-empty product-empty--new">New position &mdash; no current holdings in this class</div>
+                                </template>
+                                <template for:each={selectedBuyerHoldings} for:item="h">
+                                    <div key={h.holdingId} class="product-row product-row--buy">
+                                        <span class="product-name">{h.productName}</span>
+                                        <span class="product-class">{h.assetClass}</span>
+                                        <span class="product-value">
+                                            <lightning-formatted-number value={h.marketValue} format-style="currency" currency-code={h.currencyCode} maximum-fraction-digits="0"></lightning-formatted-number>
+                                        </span>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+
+                    <div class="action-cta">
+                        <lightning-button
+                            variant="brand"
+                            label="Match &amp; Generate Orders"
+                            title="Confirm this cross-trade match and proceed"
+                            onclick={handleProposeMatch}>
+                        </lightning-button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+</template>
