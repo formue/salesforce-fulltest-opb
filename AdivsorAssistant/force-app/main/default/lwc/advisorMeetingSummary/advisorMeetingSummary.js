@@ -438,6 +438,16 @@ function _fileKind(fileType) {
     return FILE_KINDS[(fileType || '').toUpperCase()] || 'generic';
 }
 
+/**
+ * The prompt template has exactly two attachment inputs plus one transcription
+ * input, so the cap is per KIND and not a flat total. A flat "3 documents" rule
+ * let an advisor pick three PDFs; the Flow sorts by FileType and silently
+ * dropped the third. Mirrored in advisorAssistant — both own live file UI over
+ * the same shared pool, so the two must agree.
+ */
+const MAX_ATTACHMENTS = 2;   // Input:Attachment, Input:Attachment_2
+const MAX_TRANSCRIPTS = 1;   // Input:Transcription
+
 // ── Meeting categories ──────────────────────────────────────────────────────
 /**
  * Display label and stored value are deliberately DIFFERENT for the prospect
@@ -1635,10 +1645,12 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
     // Artifact files for meeting summary checkbox list — wraps artifactFiles with isChecked/isDisabled
     get noNoteArtifactFiles() {
         const selected = this._selectedArtifactFileIds;
-        const staged   = this._sharedFiles.filter(f => f.included).length;
+        const slots    = this._fileSlots;
         return (this.artifactFiles || []).map(f => {
             const isChecked  = selected.has(f.id);
-            const isDisabled = !isChecked && selected.size + staged >= 3;
+            const isDisabled = !isChecked && (_fileKind(f.fileType) === 'txt'
+                                                ? slots.textFull
+                                                : slots.attachFull);
             return {
                 ...f,
                 isChecked,
@@ -1655,20 +1667,46 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
         return this._selectedArtifactFileIds.size +
                this._sharedFiles.filter(f => f.included).length;
     }
-    get noNoteCanAddFile() { return this._totalNoNoteFileCount < 3; }
+
+    /** Counts the selected pool by kind — see MAX_ATTACHMENTS above. */
+    get _fileSlots() {
+        let text = 0, attach = 0;
+        const byId = new Map((this.artifactFiles || []).map(f => [f.id, f]));
+        for (const id of this._selectedArtifactFileIds) {
+            if (_fileKind(byId.get(id)?.fileType) === 'txt') text++; else attach++;
+        }
+        for (const f of this._sharedFiles || []) {
+            if (!f.included) continue;
+            if (_fileKind(f.extension) === 'txt') text++; else attach++;
+        }
+        return {
+            text, attach,
+            textFull:   text   >= MAX_TRANSCRIPTS,
+            attachFull: attach >= MAX_ATTACHMENTS,
+        };
+    }
+    get noNoteCanAddFile() {
+        const s = this._fileSlots;
+        return !s.attachFull || !s.textFull;
+    }
     get sharedFilesCount() { return this._sharedFiles.length; }
 
     // Ordered list [{documentId}] — artifact selections first, then uploads
     get noNoteFilesForFlow() {
         const files = [];
+        let text = 0, attach = 0;
+        const take = (documentId, isText) => {
+            if (isText) { if (text   >= MAX_TRANSCRIPTS) return; text++; }
+            else        { if (attach >= MAX_ATTACHMENTS) return; attach++; }
+            files.push({ documentId });
+        };
+        const byId = new Map((this.artifactFiles || []).map(f => [f.id, f]));
         for (const id of this._selectedArtifactFileIds) {
-            if (files.length >= 3) break;
-            files.push({ documentId: id });
+            take(id, _fileKind(byId.get(id)?.fileType) === 'txt');
         }
         for (const f of this._sharedFiles) {
             if (!f.included) continue;
-            if (files.length >= 3) break;
-            files.push({ documentId: f.documentId });
+            take(f.documentId, _fileKind(f.extension) === 'txt');
         }
         return files;
     }
@@ -1844,7 +1882,16 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
         this._syncIncludeMeetingSummary();
         // Auto-select up to 3 artifact files for the new event (shared across both tabs)
         Promise.resolve().then(() => {
-            const ids = (this.artifactFiles || []).slice(0, 3).map(f => f.id);
+            let text = 0, attach = 0;
+            const ids = [];
+            for (const f of this.artifactFiles || []) {
+                if (_fileKind(f.fileType) === 'txt') {
+                    if (text >= MAX_TRANSCRIPTS) continue; text++;
+                } else {
+                    if (attach >= MAX_ATTACHMENTS) continue; attach++;
+                }
+                ids.push(f.id);
+            }
             this._selectedArtifactFileIds = new Set(ids);
         });
         // Restore per-event meeting type — cache wins; fall back to MeetingType__c on the Event record
@@ -1883,8 +1930,9 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
         if (set.has(id)) {
             set.delete(id);
         } else {
-            const includedUploads = this._sharedFiles.filter(f => f.included).length;
-            if (set.size + includedUploads >= 3) return;
+            const af    = (this.artifactFiles || []).find(f => f.id === id);
+            const slots = this._fileSlots;
+            if (_fileKind(af?.fileType) === 'txt' ? slots.textFull : slots.attachFull) return;
             set.add(id);
         }
         this._selectedArtifactFileIds = set;
@@ -1900,13 +1948,24 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
         const uploaded = event.detail.files || [];
         const before   = this._sharedFiles.length;
         const newFiles = [...this._sharedFiles];
+        // Counted across the WHOLE pool, not just this batch — see _fileSlots.
+        const slots = this._fileSlots;
+        let text = slots.text, attach = slots.attach;
         for (const file of uploaded) {
-            if (this._selectedArtifactFileIds.size + newFiles.length >= 3) break;
             if (!file || !file.name) continue;
             const ext = (file.name.split('.').pop() || '').toLowerCase();
-            if (ext === 'txt' && newFiles.some(f => f.extension === 'txt')) {
-                this._showToast('File Limit', 'Only one text document is allowed.', 'warning');
-                continue;
+            if (_fileKind(ext) === 'txt') {
+                if (text >= MAX_TRANSCRIPTS) {
+                    this._showToast('File Limit', 'Only one text document is allowed.', 'warning');
+                    continue;
+                }
+                text++;
+            } else {
+                if (attach >= MAX_ATTACHMENTS) {
+                    this._showToast('File Limit', `Only ${MAX_ATTACHMENTS} attachments are allowed alongside a transcript.`, 'warning');
+                    continue;
+                }
+                attach++;
             }
             let iconStyle = 'background: #f1f5f9; color: #64748b;';
             if (ext === 'pdf')                           iconStyle = 'background: #fee2e2; color: #ef4444;';
@@ -1925,8 +1984,8 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
         this._sharedFiles = this._sharedFiles.map((f, i) => {
             if (i !== idx) return f;
             if (!f.included) {
-                const total = this._selectedArtifactFileIds.size + this._sharedFiles.filter(f2 => f2.included).length;
-                if (total >= 3) return f;
+                const slots = this._fileSlots;
+                if (_fileKind(f.extension) === 'txt' ? slots.textFull : slots.attachFull) return f;
             }
             return { ...f, included: !f.included };
         });
