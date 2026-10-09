@@ -482,6 +482,12 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
     @api recordId;
     @api flowApiName;                      // Wealth Plan structuring flow
     @api meetingSummaryFlowApiName;        // Meeting Summary flow (returns plain text/HTML summary)
+    /**
+     * The advisor's own standing AI instructions, brokered by the parent.
+     * Reaches the prompt as Input:Instructions -- the input that used to carry
+     * the transcript. Summary only: generateMeetingTodos does not send it.
+     */
+    @api userInstructions = '';
     @api regenerateSummaryFlowApiName;     // Dedicated regeneration flow (inputs: currentSummary, instructions; output: generatedResponse)
     @api saveSummaryFlowApiName;           // Background save flow (inputs: noteId, noteHtml, eventId, published; output: savedNoteId)
     @api versionHistoryFlowApiName = '';  // Subflow fired on event select; input: EventId; output collection: MeetingNoteVersions
@@ -2779,7 +2785,8 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
                 hasTodos:           this._hasTodos,
                 saveDoc1AsArtifact: false,
                 saveDoc2AsArtifact: false,
-                saveDoc3AsArtifact: false
+                saveDoc3AsArtifact: false,
+                userInstructions:   this.userInstructions        || ''
             };
             const raw = await generateSummary(flowParams);
             // The older combined Flow returns JSON `{summary, brief}`; the split one

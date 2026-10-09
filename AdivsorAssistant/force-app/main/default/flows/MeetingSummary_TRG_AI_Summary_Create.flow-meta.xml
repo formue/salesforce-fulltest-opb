@@ -30,7 +30,7 @@
         <actionType>generatePromptResponse</actionType>
         <flowTransactionModel>CurrentTransaction</flowTransactionModel>
         <inputParameters>
-            <name>Input:Instructions</name>
+            <name>Input:Transcription</name>
             <value>
                 <elementReference>formVarInstructions</elementReference>
                 <inputConfiguratorMode>Resource</inputConfiguratorMode>
@@ -40,6 +40,13 @@
             <name>Input:Notes</name>
             <value>
                 <elementReference>AdditionalContext</elementReference>
+                <inputConfiguratorMode>Resource</inputConfiguratorMode>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>Input:Instructions</name>
+            <value>
+                <elementReference>formUserInstructions</elementReference>
                 <inputConfiguratorMode>Resource</inputConfiguratorMode>
             </value>
         </inputParameters>
@@ -59,7 +66,7 @@
         <actionType>generatePromptResponse</actionType>
         <flowTransactionModel>CurrentTransaction</flowTransactionModel>
         <inputParameters>
-            <name>Input:Instructions</name>
+            <name>Input:Transcription</name>
             <value>
                 <elementReference>formVarInstructions</elementReference>
                 <inputConfiguratorMode>Resource</inputConfiguratorMode>
@@ -79,53 +86,10 @@
                 <inputConfiguratorMode>Resource</inputConfiguratorMode>
             </value>
         </inputParameters>
-        <nameSegment>Wealth_Plan_AI_Helper_2_5_Meeting_Summary</nameSegment>
-        <offset>0</offset>
-        <outputParameters>
-            <assignToReference>GeneratedSummary</assignToReference>
-            <name>promptResponse</name>
-        </outputParameters>
-    </actionCalls>
-    <actionCalls>
-        <name>Wealth_Plan_AI_Helper_2_5_Meeting_Summary_Three_Docs</name>
-        <label>Wealth Plan AI Helper 2.5 (Meeting Summary) Three Docs</label>
-        <locationX>0</locationX>
-        <locationY>0</locationY>
-        <actionName>Wealth_Plan_AI_Helper_2_5_Meeting_Summary</actionName>
-        <actionType>generatePromptResponse</actionType>
-        <flowTransactionModel>CurrentTransaction</flowTransactionModel>
         <inputParameters>
             <name>Input:Instructions</name>
             <value>
-                <elementReference>formVarInstructions</elementReference>
-                <inputConfiguratorMode>Resource</inputConfiguratorMode>
-            </value>
-        </inputParameters>
-        <inputParameters>
-            <name>Input:Attachment_3</name>
-            <value>
-                <elementReference>varContentDoc3</elementReference>
-                <inputConfiguratorMode>Resource</inputConfiguratorMode>
-            </value>
-        </inputParameters>
-        <inputParameters>
-            <name>Input:Attachment</name>
-            <value>
-                <elementReference>varContentDoc1</elementReference>
-                <inputConfiguratorMode>Resource</inputConfiguratorMode>
-            </value>
-        </inputParameters>
-        <inputParameters>
-            <name>Input:Attachment_2</name>
-            <value>
-                <elementReference>varContentDoc2</elementReference>
-                <inputConfiguratorMode>Resource</inputConfiguratorMode>
-            </value>
-        </inputParameters>
-        <inputParameters>
-            <name>Input:Notes</name>
-            <value>
-                <elementReference>AdditionalContext</elementReference>
+                <elementReference>formUserInstructions</elementReference>
                 <inputConfiguratorMode>Resource</inputConfiguratorMode>
             </value>
         </inputParameters>
@@ -145,7 +109,7 @@
         <actionType>generatePromptResponse</actionType>
         <flowTransactionModel>CurrentTransaction</flowTransactionModel>
         <inputParameters>
-            <name>Input:Instructions</name>
+            <name>Input:Transcription</name>
             <value>
                 <elementReference>formVarInstructions</elementReference>
                 <inputConfiguratorMode>Resource</inputConfiguratorMode>
@@ -169,6 +133,13 @@
             <name>Input:Notes</name>
             <value>
                 <elementReference>AdditionalContext</elementReference>
+                <inputConfiguratorMode>Resource</inputConfiguratorMode>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>Input:Instructions</name>
+            <value>
+                <elementReference>formUserInstructions</elementReference>
                 <inputConfiguratorMode>Resource</inputConfiguratorMode>
             </value>
         </inputParameters>
@@ -210,14 +181,14 @@
         <actionType>generatePromptResponse</actionType>
         <flowTransactionModel>CurrentTransaction</flowTransactionModel>
         <inputParameters>
-            <name>Input:Notes_Instructions</name>
+            <name>Input:Transcription</name>
             <value>
                 <elementReference>formVarInstructions</elementReference>
                 <inputConfiguratorMode>Resource</inputConfiguratorMode>
             </value>
         </inputParameters>
         <inputParameters>
-            <name>Input:Additional_Context</name>
+            <name>Input:Notes</name>
             <value>
                 <elementReference>AdditionalContext</elementReference>
                 <inputConfiguratorMode>Resource</inputConfiguratorMode>
@@ -239,7 +210,7 @@
         <actionType>generatePromptResponse</actionType>
         <flowTransactionModel>CurrentTransaction</flowTransactionModel>
         <inputParameters>
-            <name>Input:Notes_Instructions</name>
+            <name>Input:Transcription</name>
             <value>
                 <elementReference>formVarInstructions</elementReference>
                 <inputConfiguratorMode>Resource</inputConfiguratorMode>
@@ -253,57 +224,7 @@
             </value>
         </inputParameters>
         <inputParameters>
-            <name>Input:Additional_Context</name>
-            <value>
-                <elementReference>AdditionalContext</elementReference>
-                <inputConfiguratorMode>Resource</inputConfiguratorMode>
-            </value>
-        </inputParameters>
-        <nameSegment>Wealth_Plan_AI_Helper_To_Do_s_v2</nameSegment>
-        <offset>0</offset>
-        <outputParameters>
-            <assignToReference>GeneratedTodos</assignToReference>
-            <name>promptResponse</name>
-        </outputParameters>
-    </actionCalls>
-    <actionCalls>
-        <name>WealthPlan_To_do_Three_Docs_v2</name>
-        <label>WealthPlan To-do (Three Docs) v2</label>
-        <locationX>0</locationX>
-        <locationY>0</locationY>
-        <actionName>Wealth_Plan_AI_Helper_To_Do_s_v2</actionName>
-        <actionType>generatePromptResponse</actionType>
-        <flowTransactionModel>CurrentTransaction</flowTransactionModel>
-        <inputParameters>
-            <name>Input:Notes_Instructions</name>
-            <value>
-                <elementReference>formVarInstructions</elementReference>
-                <inputConfiguratorMode>Resource</inputConfiguratorMode>
-            </value>
-        </inputParameters>
-        <inputParameters>
-            <name>Input:Attachment</name>
-            <value>
-                <elementReference>varContentDoc1</elementReference>
-                <inputConfiguratorMode>Resource</inputConfiguratorMode>
-            </value>
-        </inputParameters>
-        <inputParameters>
-            <name>Input:Attachment_2</name>
-            <value>
-                <elementReference>varContentDoc2</elementReference>
-                <inputConfiguratorMode>Resource</inputConfiguratorMode>
-            </value>
-        </inputParameters>
-        <inputParameters>
-            <name>Input:Attachment_3</name>
-            <value>
-                <elementReference>varContentDoc3</elementReference>
-                <inputConfiguratorMode>Resource</inputConfiguratorMode>
-            </value>
-        </inputParameters>
-        <inputParameters>
-            <name>Input:Additional_Context</name>
+            <name>Input:Notes</name>
             <value>
                 <elementReference>AdditionalContext</elementReference>
                 <inputConfiguratorMode>Resource</inputConfiguratorMode>
@@ -325,7 +246,7 @@
         <actionType>generatePromptResponse</actionType>
         <flowTransactionModel>CurrentTransaction</flowTransactionModel>
         <inputParameters>
-            <name>Input:Notes_Instructions</name>
+            <name>Input:Transcription</name>
             <value>
                 <elementReference>formVarInstructions</elementReference>
                 <inputConfiguratorMode>Resource</inputConfiguratorMode>
@@ -346,7 +267,7 @@
             </value>
         </inputParameters>
         <inputParameters>
-            <name>Input:Additional_Context</name>
+            <name>Input:Notes</name>
             <value>
                 <elementReference>AdditionalContext</elementReference>
                 <inputConfiguratorMode>Resource</inputConfiguratorMode>
@@ -384,22 +305,6 @@
         <locationY>0</locationY>
         <assignmentItems>
             <assignToReference>varContentDoc2</assignToReference>
-            <operator>Assign</operator>
-            <value>
-                <elementReference>LOOP_Content_Documents</elementReference>
-            </value>
-        </assignmentItems>
-        <connector>
-            <targetReference>LOOP_Content_Documents</targetReference>
-        </connector>
-    </assignments>
-    <assignments>
-        <name>Assign_Document3_to_Variable</name>
-        <label>Assign Document3 to Variable</label>
-        <locationX>0</locationX>
-        <locationY>0</locationY>
-        <assignmentItems>
-            <assignToReference>varContentDoc3</assignToReference>
             <operator>Assign</operator>
             <value>
                 <elementReference>LOOP_Content_Documents</elementReference>
@@ -536,7 +441,7 @@
             <conditionLogic>and</conditionLogic>
             <conditions>
                 <leftValueReference>CountDocuments</leftValueReference>
-                <operator>EqualTo</operator>
+                <operator>GreaterThanOrEqualTo</operator>
                 <rightValue>
                     <numberValue>2.0</numberValue>
                 </rightValue>
@@ -545,21 +450,6 @@
                 <targetReference>Wealth_Plan_AI_Helper_2_5_Meeting_Summary_Two_Docs</targetReference>
             </connector>
             <label>Documents 2</label>
-        </rules>
-        <rules>
-            <name>Documents_3</name>
-            <conditionLogic>and</conditionLogic>
-            <conditions>
-                <leftValueReference>CountDocuments</leftValueReference>
-                <operator>EqualTo</operator>
-                <rightValue>
-                    <numberValue>3.0</numberValue>
-                </rightValue>
-            </conditions>
-            <connector>
-                <targetReference>Wealth_Plan_AI_Helper_2_5_Meeting_Summary_Three_Docs</targetReference>
-            </connector>
-            <label>Documents 3</label>
         </rules>
         <rules>
             <name>No_Documents</name>
@@ -603,7 +493,7 @@
             <conditionLogic>and</conditionLogic>
             <conditions>
                 <leftValueReference>CountDocuments</leftValueReference>
-                <operator>EqualTo</operator>
+                <operator>GreaterThanOrEqualTo</operator>
                 <rightValue>
                     <numberValue>2.0</numberValue>
                 </rightValue>
@@ -612,21 +502,6 @@
                 <targetReference>WealthPlan_To_do_Two_Docs_v2</targetReference>
             </connector>
             <label>Documents 2 To-do</label>
-        </rules>
-        <rules>
-            <name>Documents_3_To_do</name>
-            <conditionLogic>and</conditionLogic>
-            <conditions>
-                <leftValueReference>CountDocuments</leftValueReference>
-                <operator>EqualTo</operator>
-                <rightValue>
-                    <numberValue>3.0</numberValue>
-                </rightValue>
-            </conditions>
-            <connector>
-                <targetReference>WealthPlan_To_do_Three_Docs_v2</targetReference>
-            </connector>
-            <label>Documents 3 To-do</label>
         </rules>
         <rules>
             <name>No_Documents_TO_DO</name>
@@ -708,21 +583,6 @@
             </connector>
             <label>Count 2</label>
         </rules>
-        <rules>
-            <name>Count_3</name>
-            <conditionLogic>and</conditionLogic>
-            <conditions>
-                <leftValueReference>Counter</leftValueReference>
-                <operator>EqualTo</operator>
-                <rightValue>
-                    <numberValue>3.0</numberValue>
-                </rightValue>
-            </conditions>
-            <connector>
-                <targetReference>Assign_Document3_to_Variable</targetReference>
-            </connector>
-            <label>Count 3</label>
-        </rules>
     </decisions>
     <decisions>
         <name>DEC_Which_Mode_is_Triggered</name>
@@ -771,6 +631,11 @@
         <name>formVarInstructions</name>
         <dataType>String</dataType>
         <expression>IF({!varInstructions} = null, &apos; &apos;, {!varInstructions})</expression>
+    </formulas>
+    <formulas>
+        <name>formUserInstructions</name>
+        <dataType>String</dataType>
+        <expression>IF({!UserInstructions} = null, &apos; &apos;, {!UserInstructions})</expression>
     </formulas>
     <interviewLabel>MeetingSummary - TRG - AI Summary Create {!$Flow.CurrentDateTime}</interviewLabel>
     <label>MeetingSummary - TRG - AI Summary Create</label>
@@ -1086,14 +951,6 @@
         <objectType>ContentDocument</objectType>
     </variables>
     <variables>
-        <name>varContentDoc3</name>
-        <dataType>SObject</dataType>
-        <isCollection>false</isCollection>
-        <isInput>false</isInput>
-        <isOutput>false</isOutput>
-        <objectType>ContentDocument</objectType>
-    </variables>
-    <variables>
         <name>varContentDocColl</name>
         <dataType>String</dataType>
         <isCollection>true</isCollection>
@@ -1102,6 +959,13 @@
     </variables>
     <variables>
         <name>varInstructions</name>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+    </variables>
+    <variables>
+        <name>UserInstructions</name>
         <dataType>String</dataType>
         <isCollection>false</isCollection>
         <isInput>true</isInput>

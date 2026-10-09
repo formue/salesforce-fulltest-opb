@@ -5,6 +5,7 @@ public with sharing class MeetingSummaryController {
      * @param flowApiName The API name of the Flow to execute.
      * @param documentId The ContentDocumentId of the uploaded file.
      * @param additionalContext Text input from the advisor.
+     * @param userInstructions The advisor's own standing AI instructions, if any.
      * @return The generated summary string from the Flow.
      */
     @AuraEnabled
@@ -22,7 +23,8 @@ public with sharing class MeetingSummaryController {
             Boolean saveDoc1AsArtifact,
             Boolean saveDoc2AsArtifact,
             Boolean saveDoc3AsArtifact,
-            String currentSummary) {
+            String currentSummary,
+            String userInstructions) {
         try {
             Map<String, Object> flowInputs = new Map<String, Object>();
             // When currentSummary is provided this is a brief-only call; otherwise generate full summary
@@ -36,6 +38,9 @@ public with sharing class MeetingSummaryController {
             if (String.isNotBlank(additionalContext)) flowInputs.put('AdditionalContext', additionalContext);
             if (String.isNotBlank(meetingNoteText))  flowInputs.put('MeetingNoteText', meetingNoteText);
             if (String.isNotBlank(meetingType))      flowInputs.put('MeetingType', meetingType);
+            // Per-advisor standing instructions -> Flow UserInstructions -> Input:Instructions.
+            // Summary only: generateMeetingTodos deliberately does not pass this.
+            if (String.isNotBlank(userInstructions)) flowInputs.put('UserInstructions', userInstructions);
             if (hasTodos != null)                    flowInputs.put('HasTodos', hasTodos);
             Map<String, String> typeLabels = new Map<String, String>{
                 'whiteboard' => 'Whiteboard Meeting',

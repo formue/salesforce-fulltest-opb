@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/formue-design-system-c1bc41cf-74cc-40c3-83bf-b7b53c792778/colors_and_type.css">
+<link rel="stylesheet" href="_ds/formue-design-system-c1bc41cf-74cc-40c3-83bf-b7b53c792778/styles.css">
+<script src="_ds/formue-design-system-c1bc41cf-74cc-40c3-83bf-b7b53c792778/_ds_bundle.js"></script>
+<style>body{margin:0;background:#F6F1E9}a{color:#000;text-decoration:none}a:hover{color:#4A4A4A;text-decoration:underline}select,input,textarea,button{font-family:inherit}</style>
+</helmet>
+<div style="display:flex;min-height:100vh;background:var(--sand);font-family:var(--font-body);color:#000">
+<aside style="width:240px;min-width:240px;background:#400030;color:#fff;display:flex;flex-direction:column;padding:32px 0 24px;position:sticky;top:0;height:100vh;box-sizing:border-box">
+<div style="padding:0 24px 8px">
+<x-import component-from-global-scope="FormueDesignSystem_c1bc41.Logo" color="white" height="22" hint-size="130px,22px"></x-import>
+</div>
+<div style="padding:0 24px 28px;font-size:12px;color:rgba(255,255,255,0.7)">Security master data</div>
+<nav style="display:flex;flex-direction:column;gap:2px">
+<button onClick="{{ goDash }}" style="display:flex;align-items:center;gap:14px;width:100%;padding:12px 24px 12px 21px;border:none;border-left:3px solid {{ nav.dash.bl }};background:{{ nav.dash.bg }};color:#fff;opacity:{{ nav.dash.op }};font-weight:{{ nav.dash.fw }};font-size:15px;cursor:pointer;text-align:left"><svg width="22" height="22" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="9" height="9" rx="1.5"></rect><rect x="18" y="5" width="9" height="9" rx="1.5"></rect><rect x="5" y="18" width="9" height="9" rx="1.5"></rect><rect x="18" y="18" width="9" height="9" rx="1.5"></rect></svg><span>Dashboard</span></button>
+<button onClick="{{ goActions }}" style="display:flex;align-items:center;gap:14px;width:100%;padding:12px 24px 12px 21px;border:none;border-left:3px solid {{ nav.actions.bl }};background:{{ nav.actions.bg }};color:#fff;opacity:{{ nav.actions.op }};font-weight:{{ nav.actions.fw }};font-size:15px;cursor:pointer;text-align:left"><svg width="22" height="22" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="5" height="5" rx="1"></rect><rect x="4" y="14" width="5" height="5" rx="1"></rect><rect x="4" y="21" width="5" height="5" rx="1"></rect><path d="M12 10 L27 10"></path><path d="M12 17 L27 17"></path><path d="M12 24 L27 24"></path></svg><span style="flex:1">Action queue</span><span style="font-size:12px;font-weight:600;background:#F2637B;color:#000;border-radius:999px;padding:1px 8px">{{ navOpen }}</span></button>
+<button onClick="{{ goSecs }}" style="display:flex;align-items:center;gap:14px;width:100%;padding:12px 24px 12px 21px;border:none;border-left:3px solid {{ nav.secs.bl }};background:{{ nav.secs.bg }};color:#fff;opacity:{{ nav.secs.op }};font-weight:{{ nav.secs.fw }};font-size:15px;cursor:pointer;text-align:left"><svg width="22" height="22" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4 L21 4 L26 9 L26 28 L7 28 Z"></path><path d="M21 4 L21 9 L26 9"></path><path d="M11 15 L22 15"></path><path d="M11 19 L22 19"></path><path d="M11 23 L18 23"></path></svg><span>Securities</span></button>
+<button onClick="{{ goFs }}" style="display:flex;align-items:center;gap:14px;width:100%;padding:12px 24px 12px 21px;border:none;border-left:3px solid {{ nav.fs.bl }};background:{{ nav.fs.bg }};color:#fff;opacity:{{ nav.fs.op }};font-weight:{{ nav.fs.fw }};font-size:15px;cursor:pointer;text-align:left"><svg width="22" height="22" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4 L19.5 11.5 L27 12.5 L21.5 18 L23 26 L16 22 L9 26 L10.5 18 L5 12.5 L12.5 11.5 Z"></path></svg><span>Formue Selected</span></button>
+<button onClick="{{ goProjects }}" style="display:flex;align-items:center;gap:14px;width:100%;padding:12px 24px 12px 21px;border:none;border-left:3px solid {{ nav.projects.bl }};background:{{ nav.projects.bg }};color:#fff;opacity:{{ nav.projects.op }};font-weight:{{ nav.projects.fw }};font-size:15px;cursor:pointer;text-align:left"><svg width="22" height="22" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9 L4 26 L28 26 L28 11 L15 11 L12 7 L4 7 Z"></path></svg><span>Projects</span></button>
+<button onClick="{{ goTemplates }}" style="display:flex;align-items:center;gap:14px;width:100%;padding:12px 24px 12px 21px;border:none;border-left:3px solid {{ nav.templates.bl }};background:{{ nav.templates.bg }};color:#fff;opacity:{{ nav.templates.op }};font-weight:{{ nav.templates.fw }};font-size:15px;cursor:pointer;text-align:left"><svg width="22" height="22" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9 L26 9"></path><path d="M6 16 L26 16"></path><path d="M6 23 L26 23"></path><circle cx="12" cy="9" r="2.5" fill="#400030"></circle><circle cx="20" cy="16" r="2.5" fill="#400030"></circle><circle cx="10" cy="23" r="2.5" fill="#400030"></circle></svg><span>Control templates</span></button>
+</nav>
+<div style="flex:1"></div>
+<div style="background:#5C1F4A;padding:16px 24px;display:flex;align-items:center;gap:12px">
+<div style="width:36px;height:36px;border-radius:999px;background:#ECE2D6;color:#000;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px">MS</div>
+<div><div style="font-size:14px;font-weight:600">Maria Solberg</div><div style="font-size:12px;color:rgba(255,255,255,0.7)">Data steward</div></div>
+</div>
+</aside>
+
+<main style="flex:1;min-width:0;padding:40px 48px 64px">
+<div style="max-width:1200px;margin:0 auto">
+
+<sc-if value="{{ isDash }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;gap:24px">
+<div style="display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap">
+<div style="display:flex;flex-direction:column;gap:8px">
+<div class="eyebrow" style="color:#4A4A4A">Overview</div>
+<h1 style="font-family:var(--font-display);font-size:40px;font-weight:500;line-height:1.1;margin:0">Data quality</h1>
+<div style="font-size:14px;color:#4A4A4A">Last control run 30.09.2026 at {{ lastRun }} · {{ tplCount }} templates across 2 projects</div>
+</div>
+<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+<div style="display:flex;gap:4px;background:#ECE2D6;border-radius:8px;padding:4px">
+<sc-for list="{{ dashScopes }}" as="t" hint-placeholder-count="3"><button onClick="{{ t.onClick }}" style="border:none;border-radius:6px;padding:7px 14px;font-size:14px;cursor:pointer;background:{{ t.bg }};color:#000;font-weight:{{ t.fw }};box-shadow:{{ t.sh }}">{{ t.label }}</button></sc-for>
+</div>
+<button class="btn btn-primary" onClick="{{ runControls }}">Run controls now</button>
+</div>
+</div>
+
+<div style="background:#400030;color:#fff;border-radius:16px;padding:40px;display:flex;flex-direction:column;gap:32px">
+<div style="font-family:var(--font-display);font-size:32px;line-height:1.2;font-weight:500;max-width:820px;text-wrap:pretty">Securities pass <span style="color:#F2637B">{{ dash.pct }}</span> of the required data controls. The largest gap is in <span style="color:#F2637B">{{ dash.worst }}</span>.</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
+<div style="background:rgba(255,255,255,0.07);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:6px"><div class="eyebrow" style="color:rgba(255,255,255,0.7)">Securities in scope</div><div style="font-size:32px;font-weight:500;font-variant-numeric:tabular-nums">{{ dash.total }}</div><div style="font-size:13px;color:rgba(255,255,255,0.7)">Core model + custom attributes</div></div>
+<div style="background:rgba(255,255,255,0.07);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:6px"><div class="eyebrow" style="color:rgba(255,255,255,0.7)">Securities with gaps</div><div style="font-size:32px;font-weight:500;font-variant-numeric:tabular-nums">{{ dash.gaps }}</div><div style="font-size:13px;color:rgba(255,255,255,0.7)">{{ dash.gapsShare }} of securities in scope</div></div>
+<div style="background:rgba(255,255,255,0.07);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:6px"><div class="eyebrow" style="color:rgba(255,255,255,0.7)">Open actions</div><div style="font-size:32px;font-weight:500;font-variant-numeric:tabular-nums">{{ dash.open }}</div><div style="font-size:13px;color:rgba(255,255,255,0.7)">{{ dash.critical }} critical</div></div>
+<div style="background:rgba(255,255,255,0.07);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:6px"><div class="eyebrow" style="color:rgba(255,255,255,0.7)">Resolved last 7 days</div><div style="font-size:32px;font-weight:500;font-variant-numeric:tabular-nums">{{ dash.resolved }}</div><div style="font-size:13px;color:rgba(255,255,255,0.7)">Manual corrections by data stewards</div></div>
+</div>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:24px">
+<div style="background:#fff;border-radius:12px;box-shadow:var(--shadow-1);padding:24px;display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;justify-content:space-between;align-items:baseline"><h3 style="font-family:var(--font-display);font-size:24px;font-weight:500;margin:0">Controls passing</h3><span style="font-size:13px;color:#4A4A4A">Last 12 weeks</span></div>
+<svg viewBox="0 0 600 190" style="width:100%;height:190px;display:block" preserveAspectRatio="none">
+<line x1="0" y1="20" x2="600" y2="20" stroke="rgba(64,0,48,0.08)"></line><line x1="0" y1="95" x2="600" y2="95" stroke="rgba(64,0,48,0.08)"></line><line x1="0" y1="170" x2="600" y2="170" stroke="rgba(64,0,48,0.16)"></line>
+<path d="{{ trend.area }}" fill="rgba(141,179,216,0.18)"></path>
+<path d="{{ trend.line }}" fill="none" stroke="#8DB3D8" stroke-width="2" vector-effect="non-scaling-stroke"></path>
+</svg>
+<div style="display:flex;justify-content:space-between;font-size:11px;color:#8A8A8A;margin-top:-8px"><sc-for list="{{ trend.labels }}" as="w" hint-placeholder-count="12"><span>{{ w }}</span></sc-for></div>
+<div style="display:flex;gap:24px;font-size:13px;color:#4A4A4A"><span>Range {{ trend.min }} – {{ trend.max }}</span><span>+{{ trend.delta }} pts since W29</span></div>
+</div>
+<div style="background:#fff;border-radius:12px;box-shadow:var(--shadow-1);padding:24px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;justify-content:space-between;align-items:baseline"><h3 style="font-family:var(--font-display);font-size:24px;font-weight:500;margin:0">Completeness by attribute</h3><span style="font-size:13px;color:#4A4A4A">Weakest first</span></div>
+<sc-for list="{{ attrBars }}" as="b" hint-placeholder-count="8">
+<button onClick="{{ b.onClick }}" style="display:grid;grid-template-columns:170px 1fr 60px;gap:12px;align-items:center;background:none;border:none;padding:4px 0;cursor:pointer;text-align:left;font-size:14px;color:#000" style-hover="opacity:0.75">
+<span style="display:flex;gap:6px;align-items:baseline">{{ b.label }}<span style="font-size:11px;color:#8A8A8A">{{ b.kind }}</span></span>
+<span style="height:8px;background:#ECE2D6;border-radius:4px;overflow:hidden;display:block"><span style="display:block;height:100%;width:{{ b.w }};background:{{ b.color }};border-radius:4px"></span></span>
+<span style="text-align:right;font-variant-numeric:tabular-nums">{{ b.pct }}</span>
+</button>
+</sc-for>
+</div>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:24px">
+<sc-for list="{{ projectCards }}" as="p" hint-placeholder-count="2">
+<div style="background:#fff;border-radius:12px;box-shadow:var(--shadow-1);padding:24px;display:flex;flex-direction:column;gap:20px">
+<div style="display:flex;justify-content:space-between;gap:16px;align-items:flex-start">
+<div style="display:flex;flex-direction:column;gap:4px"><div class="eyebrow" style="color:#4A4A4A">Project</div><h3 style="font-family:var(--font-display);font-size:24px;font-weight:500;margin:0">{{ p.name }}</h3></div>
+<div style="display:flex;align-items:center;gap:8px;font-size:13px"><span style="width:28px;height:28px;border-radius:999px;background:#ECE2D6;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px">{{ p.initials }}</span><span><span style="display:block;font-weight:500">{{ p.responsible }}</span><span style="color:#4A4A4A">Responsible</span></span></div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+<div><div class="eyebrow" style="color:#4A4A4A">Controls passing</div><div style="font-size:28px;font-weight:500;font-variant-numeric:tabular-nums">{{ p.pct }}</div></div>
+<div><div class="eyebrow" style="color:#4A4A4A">Open actions</div><div style="font-size:28px;font-weight:500;font-variant-numeric:tabular-nums">{{ p.open }}</div></div>
+<div><div class="eyebrow" style="color:#4A4A4A">Critical</div><div style="font-size:28px;font-weight:500;font-variant-numeric:tabular-nums;color:#BB4A4A">{{ p.critical }}</div></div>
+</div>
+<div style="height:6px;background:#ECE2D6;border-radius:3px;overflow:hidden"><div style="height:100%;width:{{ p.w }};background:#437047"></div></div>
+<div style="display:flex;justify-content:space-between;align-items:center;font-size:14px;gap:12px;flex-wrap:wrap"><span style="color:#4A4A4A">{{ p.templates }}</span><button class="btn btn-ghost" onClick="{{ p.onActions }}" style="padding:6px 10px">View actions →</button></div>
+</div>
+</sc-for>
+</div>
+
+<div style="background:#fff;border-radius:12px;box-shadow:var(--shadow-1);padding:24px;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;justify-content:space-between;align-items:baseline"><h3 style="font-family:var(--font-display);font-size:24px;font-weight:500;margin:0">Latest automatic actions</h3><button class="btn btn-ghost" onClick="{{ goActions }}" style="padding:6px 10px">See all →</button></div>
+<table style="width:100%;border-collapse:collapse;font-size:14px">
+<thead><tr style="text-align:left"><th class="eyebrow" style="color:#4A4A4A;padding:8px 12px 8px 0;border-bottom:1px solid rgba(64,0,48,0.16)">Severity</th><th class="eyebrow" style="color:#4A4A4A;padding:8px 12px;border-bottom:1px solid rgba(64,0,48,0.16)">Action</th><th class="eyebrow" style="color:#4A4A4A;padding:8px 12px;border-bottom:1px solid rgba(64,0,48,0.16)">Security</th><th class="eyebrow" style="color:#4A4A4A;padding:8px 12px;border-bottom:1px solid rgba(64,0,48,0.16)">Project</th><th class="eyebrow" style="color:#4A4A4A;padding:8px 12px;border-bottom:1px solid rgba(64,0,48,0.16)">Assignee</th><th class="eyebrow" style="color:#4A4A4A;padding:8px 0 8px 12px;border-bottom:1px solid rgba(64,0,48,0.16)">Created</th></tr></thead>
+<tbody>
+<sc-for list="{{ recent }}" as="a" hint-placeholder-count="5">
+<tr onClick="{{ a.onClick }}" style="cursor:pointer" style-hover="background:#F6F1E9">
+<td style="padding:12px 12px 12px 0;border-bottom:1px solid rgba(64,0,48,0.08)"><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:999px;background:{{ a.sevColor }}"></span>{{ a.severity }}</span></td>
+<td style="padding:12px;border-bottom:1px solid rgba(64,0,48,0.08);font-weight:500">{{ a.title }}</td>
+<td style="padding:12px;border-bottom:1px solid rgba(64,0,48,0.08)">{{ a.name }}</td>
+<td style="padding:12px;border-bottom:1px solid rgba(64,0,48,0.08);color:#4A4A4A">{{ a.project }}</td>
+<td style="padding:12px;border-bottom:1px solid rgba(64,0,48,0.08)">{{ a.assignee }}</td>
+<td style="padding:12px 0 12px 12px;border-bottom:1px solid rgba(64,0,48,0.08);color:#4A4A4A;font-variant-numeric:tabular-nums">{{ a.createdTxt }}</td>
+</tr>
+</sc-for>
+</tbody>
+</table>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isActions }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:24px">
+<div style="display:flex;flex-direction:column;gap:8px">
+<div class="eyebrow" style="color:#4A4A4A">Corrections</div>
+<h1 style="font-family:var(--font-display);font-size:40px;font-weight:500;line-height:1.1;margin:0">Action queue</h1>
+<div style="font-size:15px;color:#4A4A4A;max-width:720px">Actions are created automatically when a control template finds missing data. Each action is assigned to the responsible person of its project and closed when the value is filled in.</div>
+</div>
+<div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+<div style="display:flex;gap:24px;border-bottom:1px solid rgba(64,0,48,0.16)">
+<sc-for list="{{ aStatusTabs }}" as="t" hint-placeholder-count="3"><button onClick="{{ t.onClick }}" style="background:none;border:none;border-bottom:2px solid {{ t.bl }};margin-bottom:-1px;padding:8px 0;font-size:15px;cursor:pointer;font-weight:{{ t.fw }};color:#000;display:flex;gap:6px;align-items:center">{{ t.label }}<span style="font-size:12px;color:#4A4A4A;background:#ECE2D6;border-radius:999px;padding:0 7px">{{ t.count }}</span></button></sc-for>
+</div>
+<div style="flex:1"></div>
+<sc-if value="{{ aFieldChip.show }}" hint-placeholder-val="{{ false }}"><button onClick="{{ aFieldChip.clear }}" style="border:1px solid rgba(64,0,48,0.16);background:#fff;border-radius:999px;padding:5px 12px;font-size:13px;cursor:pointer">Attribute: {{ aFieldChip.label }} ×</button></sc-if>
+<div style="display:flex;gap:4px;background:#ECE2D6;border-radius:8px;padding:4px">
+<sc-for list="{{ aProjectTabs }}" as="t" hint-placeholder-count="3"><button onClick="{{ t.onClick }}" style="border:none;border-radius:6px;padding:6px 12px;font-size:13px;cursor:pointer;background:{{ t.bg }};color:#000;font-weight:{{ t.fw }};box-shadow:{{ t.sh }}">{{ t.label }}</button></sc-for>
+</div>
+<select value="{{ aSev }}" onChange="{{ onSev }}" style="height:36px;border:1px solid rgba(64,0,48,0.16);border-radius:8px;padding:0 10px;font-size:13px;background:#fff"><option value="All">All severities</option><option value="Critical">Critical</option><option value="High">High</option><option value="Medium">Medium</option></select>
+</div>
+
+<div style="display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start">
+<div style="background:#fff;border-radius:12px;box-shadow:var(--shadow-1);padding:8px 24px 16px;min-width:0;overflow-x:auto;flex:999 1 640px">
+<table style="width:100%;border-collapse:collapse;font-size:14px">
+<thead><tr style="text-align:left"><th class="eyebrow" style="color:#4A4A4A;padding:14px 12px 10px 0;border-bottom:1px solid rgba(64,0,48,0.16)">Severity</th><th class="eyebrow" style="color:#4A4A4A;padding:14px 12px 10px;border-bottom:1px solid rgba(64,0,48,0.16)">Action</th><th class="eyebrow" style="color:#4A4A4A;padding:14px 12px 10px;border-bottom:1px solid rgba(64,0,48,0.16)">Security</th><th class="eyebrow" style="color:#4A4A4A;padding:14px 12px 10px;border-bottom:1px solid rgba(64,0,48,0.16)">Template</th><th class="eyebrow" style="color:#4A4A4A;padding:14px 12px 10px;border-bottom:1px solid rgba(64,0,48,0.16)">Assignee</th><th class="eyebrow" style="color:#4A4A4A;padding:14px 12px 10px;border-bottom:1px solid rgba(64,0,48,0.16)">{{ aDateHead }}</th><th class="eyebrow" style="color:#4A4A4A;padding:14px 0 10px 12px;border-bottom:1px solid rgba(64,0,48,0.16)">Status</th></tr></thead>
+<tbody>
+<sc-for list="{{ actionRows }}" as="a" hint-placeholder-count="10">
+<tr onClick="{{ a.onClick }}" style="cursor:pointer;background:{{ a.rowBg }}" style-hover="background:#F6F1E9">
+<td style="padding:12px 12px 12px 0;border-bottom:1px solid rgba(64,0,48,0.08);white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:999px;background:{{ a.sevColor }}"></span>{{ a.severity }}</span></td>
+<td style="padding:12px;border-bottom:1px solid rgba(64,0,48,0.08);font-weight:500">{{ a.title }}</td>
+<td style="padding:12px;border-bottom:1px solid rgba(64,0,48,0.08)"><div>{{ a.name }}</div><div style="font-family:var(--font-mono);font-size:12px;color:#4A4A4A">{{ a.isin }}</div></td>
+<td style="padding:12px;border-bottom:1px solid rgba(64,0,48,0.08)"><div>{{ a.tpl }}</div><div style="font-size:12px;color:#4A4A4A">{{ a.project }}</div></td>
+<td style="padding:12px;border-bottom:1px solid rgba(64,0,48,0.08);white-space:nowrap">{{ a.assignee }}</td>
+<td style="padding:12px;border-bottom:1px solid rgba(64,0,48,0.08);white-space:nowrap;font-variant-numeric:tabular-nums;color:{{ a.dueColor }}">{{ a.dateTxt }}</td>
+<td style="padding:12px 0 12px 12px;border-bottom:1px solid rgba(64,0,48,0.08)"><span style="font-size:12px;font-weight:500;padding:2px 8px;border-radius:4px;background:{{ a.stBg }};white-space:nowrap">{{ a.status }}</span></td>
+</tr>
+</sc-for>
+</tbody>
+</table>
+<sc-if value="{{ aEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:40px 0;text-align:center;color:#4A4A4A;font-size:14px">No actions match these filters.</div></sc-if>
+<div style="font-size:13px;color:#4A4A4A;padding-top:14px">{{ aFooter }}</div>
+</div>
+
+<sc-if value="{{ sa.show }}" hint-placeholder-val="{{ false }}">
+<div style="background:#fff;border-radius:12px;box-shadow:var(--shadow-2);padding:24px;display:flex;flex-direction:column;gap:20px;position:sticky;top:24px;flex:1 1 340px;max-width:100%;box-sizing:border-box">
+<div style="display:flex;justify-content:space-between;align-items:center"><span style="display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:500"><span style="width:8px;height:8px;border-radius:999px;background:{{ sa.sevColor }}"></span>{{ sa.severity }} · {{ sa.project }}</span><button onClick="{{ closeAction }}" style="border:none;background:none;font-size:20px;cursor:pointer;line-height:1;padding:4px">×</button></div>
+<div style="display:flex;flex-direction:column;gap:6px"><h3 style="font-family:var(--font-display);font-size:28px;font-weight:500;margin:0">{{ sa.title }}</h3><button onClick="{{ sa.openSec }}" style="border:none;background:none;padding:0;text-align:left;cursor:pointer;font-size:15px;text-decoration:underline;text-underline-offset:3px">{{ sa.name }}</button><span style="font-family:var(--font-mono);font-size:12px;color:#4A4A4A">{{ sa.isin }}</span></div>
+<div style="display:grid;grid-template-columns:110px 1fr;gap:8px 12px;font-size:14px">
+<span style="color:#4A4A4A">Template</span><span>{{ sa.tpl }}</span>
+<span style="color:#4A4A4A">Assignee</span><span>{{ sa.assignee }}</span>
+<span style="color:#4A4A4A">Created</span><span>{{ sa.createdTxt }} by control run</span>
+<span style="color:#4A4A4A">Due</span><span style="color:{{ sa.dueColor }}">{{ sa.dueTxt }}</span>
+<span style="color:#4A4A4A">Source</span><span>{{ sa.src }} returned no value</span>
+</div>
+<sc-if value="{{ sa.isOpen }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;gap:14px;border-top:1px solid rgba(64,0,48,0.08);padding-top:20px">
+<label style="display:flex;flex-direction:column;gap:6px"><span class="eyebrow" style="color:#4A4A4A">{{ sa.label }}</span>
+<sc-if value="{{ sa.isSelect }}" hint-placeholder-val="{{ false }}"><select value="{{ draft }}" onChange="{{ onDraft }}" style="height:40px;border:1px solid rgba(64,0,48,0.16);border-radius:8px;padding:0 10px;font-size:14px;background:#fff"><option value="">Select value</option><sc-for list="{{ sa.options }}" as="o" hint-placeholder-count="4"><option value="{{ o }}">{{ o }}</option></sc-for></select></sc-if>
+<sc-if value="{{ sa.isMulti }}" hint-placeholder-val="{{ false }}"><span style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ sa.multiOpts }}" as="o" hint-placeholder-count="3"><button onClick="{{ o.onClick }}" style="border:1px solid rgba(64,0,48,0.16);border-radius:999px;padding:4px 10px;font-size:13px;cursor:pointer;background:{{ o.bg }};color:{{ o.c }}">{{ o.label }}</button></sc-for></span></sc-if>
+<sc-if value="{{ sa.isText }}" hint-placeholder-val="{{ true }}"><input type="{{ sa.inputType }}" value="{{ draft }}" onChange="{{ onDraft }}" placeholder="Enter value" style="height:40px;border:1px solid rgba(64,0,48,0.16);border-radius:8px;padding:0 12px;font-size:14px"></sc-if>
+</label>
+<label style="display:flex;flex-direction:column;gap:6px"><span class="eyebrow" style="color:#4A4A4A">Comment</span><textarea value="{{ comment }}" onChange="{{ onComment }}" rows="3" placeholder="Where did the value come from?" style="border:1px solid rgba(64,0,48,0.16);border-radius:8px;padding:10px 12px;font-size:14px;resize:vertical"></textarea></label>
+<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary" onClick="{{ sa.save }}">Save and resolve</button><button class="btn btn-ghost" onClick="{{ sa.toggleProgress }}">{{ sa.progressLabel }}</button></div>
+</div>
+</sc-if>
+<sc-if value="{{ sa.isResolved }}" hint-placeholder-val="{{ false }}">
+<div style="border-top:1px solid rgba(64,0,48,0.08);padding-top:20px;display:flex;flex-direction:column;gap:6px;font-size:14px"><span style="font-size:12px;font-weight:500;padding:2px 8px;border-radius:4px;background:#ABD4A3;align-self:flex-start">Resolved</span><span>{{ sa.label }} set to <strong style="font-weight:600">{{ sa.value }}</strong></span><span style="color:#4A4A4A">{{ sa.resolvedBy }} · {{ sa.resolvedAt }}</span></div>
+</sc-if>
+</div>
+</sc-if>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isSecs }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:24px">
+<div style="display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap">
+<div style="display:flex;flex-direction:column;gap:8px">
+<div class="eyebrow" style="color:#4A4A4A">Master data</div>
+<h1 style="font-family:var(--font-display);font-size:40px;font-weight:500;line-height:1.1;margin:0">Securities</h1>
+<div style="font-size:15px;color:#4A4A4A">5 124 securities in the master. Data from Bloomberg, Morningstar, MSCI and internal sources.</div>
+</div>
+<div style="display:flex;gap:8px"><button class="btn btn-ghost" onClick="{{ mockExport }}">Export</button><button class="btn btn-primary" onClick="{{ mockAdd }}">Add security</button></div>
+</div>
+<div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+<div style="position:relative;flex:1;min-width:260px;max-width:420px"><svg width="18" height="18" viewBox="0 0 32 32" fill="none" stroke="#4A4A4A" stroke-width="2" stroke-linecap="round" style="position:absolute;left:12px;top:11px"><circle cx="14" cy="14" r="8"></circle><path d="M20 20 L27 27"></path></svg><input value="{{ search }}" onChange="{{ onSearch }}" placeholder="Search name, ISIN or symbol" style="width:100%;box-sizing:border-box;height:40px;border:1px solid rgba(64,0,48,0.16);border-radius:8px;padding:0 12px 0 38px;font-size:14px;background:#fff"></div>
+<div style="display:flex;gap:4px;background:#ECE2D6;border-radius:8px;padding:4px">
+<sc-for list="{{ acTabs }}" as="t" hint-placeholder-count="4"><button onClick="{{ t.onClick }}" style="border:none;border-radius:6px;padding:6px 12px;font-size:13px;cursor:pointer;background:{{ t.bg }};color:#000;font-weight:{{ t.fw }};box-shadow:{{ t.sh }}">{{ t.label }}</button></sc-for>
+</div>
+<button onClick="{{ toggleGaps }}" style="display:flex;align-items:center;gap:8px;background:none;border:none;cursor:pointer;font-size:14px"><span style="width:36px;height:20px;border-radius:999px;background:{{ gapsTg.bg }};display:flex;align-items:center;padding:2px;box-sizing:border-box"><span style="width:16px;height:16px;border-radius:999px;background:#fff;margin-left:{{ gapsTg.x }};transition:margin 200ms"></span></span>Only securities with gaps</button>
+<button onClick="{{ toggleSelOnly }}" style="display:flex;align-items:center;gap:8px;background:none;border:none;cursor:pointer;font-size:14px"><span style="width:36px;height:20px;border-radius:999px;background:{{ selTg.bg }};display:flex;align-items:center;padding:2px;box-sizing:border-box"><span style="width:16px;height:16px;border-radius:999px;background:#fff;margin-left:{{ selTg.x }};transition:margin 200ms"></span></span>Only Formue Selected</button>
+</div>
+<div style="background:#fff;border-radius:12px;box-shadow:var(--shadow-1);padding:8px 24px 16px;overflow-x:auto">
+<table style="width:100%;border-collapse:collapse;font-size:14px">
+<thead><tr style="text-align:left"><th class="eyebrow" style="color:#4A4A4A;padding:14px 12px 10px 0;border-bottom:1px solid rgba(64,0,48,0.16)">Security</th><th class="eyebrow" style="color:#4A4A4A;padding:14px 12px 10px;border-bottom:1px solid rgba(64,0,48,0.16)">Symbol</th><th class="eyebrow" style="color:#4A4A4A;padding:14px 12px 10px;border-bottom:1px solid rgba(64,0,48,0.16)">Asset class</th><th class="eyebrow" style="color:#4A4A4A;padding:14px 12px 10px;border-bottom:1px solid rgba(64,0,48,0.16)">Risk</th><th class="eyebrow" style="color:#4A4A4A;padding:14px 12px 10px;border-bottom:1px solid rgba(64,0,48,0.16)">Broker</th><th class="eyebrow" style="color:#4A4A4A;padding:14px 12px 10px;border-bottom:1px solid rgba(64,0,48,0.16)">Status</th><th class="eyebrow" style="color:#4A4A4A;padding:14px 12px 10px;border-bottom:1px solid rgba(64,0,48,0.16)">Market / advisor</th><th class="eyebrow" style="color:#4A4A4A;padding:14px 12px 10px;border-bottom:1px solid rgba(64,0,48,0.16)">Completeness</th><th class="eyebrow" style="color:#4A4A4A;padding:14px 0 10px 12px;border-bottom:1px solid rgba(64,0,48,0.16);text-align:right">Actions</th></tr></thead>
+<tbody>
+<sc-for list="{{ secRows }}" as="s" hint-placeholder-count="12">
+<tr onClick="{{ s.open }}" style="cursor:pointer" style-hover="background:#F6F1E9">
+<td style="padding:12px 12px 12px 0;border-bottom:1px solid rgba(64,0,48,0.08)"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span style="font-weight:500">{{ s.name }}</span><sc-if value="{{ s.isSel }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;font-weight:600;padding:1px 6px;border-radius:4px;background:#C5A5D6;white-space:nowrap">Formue Selected</span></sc-if></div><div style="font-family:var(--font-mono);font-size:12px;color:#4A4A4A">{{ s.isin }}</div></td>
+<td style="padding:12px;border-bottom:1px solid rgba(64,0,48,0.08);white-space:nowrap;color:{{ s.symbol.c }};font-weight:{{ s.symbol.fw }}">{{ s.symbol.t }}</td>
+<td style="padding:12px;border-bottom:1px solid rgba(64,0,48,0.08)"><div style="color:{{ s.ac.c }};font-weight:{{ s.ac.fw }}">{{ s.ac.t }}</div><div style="font-size:12px;color:{{ s.sub.c2 }};font-weight:{{ s.sub.fw }}">{{ s.sub.t }}</div></td>
+<td style="padding:12px;border-bottom:1px solid rgba(64,0,48,0.08);color:{{ s.risk.c }};font-weight:{{ s.risk.fw }}">{{ s.risk.t }}</td>
+<td style="padding:12px;border-bottom:1px solid rgba(64,0,48,0.08);white-space:nowrap;color:{{ s.broker.c }};font-weight:{{ s.broker.fw }}">{{ s.broker.t }}</td>
+<td style="padding:12px;border-bottom:1px solid rgba(64,0,48,0.08)"><span style="font-size:12px;font-weight:500;padding:2px 8px;border-radius:4px;background:{{ s.stBg }}">{{ s.status }}</span></td>
+<td style="padding:12px;border-bottom:1px solid rgba(64,0,48,0.08);white-space:nowrap"><span style="color:{{ s.mkt.c }};font-weight:{{ s.mkt.fw }}">{{ s.mkt.t }}</span> / <span style="color:{{ s.adv.c }};font-weight:{{ s.adv.fw }}">{{ s.adv.t }}</span></td>
+<td style="padding:12px;border-bottom:1px solid rgba(64,0,48,0.08)"><div style="display:flex;align-items:center;gap:8px"><div style="width:64px;height:6px;background:#ECE2D6;border-radius:3px;overflow:hidden"><div style="height:100%;width:{{ s.w }};background:{{ s.barC }}"></div></div><span style="font-size:13px;font-variant-numeric:tabular-nums">{{ s.pct }}</span></div></td>
+<td style="padding:12px 0 12px 12px;border-bottom:1px solid rgba(64,0,48,0.08);text-align:right;font-variant-numeric:tabular-nums;font-weight:{{ s.openFw }}">{{ s.open_ }}</td>
+</tr>
+</sc-for>
+</tbody>
+</table>
+<div style="font-size:13px;color:#4A4A4A;padding-top:14px">{{ secFooter }}</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isSec }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:24px">
+<button onClick="{{ goSecs }}" style="align-self:flex-start;border:none;background:none;padding:0;cursor:pointer;font-size:14px;color:#4A4A4A">← Securities</button>
+<div style="display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap">
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;gap:10px;align-items:center"><span style="font-size:12px;font-weight:500;padding:2px 8px;border-radius:4px;background:{{ sd.stBg }}">{{ sd.status }}</span><span class="eyebrow" style="color:#4A4A4A">{{ sd.acLine }}</span></div>
+<h1 style="font-family:var(--font-display);font-size:40px;font-weight:500;line-height:1.1;margin:0">{{ sd.name }}</h1>
+<div style="display:flex;gap:16px;font-size:14px;color:#4A4A4A;flex-wrap:wrap"><span style="font-family:var(--font-mono);color:#000">{{ sd.isin }}</span><span>{{ sd.symbol }}</span><span>{{ sd.issuer }}</span></div>
+</div>
+<div style="display:flex;gap:32px">
+<div><div class="eyebrow" style="color:#4A4A4A">Completeness</div><div style="font-size:32px;font-weight:500;font-variant-numeric:tabular-nums">{{ sd.filled }}<span style="font-size:18px;color:#4A4A4A"> / {{ sd.total }}</span></div></div>
+<div><div class="eyebrow" style="color:#4A4A4A">Open actions</div><div style="font-size:32px;font-weight:500;font-variant-numeric:tabular-nums;color:{{ sd.openColor }}">{{ sd.open }}</div></div>
+</div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:24px;align-items:start">
+<div style="display:flex;flex-direction:column;gap:24px">
+<div style="background:#fff;border-radius:12px;box-shadow:var(--shadow-1);padding:24px;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap"><h3 style="font-family:var(--font-display);font-size:24px;font-weight:500;margin:0;white-space:nowrap">Core data</h3><span style="font-size:13px;color:#4A4A4A">Core data model · 11 attributes</span></div>
+<div>
+<sc-for list="{{ sd.core }}" as="r" hint-placeholder-count="11">
+<div style="display:grid;grid-template-columns:minmax(110px,170px) minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 12px;margin:0 -12px;border-bottom:1px solid rgba(64,0,48,0.08);background:{{ r.rowBg }};border-radius:6px;min-height:40px">
+<span style="font-size:14px;color:#4A4A4A">{{ r.label }}</span>
+<sc-if value="{{ r.notEditing }}" hint-placeholder-val="{{ true }}"><span style="font-size:14px;color:{{ r.vc }};font-weight:{{ r.vw }}">{{ r.value }}</span></sc-if>
+<sc-if value="{{ r.editing }}" hint-placeholder-val="{{ false }}"><span style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+<sc-if value="{{ r.isSelect }}" hint-placeholder-val="{{ false }}"><select value="{{ r.draft }}" onChange="{{ r.onDraft }}" style="height:34px;border:1px solid rgba(64,0,48,0.16);border-radius:8px;padding:0 8px;font-size:14px;background:#fff;min-width:180px"><option value="">Select value</option><sc-for list="{{ r.options }}" as="o" hint-placeholder-count="3"><option value="{{ o }}">{{ o }}</option></sc-for></select></sc-if>
+<sc-if value="{{ r.isMulti }}" hint-placeholder-val="{{ false }}"><span style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ r.multiOpts }}" as="o" hint-placeholder-count="3"><button onClick="{{ o.onClick }}" style="border:1px solid rgba(64,0,48,0.16);border-radius:999px;padding:4px 10px;font-size:13px;cursor:pointer;background:{{ o.bg }};color:{{ o.c }}">{{ o.label }}</button></sc-for></span></sc-if>
+<sc-if value="{{ r.isText }}" hint-placeholder-val="{{ false }}"><input type="{{ r.inputType }}" value="{{ r.draft }}" onChange="{{ r.onDraft }}" style="height:34px;border:1px solid rgba(64,0,48,0.16);border-radius:8px;padding:0 10px;font-size:14px;min-width:200px"></sc-if>
+<button class="btn btn-primary" onClick="{{ r.onSave }}" style="padding:7px 12px">Save</button><button class="btn btn-ghost" onClick="{{ r.onCancel }}" style="padding:7px 10px">Cancel</button>
+</span></sc-if>
+<span style="display:flex;gap:12px;align-items:center;justify-content:flex-end"><span style="font-size:12px;color:#8A8A8A">{{ r.src }}</span><sc-if value="{{ r.canEdit }}" hint-placeholder-val="{{ false }}"><button onClick="{{ r.onEdit }}" style="border:none;background:none;cursor:pointer;font-size:13px;text-decoration:underline;text-underline-offset:3px;padding:0">{{ r.editLabel }}</button></sc-if></span>
+</div>
+</sc-for>
+</div>
+</div>
+<div style="background:#fff;border-radius:12px;box-shadow:var(--shadow-1);padding:24px;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px"><div style="display:flex;flex-direction:column;gap:2px"><h3 style="font-family:var(--font-display);font-size:24px;font-weight:500;margin:0">Custom attributes</h3><span style="font-size:13px;color:#4A4A4A">Extensions to the core model, used by control templates</span></div><button class="btn btn-ghost" onClick="{{ mockAttr }}" style="padding:6px 10px">+ Add attribute</button></div>
+<div>
+<sc-for list="{{ sd.custom }}" as="r" hint-placeholder-count="4">
+<div style="display:grid;grid-template-columns:minmax(110px,170px) minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 12px;margin:0 -12px;border-bottom:1px solid rgba(64,0,48,0.08);background:{{ r.rowBg }};border-radius:6px;min-height:40px">
+<span style="font-size:14px;color:#4A4A4A">{{ r.label }}</span>
+<sc-if value="{{ r.notEditing }}" hint-placeholder-val="{{ true }}"><span style="font-size:14px;color:{{ r.vc }};font-weight:{{ r.vw }}">{{ r.value }}</span></sc-if>
+<sc-if value="{{ r.editing }}" hint-placeholder-val="{{ false }}"><span style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+<sc-if value="{{ r.isSelect }}" hint-placeholder-val="{{ false }}"><select value="{{ r.draft }}" onChange="{{ r.onDraft }}" style="height:34px;border:1px solid rgba(64,0,48,0.16);border-radius:8px;padding:0 8px;font-size:14px;background:#fff;min-width:180px"><option value="">Select value</option><sc-for list="{{ r.options }}" as="o" hint-placeholder-count="3"><option value="{{ o }}">{{ o }}</option></sc-for></select></sc-if>
+<sc-if value="{{ r.isMulti }}" hint-placeholder-val="{{ false }}"><span style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ r.multiOpts }}" as="o" hint-placeholder-count="3"><button onClick="{{ o.onClick }}" style="border:1px solid rgba(64,0,48,0.16);border-radius:999px;padding:4px 10px;font-size:13px;cursor:pointer;background:{{ o.bg }};color:{{ o.c }}">{{ o.label }}</button></sc-for></span></sc-if>
+<sc-if value="{{ r.isText }}" hint-placeholder-val="{{ false }}"><input type="{{ r.inputType }}" value="{{ r.draft }}" onChange="{{ r.onDraft }}" style="height:34px;border:1px solid rgba(64,0,48,0.16);border-radius:8px;padding:0 10px;font-size:14px;min-width:200px"></sc-if>
+<button class="btn btn-primary" onClick="{{ r.onSave }}" style="padding:7px 12px">Save</button><button class="btn btn-ghost" onClick="{{ r.onCancel }}" style="padding:7px 10px">Cancel</button>
+</span></sc-if>
+<span style="display:flex;gap:12px;align-items:center;justify-content:flex-end"><span style="font-size:12px;color:#8A8A8A">{{ r.src }}</span><sc-if value="{{ r.canEdit }}" hint-placeholder-val="{{ false }}"><button onClick="{{ r.onEdit }}" style="border:none;background:none;cursor:pointer;font-size:13px;text-decoration:underline;text-underline-offset:3px;padding:0">{{ r.editLabel }}</button></sc-if></span>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:24px">
+<sc-if value="{{ sd.fs.show }}" hint-placeholder-val="{{ false }}">
+<div style="background:#fff;border-radius:12px;box-shadow:var(--shadow-1);padding:24px;display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap"><h3 style="font-family:var(--font-display);font-size:24px;font-weight:500;margin:0">Formue Selected</h3><button class="btn btn-ghost" onClick="{{ sd.fs.manage }}" style="padding:6px 10px">Market comments →</button></div>
+<div style="display:flex;flex-direction:column;gap:4px"><span class="eyebrow" style="color:#4A4A4A">Performance report</span>
+<sc-if value="{{ sd.fs.hasReport }}" hint-placeholder-val="{{ false }}"><button onClick="{{ sd.fs.openReport }}" style="border:none;background:none;padding:0;text-align:left;cursor:pointer;font-family:var(--font-mono);font-size:13px;text-decoration:underline;text-underline-offset:3px;word-break:break-all">{{ sd.fs.report }}</button></sc-if>
+<sc-if value="{{ sd.fs.noReport }}" hint-placeholder-val="{{ false }}"><span style="font-size:14px;color:#BB4A4A;font-weight:500">Missing</span></sc-if>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px"><span class="eyebrow" style="color:#4A4A4A">Latest market comments</span>
+<sc-for list="{{ sd.fs.comments }}" as="c" hint-placeholder-count="2"><div style="background:#F6F1E9;border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:4px"><span style="font-size:12px;color:#4A4A4A">{{ c.date }} · {{ c.author }}</span><span style="font-size:14px;line-height:1.5">{{ c.text }}</span></div></sc-for>
+<sc-if value="{{ sd.fs.noComments }}" hint-placeholder-val="{{ false }}"><span style="font-size:14px;color:#4A4A4A">No market comments yet.</span></sc-if>
+</div>
+</div>
+</sc-if>
+<div style="background:#fff;border-radius:12px;box-shadow:var(--shadow-1);padding:24px;display:flex;flex-direction:column;gap:18px">
+<h3 style="font-family:var(--font-display);font-size:24px;font-weight:500;margin:0">Control results</h3>
+<sc-for list="{{ sd.controls }}" as="p" hint-placeholder-count="2">
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><span class="eyebrow">{{ p.name }}</span><span style="font-size:12px;color:#4A4A4A">{{ p.responsible }}</span></div>
+<sc-for list="{{ p.tpls }}" as="t" hint-placeholder-count="2">
+<div style="background:#F6F1E9;border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:4px">
+<div style="display:flex;justify-content:space-between;gap:8px;font-size:14px"><span style="font-weight:500">{{ t.name }}</span><span style="display:inline-flex;align-items:center;gap:6px;color:{{ t.color }};font-weight:500;white-space:nowrap"><span style="width:8px;height:8px;border-radius:999px;background:{{ t.color }}"></span>{{ t.status }}</span></div>
+<div style="font-size:13px;color:#4A4A4A">{{ t.detail }}</div>
+</div>
+</sc-for>
+</div>
+</sc-for>
+</div>
+<div style="background:#fff;border-radius:12px;box-shadow:var(--shadow-1);padding:24px;display:flex;flex-direction:column;gap:12px">
+<h3 style="font-family:var(--font-display);font-size:24px;font-weight:500;margin:0">Change history</h3>
+<sc-for list="{{ sd.history }}" as="h" hint-placeholder-count="2">
+<div style="display:flex;flex-direction:column;gap:2px;padding:8px 0;border-bottom:1px solid rgba(64,0,48,0.08);font-size:14px"><span>{{ h.title }}</span><span style="font-size:12px;color:#4A4A4A">{{ h.sub }}</span></div>
+</sc-for>
+</div>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isFs }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:24px">
+<div style="display:flex;flex-direction:column;gap:8px">
+<div class="eyebrow" style="color:#4A4A4A">Order interface</div>
+<h1 style="font-family:var(--font-display);font-size:40px;font-weight:500;line-height:1.1;margin:0">Formue Selected</h1>
+<div style="font-size:15px;color:#4A4A4A;max-width:720px">Formue Selected products are offered through the order interface. Each product links to its performance report. Market comments are written when there is something to say, not on a fixed schedule.</div>
+</div>
+<div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+<div style="display:flex;gap:4px;background:#ECE2D6;border-radius:8px;padding:4px">
+<sc-for list="{{ fsTabs }}" as="t" hint-placeholder-count="3"><button onClick="{{ t.onClick }}" style="border:none;border-radius:6px;padding:6px 12px;font-size:13px;cursor:pointer;background:{{ t.bg }};color:#000;font-weight:{{ t.fw }};box-shadow:{{ t.sh }}">{{ t.label }}</button></sc-for>
+</div>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start">
+<div style="background:#fff;border-radius:12px;box-shadow:var(--shadow-1);padding:8px 24px 16px;min-width:0;overflow-x:auto;flex:999 1 640px">
+<table style="width:100%;border-collapse:collapse;font-size:14px">
+<thead><tr style="text-align:left"><th class="eyebrow" style="color:#4A4A4A;padding:14px 12px 10px 0;border-bottom:1px solid rgba(64,0,48,0.16)">Product</th><th class="eyebrow" style="color:#4A4A4A;padding:14px 12px 10px;border-bottom:1px solid rgba(64,0,48,0.16)">Asset class</th><th class="eyebrow" style="color:#4A4A4A;padding:14px 12px 10px;border-bottom:1px solid rgba(64,0,48,0.16)">Performance report</th><th class="eyebrow" style="color:#4A4A4A;padding:14px 12px 10px;border-bottom:1px solid rgba(64,0,48,0.16)">Latest market comment</th><th class="eyebrow" style="color:#4A4A4A;padding:14px 0 10px 12px;border-bottom:1px solid rgba(64,0,48,0.16);text-align:right">Comments</th></tr></thead>
+<tbody>
+<sc-for list="{{ fsRows }}" as="r" hint-placeholder-count="9">
+<tr onClick="{{ r.onClick }}" style="cursor:pointer;background:{{ r.rowBg }}" style-hover="background:#F6F1E9">
+<td style="padding:12px 12px 12px 0;border-bottom:1px solid rgba(64,0,48,0.08);vertical-align:top"><div style="font-weight:500">{{ r.name }}</div><div style="font-family:var(--font-mono);font-size:12px;color:#4A4A4A">{{ r.isin }}</div></td>
+<td style="padding:12px;border-bottom:1px solid rgba(64,0,48,0.08);vertical-align:top"><div>{{ r.ac }}</div><div style="font-size:12px;color:#4A4A4A">{{ r.sub }}</div></td>
+<td style="padding:12px;border-bottom:1px solid rgba(64,0,48,0.08);vertical-align:top"><span style="font-size:12px;font-weight:500;padding:2px 8px;border-radius:4px;background:{{ r.repBg }};white-space:nowrap">{{ r.repTxt }}</span></td>
+<td style="padding:12px;border-bottom:1px solid rgba(64,0,48,0.08);vertical-align:top;min-width:240px">
+<sc-if value="{{ r.hasC }}" hint-placeholder-val="{{ true }}"><div style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.45">{{ r.cText }}</div><div style="font-size:12px;color:#4A4A4A;margin-top:2px">{{ r.cMeta }}</div></sc-if>
+<sc-if value="{{ r.noC }}" hint-placeholder-val="{{ false }}"><span style="color:#8A8A8A">No comments yet</span></sc-if>
+</td>
+<td style="padding:12px 0 12px 12px;border-bottom:1px solid rgba(64,0,48,0.08);text-align:right;font-variant-numeric:tabular-nums;vertical-align:top">{{ r.count }}</td>
+</tr>
+</sc-for>
+</tbody>
+</table>
+<sc-if value="{{ fsEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:40px 0;text-align:center;color:#4A4A4A;font-size:14px">No products match this filter.</div></sc-if>
+<div style="font-size:13px;color:#4A4A4A;padding-top:14px">{{ fsFooter }}</div>
+</div>
+<sc-if value="{{ fp.show }}" hint-placeholder-val="{{ false }}">
+<div style="background:#fff;border-radius:12px;box-shadow:var(--shadow-2);padding:24px;display:flex;flex-direction:column;gap:20px;position:sticky;top:24px;flex:1 1 360px;max-width:100%;box-sizing:border-box">
+<div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><span class="eyebrow" style="color:#4A4A4A">{{ fp.ac }}</span><button onClick="{{ closeFs }}" style="border:none;background:none;font-size:20px;cursor:pointer;line-height:1;padding:4px">×</button></div>
+<div style="display:flex;flex-direction:column;gap:6px"><h3 style="font-family:var(--font-display);font-size:28px;font-weight:500;margin:0">{{ fp.name }}</h3><span style="font-family:var(--font-mono);font-size:12px;color:#4A4A4A">{{ fp.isin }}</span><button onClick="{{ fp.openSec }}" style="align-self:flex-start;border:none;background:none;padding:0;cursor:pointer;font-size:14px;text-decoration:underline;text-underline-offset:3px">Open security record</button></div>
+<div style="display:flex;flex-direction:column;gap:10px;border-top:1px solid rgba(64,0,48,0.08);padding-top:20px">
+<span class="eyebrow" style="color:#4A4A4A">Performance report</span>
+<sc-if value="{{ fp.showLink }}" hint-placeholder-val="{{ true }}"><span style="font-family:var(--font-mono);font-size:13px;word-break:break-all">{{ fp.report }}</span><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary" onClick="{{ fp.openReport }}">Open report</button><button class="btn btn-ghost" onClick="{{ fp.editReport }}">Change link</button></div></sc-if>
+<sc-if value="{{ fp.showForm }}" hint-placeholder-val="{{ false }}">
+<sc-if value="{{ fp.missing }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;color:#BB4A4A">No performance report linked. The order interface control keeps an action open until one is added.</span></sc-if>
+<input value="{{ fsRepDraft }}" onChange="{{ onFsRepDraft }}" placeholder="https://reports.formue.no/selected/…" style="height:40px;border:1px solid rgba(64,0,48,0.16);border-radius:8px;padding:0 12px;font-size:14px">
+<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary" onClick="{{ fp.saveReport }}">Save link</button><sc-if value="{{ fp.canCancel }}" hint-placeholder-val="{{ false }}"><button class="btn btn-ghost" onClick="{{ fp.cancelReport }}">Cancel</button></sc-if></div>
+</sc-if>
+</div>
+<div style="display:flex;flex-direction:column;gap:12px;border-top:1px solid rgba(64,0,48,0.08);padding-top:20px">
+<div style="display:flex;justify-content:space-between;align-items:baseline"><span class="eyebrow" style="color:#4A4A4A">Market comments</span><span style="font-size:12px;color:#4A4A4A">{{ fp.count }}</span></div>
+<textarea value="{{ fsDraft }}" onChange="{{ onFsDraft }}" rows="4" placeholder="Write a market comment for this product" style="border:1px solid rgba(64,0,48,0.16);border-radius:8px;padding:10px 12px;font-size:14px;resize:vertical;line-height:1.5"></textarea>
+<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><span style="font-size:12px;color:#4A4A4A">Published with today's date and your name.</span><button class="btn btn-primary" onClick="{{ fp.publish }}">Publish comment</button></div>
+<sc-for list="{{ fp.comments }}" as="c" hint-placeholder-count="2"><div style="display:flex;flex-direction:column;gap:4px;padding:12px 0;border-bottom:1px solid rgba(64,0,48,0.08)"><span style="font-size:12px;color:#4A4A4A">{{ c.date }} · {{ c.author }}</span><span style="font-size:14px;line-height:1.5">{{ c.text }}</span></div></sc-for>
+</div>
+</div>
+</sc-if>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isProjects }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:24px">
+<div style="display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap">
+<div style="display:flex;flex-direction:column;gap:8px">
+<div class="eyebrow" style="color:#4A4A4A">Configuration</div>
+<h1 style="font-family:var(--font-display);font-size:40px;font-weight:500;line-height:1.1;margin:0">Projects</h1>
+<div style="font-size:15px;color:#4A4A4A;max-width:720px">A project groups the control templates for one purpose. Actions from a project are assigned to its responsible person.</div>
+</div>
+<button class="btn btn-primary" onClick="{{ mockProject }}">New project</button>
+</div>
+<sc-for list="{{ projRows }}" as="p" hint-placeholder-count="2">
+<div style="background:#fff;border-radius:12px;box-shadow:var(--shadow-1);padding:32px;display:flex;flex-direction:column;gap:24px">
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:32px;align-items:start">
+<div style="display:flex;flex-direction:column;gap:8px">
+<h2 style="font-family:var(--font-display);font-size:32px;font-weight:500;margin:0">{{ p.name }}</h2>
+<div style="font-size:15px;color:#4A4A4A">{{ p.desc }}</div>
+<label style="display:flex;align-items:center;gap:12px;margin-top:12px"><span style="width:36px;height:36px;border-radius:999px;background:#ECE2D6;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px">{{ p.initials }}</span><span style="display:flex;flex-direction:column;gap:2px"><span class="eyebrow" style="color:#4A4A4A">Responsible</span><select value="{{ p.responsible }}" onChange="{{ p.onResp }}" style="height:32px;border:1px solid rgba(64,0,48,0.16);border-radius:8px;padding:0 8px;font-size:14px;background:#fff"><sc-for list="{{ people }}" as="o" hint-placeholder-count="5"><option value="{{ o }}">{{ o }}</option></sc-for></select></span></label>
+</div>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+<div><div class="eyebrow" style="color:#4A4A4A">Controls passing</div><div style="font-size:28px;font-weight:500;font-variant-numeric:tabular-nums">{{ p.pct }}</div></div>
+<div><div class="eyebrow" style="color:#4A4A4A">Open actions</div><div style="font-size:28px;font-weight:500;font-variant-numeric:tabular-nums">{{ p.open }}</div></div>
+<div><div class="eyebrow" style="color:#4A4A4A">Critical</div><div style="font-size:28px;font-weight:500;font-variant-numeric:tabular-nums;color:#BB4A4A">{{ p.critical }}</div></div>
+</div>
+</div>
+<div style="display:flex;flex-direction:column">
+<div class="eyebrow" style="color:#4A4A4A;padding-bottom:8px;border-bottom:1px solid rgba(64,0,48,0.16)">Control templates</div>
+<sc-for list="{{ p.templates }}" as="t" hint-placeholder-count="2">
+<button onClick="{{ t.onClick }}" style="display:grid;grid-template-columns:minmax(180px,1fr) auto auto auto;gap:24px;align-items:center;padding:14px 0;border:none;border-bottom:1px solid rgba(64,0,48,0.08);background:none;text-align:left;cursor:pointer;font-size:14px;color:#000" style-hover="background:#F6F1E9">
+<span><span style="display:block;font-weight:500">{{ t.name }}</span><span style="font-size:13px;color:#4A4A4A">Scope: {{ t.scope }}</span></span>
+<span style="color:#4A4A4A">{{ t.rules }}</span>
+<span style="color:#4A4A4A">{{ t.open }}</span>
+<span style="text-align:right;text-decoration:underline;text-underline-offset:3px">Edit template</span>
+</button>
+</sc-for>
+<button onClick="{{ p.addTpl }}" style="align-self:flex-start;margin-top:12px;border:none;background:none;cursor:pointer;font-size:14px;padding:0">+ Add control template</button>
+</div>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ isTemplates }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:24px">
+<div style="display:flex;flex-direction:column;gap:8px">
+<div class="eyebrow" style="color:#4A4A4A">Configuration</div>
+<h1 style="font-family:var(--font-display);font-size:40px;font-weight:500;line-height:1.1;margin:0">Control templates</h1>
+<div style="font-size:15px;color:#4A4A4A;max-width:720px">A template lists the rules a security must pass for a project. Required rules that fail create actions automatically on the next control run.</div>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start">
+<div style="display:flex;flex-direction:column;gap:20px;flex:1 1 220px;max-width:300px">
+<sc-for list="{{ tplGroups }}" as="g" hint-placeholder-count="2">
+<div style="display:flex;flex-direction:column;gap:4px">
+<div class="eyebrow" style="color:#4A4A4A;padding:0 12px 6px">{{ g.name }}</div>
+<sc-for list="{{ g.items }}" as="t" hint-placeholder-count="2">
+<button onClick="{{ t.onClick }}" style="display:flex;flex-direction:column;gap:2px;text-align:left;border:none;border-radius:8px;padding:10px 12px;cursor:pointer;background:{{ t.bg }};box-shadow:{{ t.sh }};color:#000" style-hover="background:#fff"><span style="font-size:14px;font-weight:{{ t.fw }}">{{ t.name }}</span><span style="font-size:12px;color:#4A4A4A">{{ t.meta }}</span></button>
+</sc-for>
+</div>
+</sc-for>
+</div>
+<div style="background:#fff;border-radius:12px;box-shadow:var(--shadow-1);padding:32px;display:flex;flex-direction:column;gap:24px;min-width:0;flex:999 1 520px">
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px">
+<label style="display:flex;flex-direction:column;gap:6px"><span class="eyebrow" style="color:#4A4A4A">Template name</span><input value="{{ tpl.name }}" onChange="{{ tpl.onName }}" style="font-family:var(--font-display);font-size:26px;font-weight:500;border:none;border-bottom:1px solid rgba(64,0,48,0.16);padding:4px 0;outline:none"></label>
+<label style="display:flex;flex-direction:column;gap:6px"><span class="eyebrow" style="color:#4A4A4A">Project</span><select value="{{ tpl.project }}" onChange="{{ tpl.onProject }}" style="height:40px;border:1px solid rgba(64,0,48,0.16);border-radius:8px;padding:0 10px;font-size:14px;background:#fff"><sc-for list="{{ projOpts }}" as="o" hint-placeholder-count="2"><option value="{{ o.v }}">{{ o.l }}</option></sc-for></select></label>
+</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px">
+<label style="display:flex;flex-direction:column;gap:6px"><span class="eyebrow" style="color:#4A4A4A">Purpose</span><input value="{{ tpl.desc }}" onChange="{{ tpl.onDesc }}" style="height:40px;border:1px solid rgba(64,0,48,0.16);border-radius:8px;padding:0 12px;font-size:14px"></label>
+<label style="display:flex;flex-direction:column;gap:6px"><span class="eyebrow" style="color:#4A4A4A">Scope</span><input value="{{ tpl.scope }}" onChange="{{ tpl.onScope }}" style="height:40px;border:1px solid rgba(64,0,48,0.16);border-radius:8px;padding:0 12px;font-size:14px"></label>
+</div>
+<div style="display:flex;gap:32px;padding:16px 20px;background:#F6F1E9;border-radius:8px;font-size:14px;flex-wrap:wrap">
+<span><span style="color:#4A4A4A">Securities in scope </span><strong style="font-weight:600">{{ tpl.inScope }}</strong></span>
+<span><span style="color:#4A4A4A">Active rules </span><strong style="font-weight:600">{{ tpl.activeRules }}</strong></span>
+<span><span style="color:#4A4A4A">Securities failing </span><strong style="font-weight:600;color:#BB4A4A">{{ tpl.failing }}</strong></span>
+<span><span style="color:#4A4A4A">Open actions </span><strong style="font-weight:600">{{ tpl.open }}</strong></span>
+</div>
+<div style="overflow-x:auto"><div style="display:flex;flex-direction:column;min-width:680px">
+<div style="display:grid;grid-template-columns:minmax(150px,1.2fr) 140px minmax(120px,1.4fr) 110px 70px 60px 28px;gap:10px;padding:0 0 8px;border-bottom:1px solid rgba(64,0,48,0.16)">
+<span class="eyebrow" style="color:#4A4A4A">Attribute</span><span class="eyebrow" style="color:#4A4A4A">Rule</span><span class="eyebrow" style="color:#4A4A4A">Parameter</span><span class="eyebrow" style="color:#4A4A4A">Severity</span><span class="eyebrow" style="color:#4A4A4A">Active</span><span class="eyebrow" style="color:#4A4A4A;text-align:right">Failing</span><span></span>
+</div>
+<sc-for list="{{ tpl.rules }}" as="r" hint-placeholder-count="5">
+<div style="display:grid;grid-template-columns:minmax(150px,1.2fr) 140px minmax(120px,1.4fr) 110px 70px 60px 28px;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid rgba(64,0,48,0.08);opacity:{{ r.op }}">
+<select value="{{ r.field }}" onChange="{{ r.onField }}" style="height:34px;border:1px solid rgba(64,0,48,0.16);border-radius:8px;padding:0 6px;font-size:13px;background:#fff;min-width:0"><sc-for list="{{ fieldOpts }}" as="o" hint-placeholder-count="4"><option value="{{ o.v }}">{{ o.l }}</option></sc-for></select>
+<select value="{{ r.type }}" onChange="{{ r.onType }}" style="height:34px;border:1px solid rgba(64,0,48,0.16);border-radius:8px;padding:0 6px;font-size:13px;background:#fff;min-width:0"><sc-for list="{{ ruleTypes }}" as="o" hint-placeholder-count="4"><option value="{{ o }}">{{ o }}</option></sc-for></select>
+<input value="{{ r.param }}" onChange="{{ r.onParam }}" placeholder="{{ r.ph }}" style="height:34px;border:1px solid rgba(64,0,48,0.16);border-radius:8px;padding:0 10px;font-size:13px;min-width:0">
+<select value="{{ r.severity }}" onChange="{{ r.onSev }}" style="height:34px;border:1px solid rgba(64,0,48,0.16);border-radius:8px;padding:0 6px;font-size:13px;background:#fff;min-width:0"><option value="Critical">Critical</option><option value="High">High</option><option value="Medium">Medium</option></select>
+<button onClick="{{ r.toggle }}" style="width:36px;height:20px;border-radius:999px;background:{{ r.tBg }};display:flex;align-items:center;padding:2px;box-sizing:border-box;border:none;cursor:pointer"><span style="width:16px;height:16px;border-radius:999px;background:#fff;margin-left:{{ r.tX }};transition:margin 200ms"></span></button>
+<span style="text-align:right;font-variant-numeric:tabular-nums;font-size:14px;color:{{ r.failC }};font-weight:500">{{ r.failing }}</span>
+<button onClick="{{ r.remove }}" style="border:none;background:none;cursor:pointer;font-size:18px;color:#4A4A4A;padding:0">×</button>
+</div>
+</sc-for>
+<button onClick="{{ tpl.addRule }}" style="align-self:flex-start;margin-top:14px;border:none;background:none;cursor:pointer;font-size:14px;padding:0">+ Add rule</button>
+</div></div>
+<div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid rgba(64,0,48,0.08);padding-top:20px;gap:12px;flex-wrap:wrap">
+<span style="font-size:13px;color:#4A4A4A">Changes apply on the next control run. Failing counts update as you edit.</span>
+<div style="display:flex;gap:8px"><button class="btn btn-ghost" onClick="{{ tpl.dup }}">Duplicate</button><button class="btn btn-primary" onClick="{{ tpl.save }}">Save and run controls</button></div>
+</div>
+</div>
+</div>
+</div>
+</sc-if>
+
+</div>
+</main>
+</div>
+<sc-if value="{{ af.show }}" hint-placeholder-val="{{ false }}">
+<div style="position:fixed;inset:0;background:rgba(64,0,48,0.4);display:flex;align-items:flex-start;justify-content:center;padding:48px 16px;overflow-y:auto;z-index:20;box-sizing:border-box">
+<div style="background:#fff;border-radius:16px;box-shadow:var(--shadow-3);width:100%;max-width:640px;padding:32px;display:flex;flex-direction:column;gap:24px;box-sizing:border-box;font-family:var(--font-body);color:#000">
+<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px"><div style="display:flex;flex-direction:column;gap:6px"><div class="eyebrow" style="color:#4A4A4A">Data model</div><h2 style="font-family:var(--font-display);font-size:32px;font-weight:500;margin:0;line-height:1.1">New custom attribute</h2><div style="font-size:14px;color:#4A4A4A">The attribute is added to every security in the master. Values start empty.</div></div><button onClick="{{ af.cancel }}" style="border:none;background:none;font-size:22px;cursor:pointer;line-height:1;padding:4px">×</button></div>
+<label style="display:flex;flex-direction:column;gap:6px"><span class="eyebrow" style="color:#4A4A4A">Name</span><input value="{{ af.name }}" onChange="{{ af.onName }}" placeholder="e.g. Fund manager" style="height:40px;border:1px solid rgba(64,0,48,0.16);border-radius:8px;padding:0 12px;font-size:14px"></label>
+<div style="display:flex;flex-direction:column;gap:8px"><span class="eyebrow" style="color:#4A4A4A">Format</span>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px">
+<sc-for list="{{ af.types }}" as="t" hint-placeholder-count="8"><button onClick="{{ t.onClick }}" style="text-align:left;border:none;border-radius:8px;padding:12px;cursor:pointer;background:{{ t.bg }};box-shadow:{{ t.sh }};display:flex;flex-direction:column;gap:2px;color:#000"><span style="font-size:14px;font-weight:600">{{ t.label }}</span><span style="font-size:12px;color:#4A4A4A">{{ t.d }}</span></button></sc-for>
+</div></div>
+<sc-if value="{{ af.needsOpts }}" hint-placeholder-val="{{ false }}"><label style="display:flex;flex-direction:column;gap:6px"><span class="eyebrow" style="color:#4A4A4A">Values</span><textarea value="{{ af.opts }}" onChange="{{ af.onOpts }}" rows="4" placeholder="One value per line" style="border:1px solid rgba(64,0,48,0.16);border-radius:8px;padding:10px 12px;font-size:14px;resize:vertical;line-height:1.5"></textarea><span style="font-size:12px;color:#4A4A4A">{{ af.optsHint }}</span></label></sc-if>
+<sc-if value="{{ af.hasNote }}" hint-placeholder-val="{{ false }}"><div style="background:#F6F1E9;border-radius:8px;padding:12px 14px;font-size:13px">{{ af.note }}</div></sc-if>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px">
+<label style="display:flex;flex-direction:column;gap:6px"><span class="eyebrow" style="color:#4A4A4A">Source</span><select value="{{ af.src }}" onChange="{{ af.onSrc }}" style="height:40px;border:1px solid rgba(64,0,48,0.16);border-radius:8px;padding:0 12px;font-size:14px;background:#fff"><option value="Internal">Internal</option><option value="Bloomberg">Bloomberg</option><option value="Morningstar">Morningstar</option><option value="MSCI">MSCI</option></select></label>
+<label style="display:flex;flex-direction:column;gap:6px"><span class="eyebrow" style="color:#4A4A4A">Applies to</span><select value="{{ af.scope }}" onChange="{{ af.onScope }}" style="height:40px;border:1px solid rgba(64,0,48,0.16);border-radius:8px;padding:0 12px;font-size:14px;background:#fff"><option value="all">All securities</option><option value="selected">Formue Selected only</option></select></label>
+</div>
+<label style="display:flex;flex-direction:column;gap:6px"><span class="eyebrow" style="color:#4A4A4A">Description</span><input value="{{ af.desc }}" onChange="{{ af.onDesc }}" placeholder="What the attribute is used for (optional)" style="height:40px;border:1px solid rgba(64,0,48,0.16);border-radius:8px;padding:0 12px;font-size:14px"></label>
+<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;border-top:1px solid rgba(64,0,48,0.08);padding-top:20px"><span style="font-size:13px;color:#4A4A4A">Add a rule in a control template to make it required.</span><div style="display:flex;gap:8px"><button class="btn btn-ghost" onClick="{{ af.cancel }}">Cancel</button><button class="btn btn-primary" onClick="{{ af.create }}">Create attribute</button></div></div>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+<div style="position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:#400030;color:#fff;padding:12px 20px;border-radius:8px;font-size:14px;box-shadow:var(--shadow-3);z-index:10">{{ toast }}</div>
+</sc-if>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  BASEF = [
+    {k:'isin',l:'ISIN',src:'Bloomberg',core:true},
+    {k:'symbol',l:'Symbol',src:'Bloomberg',core:true},
+    {k:'issuer',l:'Issued by',src:'Bloomberg',core:true},
+    {k:'broker',l:'Broker',src:'Internal',core:true},
+    {k:'assetClass',l:'Asset class',src:'Morningstar',core:true},
+    {k:'subAssetClass',l:'Sub-asset class',src:'Morningstar',core:true},
+    {k:'riskClass',l:'Risk class',src:'Morningstar',core:true},
+    {k:'productSheet',l:'Product sheet',src:'Internal',core:true},
+    {k:'status',l:'Status',src:'Internal',core:true},
+    {k:'availMarket',l:'Available in market',src:'Bloomberg',core:true},
+    {k:'availAdvisor',l:'Available for advisor trading',src:'Internal',core:true},
+    {k:'sfdr',l:'SFDR article',src:'Morningstar',core:false},
+    {k:'esg',l:'MSCI ESG rating',src:'MSCI',core:false},
+    {k:'settleCcy',l:'Settlement currency',src:'Bloomberg',core:false},
+    {k:'country',l:'Country of risk',src:'MSCI',core:false},
+    {k:'selected',l:'Formue Selected',src:'Internal',core:false},
+    {k:'perfReport',l:'Performance report',src:'Internal',core:false,scope:'selected'},
+  ];
+  OPTS = {
+    broker:['Pareto Securities','Carnegie','SEB','Nordnet','Allfunds','DNB Markets'],
+    assetClass:['Equity','Fixed income','Alternatives'],
+    subAssetClass:['Nordic equity','Global equity','Emerging markets equity','Investment grade','High yield','Global credit','Private equity','Real estate','Infrastructure'],
+    riskClass:['1','2','3','4','5','6','7'],
+    status:['Active','Pending','Suspended','Delisted'],
+    availMarket:['Yes','No'], availAdvisor:['Yes','No'],
+    sfdr:['Art. 6','Art. 8','Art. 9','N/A'],
+    esg:['AAA','AA','A','BBB','BB','B','CCC'],
+    settleCcy:['NOK','SEK','DKK','EUR','USD','GBP'],
+    selected:['Yes','No'],
+  };
+  DEFT = {broker:'List',assetClass:'List',subAssetClass:'List',riskClass:'List',status:'List',availMarket:'Boolean',availAdvisor:'Boolean',sfdr:'List',esg:'List',settleCcy:'List',selected:'Boolean',perfReport:'URL'};
+  TYPES = [{v:'Text',d:'Free text'},{v:'Number',d:'Numeric value'},{v:'Date',d:'Calendar date'},{v:'Boolean',d:'Yes or no'},{v:'List',d:'One value from a list'},{v:'Multi list',d:'Several values from a list'},{v:'URL',d:'Web link'},{v:'Employee',d:'Person in the employee directory'}];
+  get F(){ return [...this.BASEF.map(f=>({...f,t:this.DEFT[f.k]||'Text'})),...((this.state&&this.state.attrs)||[])]; }
+  optsFor(k){const f=this.FM[k]; if(!f) return null; if(f.t==='Employee') return this.PEOPLE; if(f.t==='Boolean') return ['Yes','No']; return f.opts||this.OPTS[k]||null;}
+  inputType(f){return ({Number:'number',Date:'date',URL:'url'})[f.t]||'text';}
+  fmt(f,v){ if(f.t==='Date'&&/^\d{4}-\d{2}-\d{2}$/.test(v)){const p=v.split('-');return p[2]+'.'+p[1]+'.'+p[0];} return v; }
+  chips(f,draft){const sel=draft?draft.split(', ').filter(Boolean):[];return (f.opts||[]).map(o=>{const on=sel.includes(o);return {label:o,bg:on?'#400030':'#fff',c:on?'#fff':'#000',onClick:()=>this.setState({draft:(on?sel.filter(x=>x!==o):[...sel,o]).join(', ')})};});}
+  setAF(p){this.setState(s=>({attrForm:{...s.attrForm,...p}}));}
+  createAttr(){
+    const A=this.state.attrForm, name=A.name.trim();
+    if(!name){this.toast('Give the attribute a name.');return;}
+    if(this.F.some(f=>f.l.toLowerCase()===name.toLowerCase())){this.toast('An attribute with this name already exists.');return;}
+    const opts=A.opts.split('\n').map(x=>x.trim()).filter(Boolean);
+    if((A.type==='List'||A.type==='Multi list')&&opts.length<2){this.toast('Add at least two values.');return;}
+    const k='ca'+(++this._n);
+    this.setState(s=>({attrs:[...s.attrs,{k,l:name,src:A.src,core:false,t:A.type,opts:opts.length?opts:null,scope:A.scope==='selected'?'selected':undefined,desc:A.desc}],attrForm:null}));
+    this.toast(name+' created as '+A.type.toLowerCase()+' attribute.');
+  }
+  PEOPLE = ['Kari Lunde','Henrik Aas','Maria Solberg','Jonas Berg','Ingrid Holm'];
+  RULE_TYPES = ['Required','Allowed values','Range','Format'];
+  SEVC = {Critical:'#BB4A4A',High:'#B59525',Medium:'#4A6F9B'};
+  STBG = {Active:'#ABD4A3',Pending:'#ECE2D6',Suspended:'#E3AAB3',Delisted:'#ECE2D6'};
+  BASE = {all:{open:756,crit:117,gaps:373},oi:{open:38,crit:6,gaps:21},cf:{open:718,crit:111,gaps:352}};
+  T0 = new Date(2026,8,30);
+  state = this.init();
+
+  init() {
+    const K=['isin','name','symbol','issuer','broker','assetClass','subAssetClass','riskClass','productSheet','status','availMarket','availAdvisor','sfdr','esg','settleCcy','country'];
+    const R=[
+      ['NO0010096985','Equinor ASA','EQNR','Equinor ASA','Pareto Securities','Equity','Nordic equity',6,'PS-10231','Active','Yes','Yes','N/A','BBB','NOK','Norway'],
+      ['NO0003054108','Mowi ASA','MOWI','Mowi ASA','Pareto Securities','Equity','Nordic equity',6,'PS-10244','Active','Yes','Yes','N/A','AA','NOK','Norway'],
+      ['SE0000108656','Ericsson B','ERIC B','Telefonaktiebolaget LM Ericsson','Carnegie','Equity','Nordic equity',6,null,'Active','Yes','Yes','N/A','A','SEK','Sweden'],
+      ['IE00B4L5Y983','iShares Core MSCI World ETF','IWDA','BlackRock Asset Management Ireland','Nordnet','Equity','Global equity',4,'PS-11802','Active','Yes','Yes','Art. 6','A','USD','Ireland'],
+      ['LU0996182563','Amundi Index MSCI Emerging Markets','AMEM','Amundi Luxembourg',null,'Equity','Emerging markets equity',null,'PS-11910','Active','Yes','No','Art. 8',null,'EUR','Luxembourg'],
+      ['LU1873131775','Nordea 1 – Global Climate and Environment','NGCEF','Nordea Investment Funds','Allfunds','Equity','Global equity',4,null,'Active','Yes','Yes','Art. 9','AA',null,'Luxembourg'],
+      ['NO0012443870','Kommunalbanken 3.25 % 2029','KBN29','Kommunalbanken AS','DNB Markets','Fixed income','Investment grade',2,'PS-12014','Active','Yes','Yes','N/A','AAA','NOK','Norway'],
+      ['NO0013017657','Aker BP 5.5 % 2028','AKRBP28','Aker BP ASA','Pareto Securities','Fixed income','High yield',null,null,'Pending','No','No','N/A',null,'NOK','Norway'],
+      ['IE00BF1QPL78','PIMCO GIS Income Fund','PIMINC','PIMCO Global Advisors','Allfunds','Fixed income','Global credit',3,'PS-11477','Active','Yes','Yes','Art. 8','A',null,'Ireland'],
+      ['SE0015961909','Investor AB B','INVE B','Investor AB','Carnegie','Equity','Nordic equity',5,'PS-10988','Active','Yes','Yes','N/A','AA','SEK',null],
+      ['DK0062498333','Novo Nordisk B','NOVO B','Novo Nordisk A/S','SEB','Equity','Nordic equity',6,'PS-10420','Active','Yes','Yes','N/A','AA','DKK','Denmark'],
+      ['US0378331005','Apple Inc','AAPL','Apple Inc','Nordnet','Equity','Global equity',6,'PS-10010','Active','Yes',null,'N/A','BBB','USD','United States'],
+      ['NO0012530965','Scatec 7.9 % 2027',null,'Scatec ASA',null,'Fixed income','High yield',4,null,'Active','Yes','Yes','N/A','A','NOK','Norway'],
+      ['NO0012960139','Nordic Private Equity Fund IV',null,'Nordic PE Partners AS',null,'Alternatives','Private equity',7,'PS-12201','Pending','No','Yes','Art. 8',null,'NOK','Norway'],
+      ['LU1582988058','M&G Lux Global Listed Infrastructure','MGGLI','M&G Luxembourg S.A.','Allfunds','Alternatives','Infrastructure',4,'PS-11655','Active','Yes','Yes','Art. 8','A','EUR','Luxembourg'],
+      ['NO0010940150','Nordic Real Estate Partners III',null,'NREP Fund Management AS','DNB Markets','Alternatives','Real estate',null,null,'Pending','No','No','Art. 6',null,'NOK','Norway'],
+      ['FI0009000681','Nokia Oyj','NOKIA','Nokia Oyj','SEB','Equity','Nordic equity',6,'PS-10512','Suspended','No','No','N/A','AA','EUR','Finland'],
+      ['IE00BK5BQT80','Vanguard FTSE All-World ETF','VWCE','Vanguard Group (Ireland)','Nordnet','Equity','Global equity',4,'PS-11820','Active','Yes','Yes','Art. 6','A','USD','Ireland'],
+      ['NO0013256834','Eksportfinans FRN 2030','EKSP30','Eksportfinans ASA','DNB Markets','Fixed income',null,2,'PS-12030','Active','Yes','Yes','N/A','AA','NOK','Norway'],
+      ['SE0000695876','Alfa Laval AB','ALFA','Alfa Laval AB','Carnegie','Equity','Nordic equity',null,'PS-10601','Active','Yes','Yes','N/A','AA','SEK','Sweden'],
+      ['LU0348927095','Nordea 1 – Global Stable Equity','NGSEF','Nordea Investment Funds','Allfunds','Equity','Global equity',4,'PS-11330','Active','Yes','Yes',null,'AA','EUR','Luxembourg'],
+      ['GB00BH4HKS39','Vodafone Group plc','VOD','Vodafone Group plc','SEB','Equity','Global equity',6,'PS-10777','Delisted','No','No','N/A','A','GBP','United Kingdom'],
+      ['NO0010208051','Yara International ASA','YAR','Yara International ASA',null,'Equity','Nordic equity',6,'PS-10266','Active','Yes','Yes','N/A','A','NOK','Norway'],
+    ];
+    const secs=R.map(r=>{const o={};K.forEach((k,i)=>o[k]=r[i]==null?null:String(r[i]));return o;});
+    const U='https://reports.formue.no/selected/';
+    const SEL={'IE00B4L5Y983':U+'IWDA/2026-09','LU0996182563':null,'LU1873131775':U+'NGCEF/2026-09','IE00BF1QPL78':U+'PIMINC/2026-09','LU1582988058':null,'IE00BK5BQT80':U+'VWCE/2026-09','LU0348927095':U+'NGSEF/2026-09','NO0012960139':U+'NPE4/2026-06','NO0010940150':null};
+    secs.forEach(s=>{const y=s.isin in SEL;s.selected=y?'Yes':'No';s.perfReport=y?SEL[s.isin]:null;});
+    const comments={
+      'IE00B4L5Y983':[{id:'c1',date:'24.09.2026 14:10',author:'Jonas Berg',text:'Global equities gave back part of the summer gains in September as long rates rose. The fund follows the index closely, and tracking difference remains within the expected range.'},{id:'c2',date:'12.08.2026 09:30',author:'Jonas Berg',text:'Strong second-quarter earnings in technology and financials lifted the index. No change to our view of the fund as a core holding in market growth.'}],
+      'LU1873131775':[{id:'c3',date:'18.09.2026 11:05',author:'Ingrid Holm',text:'The fund lagged broad global equities this quarter as climate-exposed utilities and industrials fell on higher financing costs. The manager has added to grid and energy-efficiency companies.'}],
+      'IE00BF1QPL78':[{id:'c4',date:'03.09.2026 08:45',author:'Jonas Berg',text:'Credit spreads stayed tight through August. The manager has reduced high-yield exposure and increased agency mortgages, which lowers the fund\'s sensitivity to a slowdown.'}],
+      'LU0348927095':[{id:'c5',date:'21.07.2026 15:20',author:'Jonas Berg',text:'Defensive sectors held up during the July sell-off, and the fund fell less than the market, in line with its mandate.'}],
+      'NO0012960139':[{id:'c6',date:'30.06.2026 10:00',author:'Ingrid Holm',text:'Fund IV completed its fourth investment, a Swedish software company. About 55 % of commitments are now called. The next valuation follows with the third-quarter report.'}],
+    };
+    let n=0; const rule=(field,type,param,severity)=>({id:'r'+(++n),field,type,param,severity,active:true});
+    const templates=[
+      {id:'T1',project:'oi',name:'Tradable instrument check',desc:'Every active security has the data needed to route an order.',scope:'Formue Selected, status Active',rules:[rule('isin','Format','ISO 6166, 12 characters','Critical'),rule('symbol','Required','','Critical'),rule('broker','Required','','Critical'),rule('availMarket','Required','','High'),rule('availAdvisor','Required','','High'),rule('assetClass','Required','','Medium')]},
+      {id:'T2',project:'oi',name:'Broker routing',desc:'Securities open for advisor trading can be routed to an approved broker.',scope:'Formue Selected, available for advisor trading',rules:[rule('broker','Allowed values','Pareto Securities, Carnegie, SEB, Nordnet, Allfunds, DNB Markets','High'),rule('settleCcy','Required','','High'),rule('status','Allowed values','Active','Medium')]},
+      {id:'T5',project:'oi',name:'Performance reporting',desc:'Every Formue Selected product links to its latest performance report.',scope:'Formue Selected = Yes',rules:[rule('perfReport','Required','','High')]},
+      {id:'T3',project:'cf',name:'Product sheet and risk',desc:'Clients see a product sheet and a risk class for every security.',scope:'All securities',rules:[rule('productSheet','Required','','Critical'),rule('riskClass','Required','','Critical'),rule('riskClass','Range','1–7','Critical'),rule('issuer','Required','','High'),rule('subAssetClass','Required','','Medium')]},
+      {id:'T4',project:'cf',name:'Sustainability disclosure',desc:'Sustainability data shown in the client portal and reports is complete.',scope:'All securities',rules:[rule('sfdr','Required','','High'),rule('esg','Required','','Medium'),rule('country','Required','','Medium')]},
+    ];
+    this._n=n+10;
+    return {secs,templates,comments,attrs:[],attrForm:null,fsSel:null,fsDraft:'',fsRepEdit:false,fsRepDraft:'',fsFilter:'all',selOnly:false,projects:[
+      {id:'oi',name:'Order interface',responsible:'Kari Lunde',desc:'Formue Selected products: data needed to route orders, links to performance reports, and market comments.'},
+      {id:'cf',name:'Customer-facing security data',responsible:'Henrik Aas',desc:'Data shown to clients in the portal, in reports and on product sheets.'},
+    ],resolved:[],progress:{},history:[],screen:'dash',dashScope:'all',selIsin:null,selTpl:'T1',edit:null,draft:'',comment:'',search:'',acFilter:'All',gapsOnly:false,aProject:'all',aStatus:'Open',aSev:'All',aField:null,selAction:null,toast:null,lastRun:'06:00'};
+  }
+
+  get FM(){ const m={}; this.F.forEach(f=>m[f.k]=f); return m; }
+  hash(s){let h=7;for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0;return Math.abs(h);}
+  d(dt){const p=x=>String(x).padStart(2,'0');return p(dt.getDate())+'.'+p(dt.getMonth()+1)+'.'+dt.getFullYear();}
+  num(n){return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,'\u202F');}
+  pc(x){return (Math.round(x*10)/10).toFixed(1)+'\u00A0%';}
+  initials(n){return n.split(' ').map(w=>w[0]).join('');}
+  now(){const t=new Date();return String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0');}
+  applies(k,s){ const f=this.FM[k]; return !(f&&f.scope==='selected')||s.selected==='Yes'; }
+  addComment(isin){
+    const t=this.state.fsDraft.trim(); if(!t){this.toast('Write a comment before publishing.');return;}
+    const at=this.d(this.T0)+' '+this.now();
+    this.setState(st=>({comments:{...st.comments,[isin]:[{id:'c'+(++this._n),date:at,author:'Maria Solberg',text:t},...(st.comments[isin]||[])]},history:[{isin,title:'Market comment published',sub:'Maria Solberg · '+at},...st.history],fsDraft:''}));
+    this.toast('Market comment published.');
+  }
+  inScope(t,s){ if(t.project==='oi'&&s.selected!=='Yes') return false; if(t.id==='T1') return s.status==='Active'; if(t.id==='T2') return s.availAdvisor==='Yes'; return true; }
+  fails(r,s){
+    const v=s[r.field];
+    if(!this.applies(r.field,s)) return false;
+    if(r.type==='Required') return v==null||v==='';
+    if(v==null) return false;
+    if(r.type==='Allowed values'){const l=(r.param||'').split(',').map(x=>x.trim()).filter(Boolean);return l.length>0&&!l.includes(v);}
+    if(r.type==='Range'){const m=(r.param||'').match(/(\d+)\D+(\d+)/);if(!m)return false;const x=+v;return isNaN(x)||x<+m[1]||x>+m[2];}
+    if(r.type==='Format'&&r.field==='isin') return !/^[A-Z]{2}[A-Z0-9]{9}\d$/.test(v);
+    return false;
+  }
+  toast(msg){ this.setState({toast:msg}); clearTimeout(this._tt); this._tt=setTimeout(()=>this.setState({toast:null}),2600); }
+
+  actions(){
+    const st=this.state,out=[],seen={};
+    st.secs.forEach(s=>st.templates.forEach(t=>{
+      if(!this.inScope(t,s)) return;
+      const p=st.projects.find(p=>p.id===t.project);
+      t.rules.forEach(r=>{
+        if(!r.active||r.type!=='Required'||!this.fails(r,s)) return;
+        const id=t.id+'-'+s.isin+'-'+r.field; if(seen[id]) return; seen[id]=1;
+        const h=this.hash(id);
+        const created=new Date(2026,8,30-(h%12)); const due=new Date(created); due.setDate(due.getDate()+({Critical:3,High:7,Medium:14}[r.severity]));
+        out.push({id,isin:s.isin,name:s.name,field:r.field,label:this.FM[r.field].l,title:'Missing '+this.FM[r.field].l.toLowerCase(),project:p.name,projectId:p.id,tpl:t.name,severity:r.severity,assignee:p.responsible,created,due,overdue:due<this.T0,status:st.progress[id]||(h%4===0?'In progress':'Open'),src:this.FM[r.field].src});
+      });
+    }));
+    const rank={Critical:0,High:1,Medium:2};
+    return out.sort((a,b)=>rank[a.severity]-rank[b.severity]||b.created-a.created);
+  }
+  checks(pid){
+    const st=this.state;let total=0,pass=0;
+    st.templates.filter(t=>pid==='all'||t.project===pid).forEach(t=>st.secs.forEach(s=>{
+      if(!this.inScope(t,s))return; t.rules.forEach(r=>{if(!r.active)return; total++; if(!this.fails(r,s))pass++;});
+    }));
+    return total?pass/total*100:100;
+  }
+
+  save(isin,field,value){
+    if(value==null||value==='') { this.toast('Enter a value before saving.'); return; }
+    const ft=this.FM[field].t;
+    if(ft==='URL'&&!/^https?:\/\/\S+$/.test(value)) { this.toast('Enter a full link starting with https://'); return; }
+    if(ft==='Number'&&isNaN(+value)) { this.toast('Enter a number.'); return; }
+    const acts=this.actions().filter(a=>a.isin===isin&&a.field===field);
+    const at=this.d(this.T0)+' '+this.now();
+    const sec=this.state.secs.find(s=>s.isin===isin);
+    const label=this.FM[field].l;
+    this.setState(st=>({
+      secs:st.secs.map(s=>s.isin===isin?{...s,[field]:value}:s),
+      resolved:[...acts.map(a=>({...a,status:'Resolved',value,resolvedBy:'Maria Solberg',resolvedAt:at,comment:st.comment})),...st.resolved],
+      history:[{isin,title:label+': '+(sec[field]||'empty')+' → '+value,sub:'Maria Solberg · '+at+(st.comment?' · '+st.comment:'')},...st.history],
+      edit:null,comment:'',draft:''
+    }));
+    this.toast(acts.length?('Saved. '+acts.length+' action'+(acts.length>1?'s':'')+' resolved.'):'Saved.');
+  }
+  updTpl(id,patch){this.setState(st=>({templates:st.templates.map(t=>t.id===id?{...t,...patch}:t)}));}
+  updRule(tid,rid,patch){this.setState(st=>({templates:st.templates.map(t=>t.id===tid?{...t,rules:t.rules.map(r=>r.id===rid?{...r,...patch}:r)}:t)}));}
+  go(screen,extra){this.setState({screen,edit:null,...(extra||{})});window.scrollTo&&window.scrollTo(0,0);}
+  tabs(list,cur,set){return list.map(([v,l])=>({label:l,bg:v===cur?'#fff':'transparent',fw:v===cur?600:400,sh:v===cur?'var(--shadow-1)':'none',onClick:()=>set(v)}));}
+  cell(v){return v==null?{t:'Missing',c:'#BB4A4A',c2:'#BB4A4A',fw:500}:{t:v,c:'#000',c2:'#4A4A4A',fw:400};}
+
+  renderVals(){
+    const st=this.state, acts=this.actions(), nav={};
+    const scr=st.screen==='sec'?'secs':st.screen;
+    ['dash','actions','secs','fs','projects','templates'].forEach(k=>nav[k]={bg:k===scr?'rgba(255,255,255,0.06)':'transparent',bl:k===scr?'#8DB3D8':'transparent',op:k===scr?1:0.8,fw:k===scr?600:400});
+    const projOf=pid=>pid==='all'?acts:acts.filter(a=>a.projectId===pid);
+    const statusBg={Open:'#ECE2D6','In progress':'#B9CFE6',Resolved:'#ABD4A3'};
+    const openAction=a=>()=>this.go('actions',{selAction:a.id,aStatus:a.status==='Resolved'?'Resolved':(a.status),draft:'',comment:''});
+    const aRow=(a,selId)=>({...a,sevColor:this.SEVC[a.severity],createdTxt:this.d(a.created),dateTxt:a.status==='Resolved'?a.resolvedAt:this.d(a.due),dueColor:a.status!=='Resolved'&&a.overdue?'#BB4A4A':'#000',stBg:statusBg[a.status],rowBg:a.id===selId?'#F6F1E9':'transparent',onClick:()=>this.setState({selAction:a.id,draft:'',comment:''})});
+
+    // dashboard
+    const sc=st.dashScope, b=this.BASE[sc], sa_=projOf(sc);
+    const tplsIn=st.templates.filter(t=>sc==='all'||t.project===sc);
+    const fields=[...new Set(tplsIn.flatMap(t=>t.rules.filter(r=>r.active&&r.type==='Required').map(r=>r.field)))];
+    const bars=fields.map(k=>{const ap=st.secs.filter(s=>this.applies(k,s));const f=ap.length?ap.filter(s=>s[k]!=null).length/ap.length*100:100;return {k,f};}).sort((a,b)=>a.f-b.f).slice(0,8)
+      .map(x=>({label:this.FM[x.k].l,kind:this.FM[x.k].core?'':'custom',pct:this.pc(x.f),w:x.f+'%',color:x.f<85?'#BB4A4A':x.f<95?'#B59525':'#437047',onClick:()=>this.go('actions',{aField:x.k,aStatus:'Open',aProject:sc,selAction:null})}));
+    const cur=this.checks(sc);
+    const offs=[4.1,3.8,3.3,3.4,2.6,2.2,2.3,1.6,1.2,0.8,0.5,0];
+    const vals=offs.map(o=>cur-o), mn=Math.floor(Math.min(...vals))-1, mx=Math.ceil(Math.max(...vals))+1;
+    const pts=vals.map((v,i)=>[i*600/11,170-(v-mn)/(mx-mn)*150]);
+    const line='M'+pts.map(p=>p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' L');
+    const uniq=new Set(sa_.map(a=>a.isin)).size;
+    const gaps=b.gaps+uniq;
+    const dash={pct:this.pc(cur),worst:bars[0]?bars[0].label.toLowerCase():'—',total:this.num(5124),gaps:this.num(gaps),gapsShare:this.pc(gaps/5124*100),open:this.num(b.open+sa_.length),critical:this.num(b.crit+sa_.filter(a=>a.severity==='Critical').length),resolved:this.num(186+st.resolved.length)};
+    const projectCards=st.projects.map(p=>{const pa=projOf(p.id),pb=this.BASE[p.id],c=this.checks(p.id);return {name:p.name,responsible:p.responsible,initials:this.initials(p.responsible),pct:this.pc(c),w:c+'%',open:this.num(pb.open+pa.length),critical:this.num(pb.crit+pa.filter(a=>a.severity==='Critical').length),templates:st.templates.filter(t=>t.project===p.id).map(t=>t.name).join(' · '),onActions:()=>this.go('actions',{aProject:p.id,aStatus:'Open',aField:null,selAction:null})};});
+    const recent=[...acts].sort((a,b)=>b.created-a.created).slice(0,5).map(a=>({...aRow(a),onClick:openAction(a)}));
+
+    // actions
+    const all=[...acts,...st.resolved];
+    const base=all.filter(a=>(st.aProject==='all'||a.projectId===st.aProject)&&(st.aSev==='All'||a.severity===st.aSev)&&(!st.aField||a.field===st.aField));
+    const filtered=base.filter(a=>a.status===st.aStatus);
+    const aStatusTabs=['Open','In progress','Resolved'].map(s=>({label:s,count:base.filter(a=>a.status===s).length,bl:s===st.aStatus?'#8DB3D8':'transparent',fw:s===st.aStatus?600:400,onClick:()=>this.setState({aStatus:s,selAction:null})}));
+    const selA=all.find(a=>a.id===st.selAction);
+    let sa={show:false};
+    if(selA&&st.screen==='actions'){
+      const opts=this.optsFor(selA.field), saF=this.FM[selA.field], saMulti=saF.t==='Multi list';
+      sa={show:true,...selA,sevColor:this.SEVC[selA.severity],createdTxt:this.d(selA.created),dueTxt:this.d(selA.due)+(selA.overdue&&selA.status!=='Resolved'?' · overdue':''),dueColor:selA.overdue&&selA.status!=='Resolved'?'#BB4A4A':'#000',
+        isOpen:selA.status!=='Resolved',isResolved:selA.status==='Resolved',isSelect:!!opts&&!saMulti,isText:!opts&&!saMulti,isMulti:saMulti,multiOpts:saMulti?this.chips(saF,st.draft):[],inputType:this.inputType(saF),options:opts||[],
+        save:()=>this.save(selA.isin,selA.field,st.draft),
+        progressLabel:selA.status==='In progress'?'Move back to open':'Mark in progress',
+        toggleProgress:()=>{this.setState(s=>({progress:{...s.progress,[selA.id]:selA.status==='In progress'?'Open':'In progress'},aStatus:selA.status==='In progress'?'Open':'In progress'}));},
+        openSec:()=>this.go('sec',{selIsin:selA.isin})};
+    }
+    const scaled=st.aProject==='all'?this.BASE.all.open:this.BASE[st.aProject].open;
+
+    // securities
+    const q=st.search.trim().toLowerCase();
+    const secRows=st.secs.filter(s=>(st.acFilter==='All'||s.assetClass===st.acFilter)&&(!q||(s.name+' '+s.isin+' '+(s.symbol||'')).toLowerCase().includes(q))).map(s=>{
+      const ap=this.F.filter(f=>this.applies(f.k,s)), filled=ap.filter(f=>s[f.k]!=null).length, p=filled/ap.length*100, o=acts.filter(a=>a.isin===s.isin).length;
+      return {name:s.name,isin:s.isin,isSel:s.selected==='Yes',symbol:this.cell(s.symbol),ac:this.cell(s.assetClass),sub:this.cell(s.subAssetClass),risk:this.cell(s.riskClass),broker:this.cell(s.broker),mkt:this.cell(s.availMarket),adv:this.cell(s.availAdvisor),status:s.status,stBg:this.STBG[s.status],pct:filled+'/'+ap.length,w:p+'%',barC:p<85?'#BB4A4A':p<100?'#B59525':'#437047',open_:o||'–',openFw:o?600:400,o,open:()=>this.go('sec',{selIsin:s.isin})};
+    }).filter(r=>(!st.gapsOnly||r.o>0)&&(!st.selOnly||r.isSel));
+
+    // security detail
+    let sd={core:[],custom:[],controls:[],history:[],fs:{show:false}};
+    const s=st.secs.find(x=>x.isin===st.selIsin);
+    if(s){
+      const row=f=>{const v=s[f.k],ed=!!(st.edit&&st.edit.isin===s.isin&&st.edit.field===f.k),opts=this.optsFor(f.k),na=!this.applies(f.k,s),multi=f.t==='Multi list';
+        if(na) return {label:f.l,value:'Only for Formue Selected',vc:'#8A8A8A',vw:400,src:f.src,editing:false,notEditing:true,isSelect:false,isText:false,options:[],canEdit:false,rowBg:'transparent'};
+        return {label:f.l,value:v==null?'Missing':this.fmt(f,v),vc:v==null?'#BB4A4A':'#000',vw:v==null?500:400,src:f.core?f.src:f.src+' · '+f.t,editing:ed,notEditing:!ed,isSelect:!!opts&&!multi,isText:!opts&&!multi,isMulti:multi,multiOpts:multi&&ed?this.chips(f,st.draft):[],inputType:this.inputType(f),options:opts||[],draft:st.draft,
+          onDraft:e=>this.setState({draft:e.target.value}),canEdit:f.k!=='isin'&&!ed,editLabel:v==null?'Add value':'Edit',rowBg:v==null?'rgba(187,74,74,0.06)':'transparent',
+          onEdit:()=>this.setState({edit:{isin:s.isin,field:f.k},draft:v||''}),onSave:()=>this.save(s.isin,f.k,st.draft),onCancel:()=>this.setState({edit:null})};};
+      const ap=this.F.filter(f=>this.applies(f.k,s)), filled=ap.filter(f=>s[f.k]!=null).length, so=acts.filter(a=>a.isin===s.isin).length;
+      const sc_=st.comments[s.isin]||[];
+      sd={fs:{show:s.selected==='Yes',hasReport:!!s.perfReport,noReport:!s.perfReport,report:s.perfReport||'',openReport:()=>this.toast('Opens the performance report in a new tab (mock).'),comments:sc_.slice(0,2),noComments:!sc_.length,manage:()=>this.go('fs',{fsSel:s.isin,fsDraft:'',fsRepEdit:false,fsRepDraft:''})},name:s.name,isin:s.isin,symbol:s.symbol||'No symbol',issuer:s.issuer||'Issuer missing',status:s.status,stBg:this.STBG[s.status],acLine:[s.assetClass,s.subAssetClass].filter(Boolean).join(' · '),filled,total:ap.length,open:so,openColor:so?'#BB4A4A':'#437047',
+        core:this.F.filter(f=>f.core).map(row),custom:this.F.filter(f=>!f.core).map(row),
+        controls:st.projects.map(p=>({name:p.name,responsible:p.responsible,tpls:st.templates.filter(t=>t.project===p.id).map(t=>{
+          if(!this.inScope(t,s)) return {name:t.name,status:'Not in scope',color:'#8A8A8A',detail:'Scope: '+t.scope};
+          const fr=t.rules.filter(r=>r.active&&this.fails(r,s)), n=t.rules.filter(r=>r.active).length;
+          return {name:t.name,status:fr.length?fr.length+' failing':'Passed',color:fr.length?'#BB4A4A':'#437047',detail:fr.length?fr.map(r=>r.type==='Required'?'Missing '+this.FM[r.field].l.toLowerCase():this.FM[r.field].l+' fails '+r.type.toLowerCase()).join(' · '):n+' rules checked'};
+        })})),
+        history:[...st.history.filter(h=>h.isin===s.isin),{title:'Controls run, '+so+' open action'+(so===1?'':'s'),sub:'System · 30.09.2026 '+st.lastRun},{title:'Prices and reference data refreshed',sub:'Bloomberg feed · 30.09.2026 05:40'},{title:'Record created from Bloomberg',sub:'System · 02.01.2026'}]};
+    }
+
+    // formue selected
+    const cm=st.comments, fsAll=st.secs.filter(x=>x.selected==='Yes'), nC=x=>(cm[x.isin]||[]).length;
+    const fsM={all:()=>true,noreport:x=>!x.perfReport,nocomment:x=>!nC(x)};
+    const fsRows=fsAll.filter(fsM[st.fsFilter]).map(x=>{const c=(cm[x.isin]||[])[0];return {name:x.name,isin:x.isin,ac:x.assetClass||'Missing',sub:x.subAssetClass||'',repTxt:x.perfReport?'Linked':'Missing',repBg:x.perfReport?'#ABD4A3':'#E3AAB3',hasC:!!c,noC:!c,cText:c?c.text:'',cMeta:c?c.date.split(' ')[0]+' · '+c.author:'',count:nC(x)||'–',rowBg:x.isin===st.fsSel?'#F6F1E9':'transparent',onClick:()=>this.setState({fsSel:x.isin,fsDraft:'',fsRepEdit:false,fsRepDraft:''})};});
+    const fsTabs=this.tabs([['all','All · '+fsAll.length],['noreport','Missing report · '+fsAll.filter(fsM.noreport).length],['nocomment','No comments · '+fsAll.filter(fsM.nocomment).length]],st.fsFilter,v=>this.setState({fsFilter:v}));
+    let fp={show:false}; const fx=fsAll.find(x=>x.isin===st.fsSel);
+    if(fx&&st.screen==='fs'){const list=cm[fx.isin]||[],form=!fx.perfReport||st.fsRepEdit;
+      fp={show:true,name:fx.name,isin:fx.isin,ac:[fx.assetClass,fx.subAssetClass].filter(Boolean).join(' · '),report:fx.perfReport||'',showLink:!form,showForm:form,missing:!fx.perfReport,canCancel:!!fx.perfReport,
+        openReport:()=>this.toast('Opens the performance report in a new tab (mock).'),editReport:()=>this.setState({fsRepEdit:true,fsRepDraft:fx.perfReport||''}),cancelReport:()=>this.setState({fsRepEdit:false}),
+        saveReport:()=>{const v=st.fsRepDraft.trim();if(!v){this.toast('Enter a link before saving.');return;}this.save(fx.isin,'perfReport',v);this.setState({fsRepEdit:false,fsRepDraft:''});},
+        publish:()=>this.addComment(fx.isin),count:list.length+' published',comments:list,openSec:()=>this.go('sec',{selIsin:fx.isin})};}
+
+    const AF=st.attrForm;
+    const af=AF?{show:true,...AF,types:this.TYPES.map(t=>({label:t.v,d:t.d,bg:t.v===AF.type?'#F6F1E9':'#fff',sh:t.v===AF.type?'inset 0 0 0 2px #400030':'inset 0 0 0 1px rgba(64,0,48,0.16)',onClick:()=>this.setAF({type:t.v})})),
+      needsOpts:AF.type==='List'||AF.type==='Multi list',optsHint:AF.type==='Multi list'?'Stewards can pick several values.':'Stewards pick one value.',
+      hasNote:['Boolean','Employee','URL','Date','Number'].includes(AF.type),note:({Boolean:'Values are Yes or No.',Employee:'Values are picked from the employee directory: '+this.PEOPLE.join(', ')+'.',URL:'Values must be full links starting with https://.',Date:'Values are picked from a calendar and shown as dd.mm.yyyy.',Number:'Only numeric values are accepted.'})[AF.type]||'',
+      onName:e=>this.setAF({name:e.target.value}),onOpts:e=>this.setAF({opts:e.target.value}),onSrc:e=>this.setAF({src:e.target.value}),onScope:e=>this.setAF({scope:e.target.value}),onDesc:e=>this.setAF({desc:e.target.value}),
+      cancel:()=>this.setState({attrForm:null}),create:()=>this.createAttr()}:{show:false};
+
+    // projects
+    const projRows=st.projects.map(p=>{const pa=projOf(p.id),pb=this.BASE[p.id];return {...p,initials:this.initials(p.responsible),pct:this.pc(this.checks(p.id)),open:this.num(pb.open+pa.length),critical:this.num(pb.crit+pa.filter(a=>a.severity==='Critical').length),
+      onResp:e=>{const v=e.target.value;this.setState(s=>({projects:s.projects.map(x=>x.id===p.id?{...x,responsible:v}:x)}));this.toast('Open actions reassigned to '+v+'.');},
+      templates:st.templates.filter(t=>t.project===p.id).map(t=>({name:t.name,scope:t.scope,rules:t.rules.filter(r=>r.active).length+' active rules',open:acts.filter(a=>a.tpl===t.name).length+' open (sample)',onClick:()=>this.go('templates',{selTpl:t.id})})),
+      addTpl:()=>{const id='T'+(++this._n);this.setState(s=>({templates:[...s.templates,{id,project:p.id,name:'New control template',desc:'',scope:'All securities',rules:[{id:'r'+(++this._n),field:'isin',type:'Required',param:'',severity:'High',active:true}]}],screen:'templates',selTpl:id}));}};});
+
+    // templates
+    const T=st.templates.find(t=>t.id===st.selTpl)||st.templates[0];
+    const inS=st.secs.filter(x=>this.inScope(T,x));
+    const tpl={...T,inScope:inS.length,activeRules:T.rules.filter(r=>r.active).length,failing:inS.filter(x=>T.rules.some(r=>r.active&&this.fails(r,x))).length,open:acts.filter(a=>a.tpl===T.name).length,
+      onName:e=>this.updTpl(T.id,{name:e.target.value}),onDesc:e=>this.updTpl(T.id,{desc:e.target.value}),onScope:e=>this.updTpl(T.id,{scope:e.target.value}),onProject:e=>this.updTpl(T.id,{project:e.target.value}),
+      addRule:()=>this.updTpl(T.id,{rules:[...T.rules,{id:'r'+(++this._n),field:'symbol',type:'Required',param:'',severity:'Medium',active:true}]}),
+      save:()=>{this.setState({lastRun:this.now()});this.toast('Template saved. Controls rerun: '+this.actions().length+' open actions in sample.');},
+      dup:()=>{const id='T'+(++this._n);this.setState(s=>({templates:[...s.templates,{...T,id,name:T.name+' (copy)',rules:T.rules.map(r=>({...r,id:'r'+(++this._n)}))}],selTpl:id}));},
+      rules:T.rules.map(r=>{const f=inS.filter(x=>this.fails(r,x)).length;return {...r,op:r.active?1:0.45,ph:{Required:'—','Allowed values':'Comma-separated list',Range:'e.g. 1–7',Format:'Pattern'}[r.type],
+        failing:r.active?f:'–',failC:r.active&&f?'#BB4A4A':'#4A4A4A',tBg:r.active?'#400030':'#ECE2D6',tX:r.active?'16px':'0px',
+        onField:e=>this.updRule(T.id,r.id,{field:e.target.value}),onType:e=>this.updRule(T.id,r.id,{type:e.target.value}),onParam:e=>this.updRule(T.id,r.id,{param:e.target.value}),onSev:e=>this.updRule(T.id,r.id,{severity:e.target.value}),
+        toggle:()=>this.updRule(T.id,r.id,{active:!r.active}),remove:()=>this.updTpl(T.id,{rules:T.rules.filter(x=>x.id!==r.id)})};})};
+    const tplGroups=st.projects.map(p=>({name:p.name,items:st.templates.filter(t=>t.project===p.id).map(t=>({name:t.name,meta:t.rules.filter(r=>r.active).length+' active rules · '+acts.filter(a=>a.tpl===t.name).length+' open',bg:t.id===T.id?'#fff':'transparent',sh:t.id===T.id?'var(--shadow-1)':'none',fw:t.id===T.id?600:400,onClick:()=>this.setState({selTpl:t.id})}))}));
+
+    return {
+      nav,navOpen:this.num(this.BASE.all.open+acts.length),
+      goDash:()=>this.go('dash'),goActions:()=>this.go('actions',{selAction:null}),goSecs:()=>this.go('secs'),goFs:()=>this.go('fs'),goProjects:()=>this.go('projects'),goTemplates:()=>this.go('templates'),
+      isDash:st.screen==='dash',isActions:st.screen==='actions',isSecs:st.screen==='secs',isSec:st.screen==='sec',isFs:st.screen==='fs',fsTabs,fsRows,fsEmpty:fsRows.length===0,fsFooter:'Showing '+fsRows.length+' of '+fsAll.length+' Formue Selected products (sample)',fp,fsDraft:st.fsDraft,onFsDraft:e=>this.setState({fsDraft:e.target.value}),fsRepDraft:st.fsRepDraft,onFsRepDraft:e=>this.setState({fsRepDraft:e.target.value}),closeFs:()=>this.setState({fsSel:null}),selTg:{bg:st.selOnly?'#400030':'#ECE2D6',x:st.selOnly?'16px':'0px'},toggleSelOnly:()=>this.setState(s=>({selOnly:!s.selOnly})),isProjects:st.screen==='projects',isTemplates:st.screen==='templates',
+      lastRun:st.lastRun,tplCount:st.templates.length,dash,trend:{line,area:line+' L600 170 L0 170 Z',labels:offs.map((_,i)=>'W'+(29+i)),min:this.pc(vals[0]),max:this.pc(cur),delta:(cur-vals[0]).toFixed(1)},
+      dashScopes:this.tabs([['all','All projects'],['oi','Order interface'],['cf','Customer-facing']],sc,v=>this.setState({dashScope:v})),
+      runControls:()=>{this.setState({lastRun:this.now()});this.toast('Controls run complete. '+acts.length+' open actions in sample.');},
+      attrBars:bars,projectCards,recent,
+      aStatusTabs,aProjectTabs:this.tabs([['all','All projects'],['oi','Order interface'],['cf','Customer-facing']],st.aProject,v=>this.setState({aProject:v,selAction:null})),
+      aSev:st.aSev,onSev:e=>this.setState({aSev:e.target.value}),
+      aFieldChip:{show:!!st.aField,label:st.aField?this.FM[st.aField].l:'',clear:()=>this.setState({aField:null})},
+      aGrid:sa.show?'minmax(0,1fr) 380px':'minmax(0,1fr)',aDateHead:st.aStatus==='Resolved'?'Resolved':'Due',
+      actionRows:filtered.map(a=>aRow(a,st.selAction)),aEmpty:filtered.length===0,
+      aFooter:st.aStatus==='Open'?'Showing '+filtered.length+' sample actions of '+this.num(scaled+filtered.length)+' open':'Showing '+filtered.length+' actions',
+      sa,draft:st.draft,onDraft:e=>this.setState({draft:e.target.value}),comment:st.comment,onComment:e=>this.setState({comment:e.target.value}),closeAction:()=>this.setState({selAction:null}),
+      search:st.search,onSearch:e=>this.setState({search:e.target.value}),
+      acTabs:this.tabs([['All','All'],['Equity','Equity'],['Fixed income','Fixed income'],['Alternatives','Alternatives']],st.acFilter,v=>this.setState({acFilter:v})),
+      gapsTg:{bg:st.gapsOnly?'#400030':'#ECE2D6',x:st.gapsOnly?'16px':'0px'},toggleGaps:()=>this.setState(s=>({gapsOnly:!s.gapsOnly})),
+      secRows,secFooter:'Showing '+secRows.length+' of 5\u202F124 securities (sample)',
+      sd,projRows,people:this.PEOPLE,tpl,tplGroups,
+      projOpts:st.projects.map(p=>({v:p.id,l:p.name})),fieldOpts:this.F.map(f=>({v:f.k,l:f.l+(f.core?'':' (custom)')})),ruleTypes:this.RULE_TYPES,
+      mockExport:()=>this.toast('Export prepared (mock).'),mockAdd:()=>this.toast('Add security opens a form (not mocked).'),mockAttr:()=>this.setState({attrForm:{name:'',type:'Text',opts:'',src:'Internal',scope:'all',desc:''}}),af,mockProject:()=>this.toast('New project opens a form (not mocked).'),
+      hasToast:!!st.toast,toast:st.toast
+    };
+  }
+}
+</script>
+</body>
+</html>
