@@ -1,0 +1,64 @@
+<template>
+    <div class="aq-root">
+
+        <!-- toolbar -->
+        <div class="aq-toolbar">
+            <span class="aq-toolbar__title">Action Queue</span>
+            <div class="aq-toolbar__search">
+                <lightning-input
+                    type="search"
+                    label=""
+                    placeholder="Search by subject or security…"
+                    value={searchTerm}
+                    onchange={handleSearch}>
+                </lightning-input>
+            </div>
+            <div class="aq-toolbar__priority">
+                <lightning-combobox
+                    label=""
+                    placeholder="All Priorities"
+                    value={priorityFilter}
+                    options={priorityOptions}
+                    onchange={handlePriorityChange}>
+                </lightning-combobox>
+            </div>
+            <span class="aq-toolbar__count">{rowCountLabel}</span>
+        </div>
+
+        <template lwc:if={isLoading}>
+            <div class="aq-spinner">
+                <lightning-spinner alternative-text="Loading actions" size="medium"></lightning-spinner>
+            </div>
+        </template>
+        <template lwc:elseif={hasError}>
+            <div class="aq-error" role="alert">{errorMessage}</div>
+        </template>
+        <template lwc:else>
+            <template lwc:if={hasRows}>
+                <div class="aq-table-wrap">
+                    <lightning-datatable
+                        key-field="taskId"
+                        data={displayRows}
+                        columns={columns}
+                        hide-checkbox-column
+                        onrowaction={handleRowAction}
+                        default-sort-direction="asc"
+                        sorted-by={sortedBy}
+                        sorted-direction={sortedDirection}
+                        onsort={handleSort}>
+                    </lightning-datatable>
+                </div>
+            </template>
+            <template lwc:else>
+                <div class="aq-empty">
+                    <div class="aq-empty__icon">
+                        <lightning-icon icon-name="utility:check" size="medium"></lightning-icon>
+                    </div>
+                    <p class="aq-empty__title">All caught up</p>
+                    <p class="aq-empty__body">No open data quality actions match your filters.</p>
+                </div>
+            </template>
+        </template>
+
+    </div>
+</template>

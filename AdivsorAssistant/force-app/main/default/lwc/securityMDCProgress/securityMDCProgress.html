@@ -1,0 +1,139 @@
+<template>
+    <div class="prg-root">
+
+        <template lwc:if={isLoading}>
+            <div class="prg-spinner">
+                <lightning-spinner alternative-text="Loading" size="medium"></lightning-spinner>
+            </div>
+        </template>
+        <template lwc:elseif={hasError}>
+            <div class="prg-error" role="alert">{errorMessage}</div>
+        </template>
+        <template lwc:else>
+
+            <!-- domain project cards -->
+            <div class="prg-cards">
+                <template for:each={domainCards} for:item="dc">
+                    <div key={dc.key} class="prg-card">
+
+                        <div class="prg-card__hdr">
+                            <div>
+                                <span class="prg-card__eyebrow">Domain</span>
+                                <h3 class="prg-card__title">{dc.label}</h3>
+                            </div>
+                            <template lwc:if={dc.topOwner}>
+                                <div class="prg-owner">
+                                    <div class="prg-owner__av">{dc.topInitials}</div>
+                                    <div class="prg-owner__info">
+                                        <span class="prg-owner__name">{dc.topOwner}</span>
+                                        <span class="prg-owner__role">Responsible</span>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+
+                        <div class="prg-kpis">
+                            <div class="prg-kpi">
+                                <span class="prg-kpi__lbl">Controls passing</span>
+                                <span class="prg-kpi__num">{dc.controlsPct} %</span>
+                            </div>
+                            <div class="prg-kpi">
+                                <span class="prg-kpi__lbl">Open actions</span>
+                                <span class="prg-kpi__num">{dc.openActions}</span>
+                            </div>
+                            <div class="prg-kpi">
+                                <span class="prg-kpi__lbl">Critical</span>
+                                <span class="prg-kpi__num" style={dc.criticalStyle}>{dc.critical}</span>
+                            </div>
+                        </div>
+
+                        <div class="prg-bar-track">
+                            <div class="prg-bar-fill" style={dc.barStyle}></div>
+                        </div>
+
+                        <div class="prg-tags">
+                            <template lwc:if={dc.fieldTagsExist}>
+                                <template for:each={dc.fieldTags} for:item="tag">
+                                    <span key={tag.key} class="prg-tag">{tag.label}</span>
+                                </template>
+                            </template>
+                            <template lwc:else>
+                                <span class="prg-tag prg-tag--ok">All fields complete</span>
+                            </template>
+                            <button class="prg-view-actions" onclick={handleViewDomainActions}>View actions →</button>
+                        </div>
+
+                    </div>
+                </template>
+            </div>
+
+            <!-- latest automatic actions -->
+            <div class="prg-feed">
+                <div class="prg-feed__hdr">
+                    <h3 class="prg-feed__title">Latest automatic actions</h3>
+                    <button class="prg-see-all" onclick={handleSeeAll}>See all →</button>
+                </div>
+
+                <template lwc:if={hasRecentActions}>
+                    <div class="prg-table-wrap">
+                        <table class="prg-table">
+                            <thead>
+                                <tr>
+                                    <th class="prg-th">Severity</th>
+                                    <th class="prg-th">Action</th>
+                                    <th class="prg-th">Security</th>
+                                    <th class="prg-th">Domain</th>
+                                    <th class="prg-th">Assignee</th>
+                                    <th class="prg-th">Created</th>
+                                    <th class="prg-th"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template for:each={recentActions} for:item="a">
+                                    <tr key={a.taskId} class="prg-row">
+                                        <td class="prg-td">
+                                            <div class="prg-sev">
+                                                <span class="prg-sev__dot" style={a.severityDotStyle}></span>
+                                                <span class="prg-sev__lbl">{a.severityLabel}</span>
+                                            </div>
+                                        </td>
+                                        <td class="prg-td prg-td--bold">{a.subject}</td>
+                                        <td class="prg-td">
+                                            <button class="prg-link" data-taskid={a.taskId} onclick={handleViewSecurity}>
+                                                {a.securityName}
+                                            </button>
+                                        </td>
+                                        <td class="prg-td prg-td--muted">{a.domainLabel}</td>
+                                        <td class="prg-td">
+                                            <template lwc:if={a.assigneeName}>
+                                                <div class="prg-assignee">
+                                                    <div class="prg-assignee__av">{a.assigneeInitials}</div>
+                                                    <span>{a.assigneeName}</span>
+                                                </div>
+                                            </template>
+                                            <template lwc:else>
+                                                <span class="prg-td--muted">—</span>
+                                            </template>
+                                        </td>
+                                        <td class="prg-td prg-td--muted">{a.formattedDate}</td>
+                                        <td class="prg-td">
+                                            <button class="prg-done-btn" data-taskid={a.taskId}
+                                                    onclick={handleComplete} title="Mark complete">✓</button>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </template>
+                <template lwc:else>
+                    <div class="prg-empty">
+                        <lightning-icon icon-name="utility:check" size="small"></lightning-icon>
+                        <span>No open actions — all caught up</span>
+                    </div>
+                </template>
+            </div>
+
+        </template>
+    </div>
+</template>

@@ -1,0 +1,239 @@
+.det-root {
+    padding: 1.25rem 1.5rem;
+    background: #f9fafb;
+    min-height: 480px;
+}
+
+/* ── Back nav ───────────────────────────────────────────────── */
+.det-nav {
+    margin-bottom: 1rem;
+}
+
+.det-back {
+    display: inline-flex;
+    align-items: center;
+    gap: .3rem;
+    border: none;
+    background: transparent;
+    color: #0070d2;
+    font-size: .82rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: .25rem .5rem .25rem 0;
+    border-radius: 4px;
+    transition: background .1s;
+}
+
+.det-back:hover { background: #e8f4fd; }
+
+/* ── Hero header ────────────────────────────────────────────── */
+.det-hero {
+    background: linear-gradient(135deg, #0a1628, #132d5e);
+    border-radius: 10px;
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    margin-bottom: 1.25rem;
+    color: #fff;
+    flex-wrap: wrap;
+}
+
+.det-hero__icon {
+    width: 3rem;
+    height: 3rem;
+    background: rgba(255,255,255,.15);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.det-hero__meta {
+    flex: 1;
+    min-width: 0;
+}
+
+.det-hero__name {
+    font-size: 1.2rem;
+    font-weight: 800;
+    margin: 0 0 .4rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.det-hero__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .4rem;
+}
+
+.det-chip {
+    background: rgba(255,255,255,.12);
+    border: 1px solid rgba(255,255,255,.2);
+    border-radius: 100px;
+    padding: .15rem .65rem;
+    font-size: .72rem;
+    letter-spacing: .02em;
+}
+
+.det-chip--isin {
+    background: rgba(0,112,210,.4);
+    border-color: rgba(0,112,210,.6);
+    font-weight: 700;
+}
+
+.det-hero__scores {
+    display: flex;
+    gap: .75rem;
+    flex-shrink: 0;
+}
+
+.det-score-tile {
+    background: rgba(255,255,255,.1);
+    border-radius: 8px;
+    padding: .5rem .9rem;
+    text-align: center;
+    min-width: 5rem;
+}
+
+.det-score-tile--actions .det-score-tile__num { color: #f2a73b; }
+
+.det-score-tile__num {
+    display: block;
+    font-size: 1.6rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.det-score-tile__lbl {
+    display: block;
+    font-size: .65rem;
+    opacity: .65;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    margin-top: .2rem;
+}
+
+/* ── Two-column section grid ────────────────────────────────── */
+.det-sections {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+@media (max-width: 800px) {
+    .det-sections { grid-template-columns: 1fr; }
+}
+
+/* ── Cards ──────────────────────────────────────────────────── */
+.det-card {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 1px 6px rgba(0,0,0,.07);
+    overflow: hidden;
+    margin-bottom: 0;
+}
+
+.det-card--full {
+    grid-column: 1 / -1;
+    margin-bottom: 1rem;
+}
+
+.det-card__header {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .85rem 1.25rem .7rem;
+    border-bottom: 1px solid #f0f0f0;
+    background: #fafafa;
+}
+
+.det-card__icon { color: #54698d; }
+
+.det-card__title {
+    font-size: .875rem;
+    font-weight: 700;
+    color: #0a1628;
+    flex: 1;
+}
+
+.det-card__header-actions { margin-left: auto; }
+
+.det-card__body { padding: .5rem 0; }
+
+/* ── Field rows ─────────────────────────────────────────────── */
+.det-field {
+    display: flex;
+    align-items: center;
+    padding: .45rem 1.25rem;
+    gap: .75rem;
+    border-bottom: 1px solid #f9f9f9;
+    min-height: 2.2rem;
+}
+
+.det-field:last-child { border-bottom: none; }
+.det-field:hover { background: #f4f6f9; }
+
+.det-field__lbl {
+    font-size: .78rem;
+    color: #54698d;
+    font-weight: 500;
+    min-width: 160px;
+    flex-shrink: 0;
+}
+
+.det-field__val-wrap {
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+    flex: 1;
+    min-width: 0;
+    font-size: .875rem;
+    color: #181818;
+}
+
+.det-field__val-wrap .slds-text-color_weak {
+    color: #c0c0c0;
+    font-style: italic;
+}
+
+.det-field__input { flex: 1; }
+
+.det-field__action { flex-shrink: 0; }
+
+.det-field__edit-btn {
+    opacity: 0;
+    transition: opacity .12s;
+}
+
+.det-field:hover .det-field__edit-btn { opacity: 1; }
+
+/* ── Empty / spinner / error ─────────────────────────────────── */
+.det-spinner {
+    display: flex;
+    justify-content: center;
+    padding: 3rem;
+}
+
+.det-error {
+    background: #fef1f1;
+    border-left: 4px solid #ba0517;
+    border-radius: 4px;
+    padding: 1rem 1.25rem;
+    color: #ba0517;
+    font-size: .875rem;
+    margin-bottom: 1rem;
+}
+
+.det-empty {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: 1rem 1.25rem;
+    color: #8a8a8a;
+    font-size: .875rem;
+}

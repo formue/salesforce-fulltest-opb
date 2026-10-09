@@ -1,0 +1,62 @@
+<template>
+    <div class="sec-root">
+
+        <!-- toolbar -->
+        <div class="sec-toolbar">
+            <div class="sec-toolbar__search">
+                <lightning-input
+                    type="search"
+                    label="Search"
+                    placeholder="Name, ISIN, symbol…"
+                    value={searchTerm}
+                    onchange={handleSearch}>
+                </lightning-input>
+            </div>
+            <div class="sec-toolbar__type">
+                <lightning-combobox
+                    label="Asset Class Code"
+                    placeholder="All"
+                    value={typeFilter}
+                    options={typeOptions}
+                    onchange={handleTypeChange}>
+                </lightning-combobox>
+            </div>
+            <div class="sec-toolbar__toggle">
+                <lightning-input
+                    type="toggle"
+                    label="Gaps only"
+                    checked={gapsOnly}
+                    onchange={handleGapsToggle}>
+                </lightning-input>
+            </div>
+            <span class="sec-toolbar__count">{rowCountLabel}</span>
+        </div>
+
+        <!-- loading / error -->
+        <template lwc:if={isLoading}>
+            <div class="sec-spinner">
+                <lightning-spinner alternative-text="Loading securities" size="medium"></lightning-spinner>
+            </div>
+        </template>
+        <template lwc:elseif={hasError}>
+            <div class="sec-error" role="alert">{errorMessage}</div>
+        </template>
+        <template lwc:else>
+            <div class="sec-table-wrap">
+                <lightning-datatable
+                    key-field="id"
+                    data={displayRows}
+                    columns={columns}
+                    hide-checkbox-column
+                    selected-rows={selectedRowIds}
+                    onrowaction={handleRowAction}
+                    default-sort-direction="asc"
+                    sorted-by={sortedBy}
+                    sorted-direction={sortedDirection}
+                    onsort={handleSort}>
+                </lightning-datatable>
+            </div>
+        </template>
+
+    </div>
+</template>

@@ -1,0 +1,263 @@
+<template>
+    <div class="det-root">
+
+        <!-- back nav -->
+        <div class="det-nav">
+            <button class="det-back" onclick={handleBack} title="Back to securities list">
+                <lightning-icon icon-name="utility:chevronleft" size="x-small"></lightning-icon>
+                <span>All Securities</span>
+            </button>
+        </div>
+
+        <!-- loading / error -->
+        <template lwc:if={isLoading}>
+            <div class="det-spinner">
+                <lightning-spinner alternative-text="Loading" size="medium"></lightning-spinner>
+            </div>
+        </template>
+        <template lwc:elseif={hasError}>
+            <div class="det-error" role="alert">{errorMessage}</div>
+        </template>
+        <template lwc:else>
+
+            <!-- hero header -->
+            <div class="det-hero">
+                <div class="det-hero__icon">
+                    <lightning-icon icon-name="standard:account" size="medium"></lightning-icon>
+                </div>
+                <div class="det-hero__meta">
+                    <h1 class="det-hero__name">{security.securityName}</h1>
+                    <div class="det-hero__chips">
+                        <span class="det-chip det-chip--isin">ISIN: {security.isin}</span>
+                        <span class="det-chip">Symbol: {security.symbol}</span>
+                        <span class="det-chip">{security.assetClassCode}</span>
+                    </div>
+                </div>
+                <div class="det-hero__scores">
+                    <div class="det-score-tile">
+                        <span class="det-score-tile__num" style={completenessStyle}>{security.completenessScore}%</span>
+                        <span class="det-score-tile__lbl">Completeness</span>
+                    </div>
+                    <div class="det-score-tile det-score-tile--actions">
+                        <span class="det-score-tile__num">{security.openActionCount}</span>
+                        <span class="det-score-tile__lbl">Open Actions</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- two-column sections -->
+            <div class="det-sections">
+
+                <div class="det-card">
+                    <div class="det-card__header">
+                        <lightning-icon icon-name="utility:key" size="x-small" class="det-card__icon"></lightning-icon>
+                        <span class="det-card__title">Identity</span>
+                    </div>
+                    <div class="det-card__body">
+                        <template for:each={identityFields} for:item="f">
+                            <div key={f.key} class="det-field">
+                                <span class="det-field__lbl">{f.label}</span>
+                                <div class="det-field__val-wrap">
+                                    <template lwc:if={f.editing}>
+                                        <lightning-input label={f.label} value={f.editValue}
+                                            variant="label-hidden" onchange={handleFieldChange}
+                                            data-field={f.key} class="det-field__input">
+                                        </lightning-input>
+                                        <lightning-button-icon icon-name="utility:check" variant="border-filled"
+                                            alternative-text="Save" size="small"
+                                            onclick={handleFieldSave} data-field={f.key}
+                                            class="det-field__action">
+                                        </lightning-button-icon>
+                                        <lightning-button-icon icon-name="utility:close" variant="border-filled"
+                                            alternative-text="Cancel" size="small"
+                                            onclick={handleFieldCancel} data-field={f.key}
+                                            class="det-field__action">
+                                        </lightning-button-icon>
+                                    </template>
+                                    <template lwc:else>
+                                        <span class={f.valueClass}>{f.displayValue}</span>
+                                        <lightning-button-icon icon-name="utility:edit"
+                                            variant="bare" size="x-small" alternative-text="Edit"
+                                            class="det-field__edit-btn"
+                                            onclick={handleFieldEdit} data-field={f.key}>
+                                        </lightning-button-icon>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <div class="det-card">
+                    <div class="det-card__header">
+                        <lightning-icon icon-name="utility:hierarchy" size="x-small" class="det-card__icon"></lightning-icon>
+                        <span class="det-card__title">Classification</span>
+                    </div>
+                    <div class="det-card__body">
+                        <template for:each={classificationFields} for:item="f">
+                            <div key={f.key} class="det-field">
+                                <span class="det-field__lbl">{f.label}</span>
+                                <div class="det-field__val-wrap">
+                                    <template lwc:if={f.editing}>
+                                        <lightning-input label={f.label} value={f.editValue}
+                                            variant="label-hidden" onchange={handleFieldChange}
+                                            data-field={f.key} class="det-field__input">
+                                        </lightning-input>
+                                        <lightning-button-icon icon-name="utility:check" variant="border-filled"
+                                            alternative-text="Save" size="small"
+                                            onclick={handleFieldSave} data-field={f.key}
+                                            class="det-field__action">
+                                        </lightning-button-icon>
+                                        <lightning-button-icon icon-name="utility:close" variant="border-filled"
+                                            alternative-text="Cancel" size="small"
+                                            onclick={handleFieldCancel} data-field={f.key}
+                                            class="det-field__action">
+                                        </lightning-button-icon>
+                                    </template>
+                                    <template lwc:else>
+                                        <span class={f.valueClass}>{f.displayValue}</span>
+                                        <lightning-button-icon icon-name="utility:edit"
+                                            variant="bare" size="x-small" alternative-text="Edit"
+                                            class="det-field__edit-btn"
+                                            onclick={handleFieldEdit} data-field={f.key}>
+                                        </lightning-button-icon>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <div class="det-card">
+                    <div class="det-card__header">
+                        <lightning-icon icon-name="utility:layers" size="x-small" class="det-card__icon"></lightning-icon>
+                        <span class="det-card__title">Custodian Classifications</span>
+                    </div>
+                    <div class="det-card__body">
+                        <template for:each={custodianFields} for:item="f">
+                            <div key={f.key} class="det-field">
+                                <span class="det-field__lbl">{f.label}</span>
+                                <div class="det-field__val-wrap">
+                                    <template lwc:if={f.editing}>
+                                        <lightning-input label={f.label} value={f.editValue}
+                                            variant="label-hidden" onchange={handleFieldChange}
+                                            data-field={f.key} class="det-field__input">
+                                        </lightning-input>
+                                        <lightning-button-icon icon-name="utility:check" variant="border-filled"
+                                            alternative-text="Save" size="small"
+                                            onclick={handleFieldSave} data-field={f.key}
+                                            class="det-field__action">
+                                        </lightning-button-icon>
+                                        <lightning-button-icon icon-name="utility:close" variant="border-filled"
+                                            alternative-text="Cancel" size="small"
+                                            onclick={handleFieldCancel} data-field={f.key}
+                                            class="det-field__action">
+                                        </lightning-button-icon>
+                                    </template>
+                                    <template lwc:else>
+                                        <span class={f.valueClass}>{f.displayValue}</span>
+                                        <lightning-button-icon icon-name="utility:edit"
+                                            variant="bare" size="x-small" alternative-text="Edit"
+                                            class="det-field__edit-btn"
+                                            onclick={handleFieldEdit} data-field={f.key}>
+                                        </lightning-button-icon>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <div class="det-card">
+                    <div class="det-card__header">
+                        <lightning-icon icon-name="utility:money" size="x-small" class="det-card__icon"></lightning-icon>
+                        <span class="det-card__title">Market Data</span>
+                    </div>
+                    <div class="det-card__body">
+                        <template for:each={marketFields} for:item="f">
+                            <div key={f.key} class="det-field">
+                                <span class="det-field__lbl">{f.label}</span>
+                                <div class="det-field__val-wrap">
+                                    <span class={f.valueClass}>{f.displayValue}</span>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- security costs -->
+            <template lwc:if={hasCosts}>
+                <div class="det-card det-card--full">
+                    <div class="det-card__header">
+                        <lightning-icon icon-name="utility:currency" size="x-small" class="det-card__icon"></lightning-icon>
+                        <span class="det-card__title">Security Costs</span>
+                    </div>
+                    <lightning-datatable
+                        key-field="Id"
+                        data={security.costs}
+                        columns={costColumns}
+                        hide-checkbox-column>
+                    </lightning-datatable>
+                </div>
+            </template>
+
+            <!-- actions section -->
+            <div class="det-card det-card--full">
+                <div class="det-card__header">
+                    <lightning-icon icon-name="utility:task" size="x-small" class="det-card__icon"></lightning-icon>
+                    <span class="det-card__title">Open Data Quality Actions</span>
+                    <div class="det-card__header-actions">
+                        <lightning-button label="New Action" icon-name="utility:add" size="small"
+                            onclick={handleNewAction}></lightning-button>
+                    </div>
+                </div>
+                <template lwc:if={hasActions}>
+                    <lightning-datatable
+                        key-field="taskId"
+                        data={actions}
+                        columns={actionColumns}
+                        hide-checkbox-column
+                        onrowaction={handleActionRowAction}>
+                    </lightning-datatable>
+                </template>
+                <template lwc:else>
+                    <div class="det-empty">
+                        <lightning-icon icon-name="utility:check" size="small"></lightning-icon>
+                        <span>No open actions</span>
+                    </div>
+                </template>
+            </div>
+
+        </template>
+
+        <!-- new action modal -->
+        <template lwc:if={showNewActionModal}>
+            <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open">
+                <div class="slds-modal__container">
+                    <header class="slds-modal__header">
+                        <button class="slds-button slds-button_icon slds-modal__close" onclick={closeNewActionModal}>
+                            <lightning-icon icon-name="utility:close" size="small"></lightning-icon>
+                        </button>
+                        <h2 class="slds-modal__title">New Data Quality Action</h2>
+                    </header>
+                    <div class="slds-modal__content slds-p-around_medium">
+                        <lightning-input label="Field Name" value={newActionField}
+                            onchange={handleNewActionField}></lightning-input>
+                        <lightning-combobox label="Priority" value={newActionPriority}
+                            options={priorityOptions} onchange={handleNewActionPriority}
+                            class="slds-m-top_small"></lightning-combobox>
+                    </div>
+                    <footer class="slds-modal__footer">
+                        <lightning-button label="Cancel" onclick={closeNewActionModal}></lightning-button>
+                        <lightning-button label="Create" variant="brand" onclick={handleCreateAction}
+                            class="slds-m-left_x-small"></lightning-button>
+                    </footer>
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+        </template>
+
+    </div>
+</template>

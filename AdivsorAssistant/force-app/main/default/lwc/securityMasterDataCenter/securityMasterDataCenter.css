@@ -1,0 +1,199 @@
+/* ── Shell ─────────────────────────────────────────────────────── */
+.smc-shell {
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, .12);
+    background: var(--slds-g-color-surface-container-1, #fff);
+    font-family: var(--slds-g-font-family-text, 'Salesforce Sans', Arial, sans-serif);
+}
+
+/* ── App bar ───────────────────────────────────────────────────── */
+.smc-appbar {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: .875rem 1.25rem;
+    background: linear-gradient(135deg, #0a1628 0%, #132d5e 60%, #1a4a9e 100%);
+    color: #fff;
+}
+
+.smc-appbar__brand {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.smc-appbar__icon {
+    width: 2.25rem;
+    height: 2.25rem;
+    background: rgba(255,255,255,.15);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.smc-appbar__title {
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: .01em;
+    display: block;
+    line-height: 1.2;
+}
+
+.smc-appbar__sub {
+    font-size: .7rem;
+    opacity: .55;
+    display: block;
+    font-family: 'SFMono-Regular', Consolas, monospace;
+    letter-spacing: .02em;
+}
+
+/* ── Context pill ──────────────────────────────────────────────── */
+.smc-context-pill {
+    display: flex;
+    align-items: center;
+    gap: .375rem;
+    background: rgba(255,255,255,.12);
+    border: 1px solid rgba(255,255,255,.25);
+    border-radius: 100px;
+    padding: .3rem .75rem .3rem .6rem;
+    color: #fff;
+    font-size: .8rem;
+    cursor: pointer;
+    transition: background .15s;
+    white-space: nowrap;
+    max-width: 280px;
+    flex-shrink: 0;
+}
+
+.smc-context-pill:hover {
+    background: rgba(255,255,255,.22);
+}
+
+.smc-pill__label {
+    opacity: .7;
+    font-size: .7rem;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+}
+
+.smc-pill__name {
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 180px;
+}
+
+.smc-pill__icon,
+.smc-pill__arrow {
+    flex-shrink: 0;
+}
+
+.smc-appbar__actions {
+    flex-shrink: 0;
+}
+
+/* ── Tab bar ───────────────────────────────────────────────────── */
+.smc-tabbar {
+    display: flex;
+    gap: 0;
+    background: #fff;
+    border-bottom: 2px solid #e5e5e5;
+    padding: 0 1rem;
+    overflow-x: auto;
+}
+
+.smc-tab {
+    display: flex;
+    align-items: center;
+    gap: .375rem;
+    padding: .75rem 1.1rem;
+    border: none;
+    background: transparent;
+    font-size: .875rem;
+    font-weight: 500;
+    color: #54698d;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    transition: color .15s, border-color .15s, background .1s;
+    white-space: nowrap;
+}
+
+.smc-tab:hover {
+    color: #0070d2;
+    background: #f4f6f9;
+}
+
+.smc-tab--active {
+    color: #0070d2;
+    border-bottom-color: #0070d2;
+    font-weight: 700;
+}
+
+.smc-tab__icon {
+    opacity: .6;
+    transition: opacity .15s;
+}
+
+.smc-tab--active .smc-tab__icon {
+    opacity: 1;
+}
+
+.smc-tab__badge {
+    background: #e8f4fd;
+    color: #0070d2;
+    font-size: .65rem;
+    font-weight: 700;
+    border-radius: 100px;
+    padding: .1rem .45rem;
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ── Content panel ─────────────────────────────────────────────── */
+.smc-panel {
+    min-height: 520px;
+    background: #f9fafb;
+}
+
+/* ── Empty state ───────────────────────────────────────────────── */
+.smc-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 2rem;
+    text-align: center;
+}
+
+.smc-empty-state__icon {
+    width: 4rem;
+    height: 4rem;
+    border-radius: 50%;
+    background: #e8f4fd;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1rem;
+}
+
+.smc-empty-state__title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #181818;
+    margin: 0 0 .5rem;
+}
+
+.smc-empty-state__body {
+    color: #747474;
+    font-size: .875rem;
+    max-width: 340px;
+    margin: 0;
+}

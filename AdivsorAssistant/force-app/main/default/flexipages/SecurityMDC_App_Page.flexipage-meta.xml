@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FlexiPage xmlns="http://soap.sforce.com/2006/04/metadata">
+    <flexiPageRegions>
+        <mode>Append</mode>
+        <name>main</name>
+        <type>Region</type>
+    </flexiPageRegions>
+    <masterLabel>Security Master Data Center</masterLabel>
+    <pageTemplate>AppPage_Default</pageTemplate>
+    <type>AppPage</type>
+    <componentInstances>
+        <componentInstanceProperties>
+            <name>defaultTab</name>
+            <value>overview</value>
+        </componentInstanceProperties>
+        <componentName>c:securityMasterDataCenter</componentName>
+        <regionFormat>FULL_WIDTH</regionFormat>
+        <regionName>main</regionName>
+    </componentInstances>
+</FlexiPage>

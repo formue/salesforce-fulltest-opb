@@ -1,0 +1,126 @@
+<template>
+    <div class="dash-root">
+
+        <div class="dash-topbar">
+            <div class="dash-topbar__left">
+                <span class="dash-eyebrow">Security Master Data</span>
+                <h1 class="dash-heading">Data Quality Dashboard</h1>
+            </div>
+            <div class="dash-topbar__right">
+                <lightning-combobox label="" placeholder="All Asset Classes"
+                    value={typeFilter} options={typeOptions} onchange={handleTypeChange}>
+                </lightning-combobox>
+            </div>
+        </div>
+
+        <template lwc:if={isLoading}>
+            <div class="dash-spinner">
+                <lightning-spinner alternative-text="Loading" size="medium"></lightning-spinner>
+            </div>
+        </template>
+        <template lwc:elseif={hasError}>
+            <div class="dash-error" role="alert">{errorMessage}</div>
+        </template>
+        <template lwc:else>
+
+            <!-- dark KPI banner -->
+            <div class="dash-banner">
+                <p class="dash-banner__headline">
+                    Securities pass <span class="dash-accent">{metrics.avgCompleteness}%</span>
+                    of all data controls.
+                    <template lwc:if={weakestField}>
+                        The largest gap is in <span class="dash-accent">{weakestField}</span>.
+                    </template>
+                </p>
+                <div class="dash-kpi-grid">
+                    <div class="dash-kpi">
+                        <span class="dash-kpi__eyebrow">Securities in scope</span>
+                        <span class="dash-kpi__num">{metrics.totalCount}</span>
+                        <span class="dash-kpi__sub">Across all asset classes</span>
+                    </div>
+                    <div class="dash-kpi">
+                        <span class="dash-kpi__eyebrow">Securities with gaps</span>
+                        <span class="dash-kpi__num">{securitiesWithGaps}</span>
+                        <span class="dash-kpi__sub">{gapsShareLabel} of total</span>
+                    </div>
+                    <div class="dash-kpi">
+                        <span class="dash-kpi__eyebrow">Open actions</span>
+                        <span class="dash-kpi__num">{metrics.openActionCount}</span>
+                        <span class="dash-kpi__sub">{metrics.highPriorityCount} high priority</span>
+                    </div>
+                    <div class="dash-kpi">
+                        <span class="dash-kpi__eyebrow">Avg completeness</span>
+                        <span class="dash-kpi__num">{metrics.avgCompleteness}%</span>
+                        <span class="dash-kpi__sub">{trendDeltaLabel}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- charts row -->
+            <div class="dash-charts">
+
+                <!-- trend sparkline -->
+                <div class="dash-card">
+                    <div class="dash-card__hdr">
+                        <div>
+                            <h3 class="dash-card__title">Completeness trend</h3>
+                            <span class="dash-card__hint">Last 12 weeks (estimated)</span>
+                        </div>
+                        <span class="dash-chip">{metrics.avgCompleteness}% current</span>
+                    </div>
+                    <div class="dash-chart-bg">
+                        <svg viewBox="0 0 600 160" class="dash-svg" preserveAspectRatio="none">
+                            <line x1="0" y1="20"  x2="600" y2="20"  stroke="rgba(0,0,0,.06)" stroke-width="1"></line>
+                            <line x1="0" y1="80"  x2="600" y2="80"  stroke="rgba(0,0,0,.06)" stroke-width="1"></line>
+                            <line x1="0" y1="140" x2="600" y2="140" stroke="rgba(0,0,0,.11)" stroke-width="1"></line>
+                            <path d={trendAreaPath} fill="rgba(0,112,210,.1)"></path>
+                            <path d={trendLinePath} fill="none" stroke="#0070d2" stroke-width="2.5"
+                                  stroke-linecap="round" stroke-linejoin="round"></path>
+                            <template for:each={trendPoints} for:item="p">
+                                <circle key={p.key} cx={p.cx} cy={p.cy} r="3.5" fill="#0070d2"></circle>
+                            </template>
+                        </svg>
+                    </div>
+                    <div class="dash-chart-labels">
+                        <template for:each={trendPoints} for:item="p">
+                            <span key={p.key} class="dash-chart-label">{p.label}</span>
+                        </template>
+                    </div>
+                    <div class="dash-chart-footer">
+                        <span>Range {trendMin}% – {trendMax}%</span>
+                        <span class="dash-chart-delta">{trendDeltaLabel}</span>
+                    </div>
+                </div>
+
+                <!-- completeness by field -->
+                <div class="dash-card">
+                    <div class="dash-card__hdr">
+                        <div>
+                            <h3 class="dash-card__title">Completeness by field</h3>
+                            <span class="dash-card__hint">Weakest first · click to filter securities</span>
+                        </div>
+                    </div>
+                    <div class="dash-fields">
+                        <template for:each={sortedFieldCompleteness} for:item="fc">
+                            <button key={fc.fieldApiName} class="dash-field-row"
+                                    data-field={fc.fieldApiName} data-label={fc.fieldLabel}
+                                    onclick={handleBarClick}>
+                                <div class="dash-field__meta">
+                                    <span class="dash-field__name">{fc.fieldLabel}</span>
+                                    <span class="dash-field__missing">{fc.missingCount} missing</span>
+                                </div>
+                                <div class="dash-field__viz">
+                                    <div class="dash-field__track">
+                                        <div class="dash-field__fill" style={fc.barStyle}></div>
+                                    </div>
+                                    <span class="dash-field__score" style={fc.scoreStyle}>{fc.completenessScore}%</span>
+                                </div>
+                            </button>
+                        </template>
+                    </div>
+                </div>
+
+            </div>
+        </template>
+    </div>
+</template>

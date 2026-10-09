@@ -1,0 +1,16 @@
+<template>
+    <div class="slds-m-bottom_x-small">
+        <div class="slds-grid slds-grid_align-spread slds-m-bottom_xx-small">
+            <span class="slds-text-body_small">{label}</span>
+            <span class="slds-text-body_small slds-text-color_weak">{score}%</span>
+        </div>
+        <div class="slds-progress-bar slds-progress-bar_x-small"
+             role="progressbar"
+             aria-valuemin="0"
+             aria-valuemax="100"
+             aria-valuenow={score}
+             aria-label={label}>
+            <span class={barClass} style={barStyle}></span>
+        </div>
+    </div>
+</template>

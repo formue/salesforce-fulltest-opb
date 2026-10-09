@@ -1,0 +1,119 @@
+<template>
+    <div class="smc-shell">
+
+        <!-- ── App bar ────────────────────────────────────────────── -->
+        <div class="smc-appbar">
+            <div class="smc-appbar__brand">
+                <div class="smc-appbar__icon">
+                    <lightning-icon icon-name="standard:financial_account" size="small"></lightning-icon>
+                </div>
+                <div>
+                    <span class="smc-appbar__title">Security Master Data Center</span>
+                    <span class="smc-appbar__sub">FinServ__Securities__c</span>
+                </div>
+            </div>
+
+            <template lwc:if={selectedSecurityName}>
+                <button class="smc-context-pill" onclick={goToDetail} title="Jump to detail">
+                    <lightning-icon icon-name="utility:preview" size="xx-small" class="smc-pill__icon"></lightning-icon>
+                    <span class="smc-pill__label">Viewing:</span>
+                    <span class="smc-pill__name">{selectedSecurityName}</span>
+                    <lightning-icon icon-name="utility:chevronright" size="xx-small" class="smc-pill__arrow"></lightning-icon>
+                </button>
+            </template>
+
+            <div class="smc-appbar__actions">
+                <lightning-button-icon
+                    icon-name="utility:refresh"
+                    variant="bare-inverse"
+                    alternative-text="Refresh"
+                    title="Refresh"
+                    onclick={handleRefresh}>
+                </lightning-button-icon>
+            </div>
+        </div>
+
+        <!-- ── Tab bar ───────────────────────────────────────────── -->
+        <div class="smc-tabbar" role="tablist">
+            <button class={tabCls0} role="tab" aria-selected={isOverview} onclick={handleTabClick} data-tab="overview">
+                <lightning-icon icon-name="utility:chart" size="xx-small" class="smc-tab__icon"></lightning-icon>
+                Overview
+            </button>
+            <button class={tabCls1} role="tab" aria-selected={isSecurities} onclick={handleTabClick} data-tab="securities">
+                <lightning-icon icon-name="utility:list" size="xx-small" class="smc-tab__icon"></lightning-icon>
+                Securities
+            </button>
+            <button class={tabCls2} role="tab" aria-selected={isDetail} onclick={handleTabClick} data-tab="detail">
+                <lightning-icon icon-name="utility:preview" size="xx-small" class="smc-tab__icon"></lightning-icon>
+                Detail
+                <template lwc:if={selectedSecurityName}>
+                    <span class="smc-tab__badge">{selectedSecurityShort}</span>
+                </template>
+            </button>
+            <button class={tabCls3} role="tab" aria-selected={isActions} onclick={handleTabClick} data-tab="actions">
+                <lightning-icon icon-name="utility:task" size="xx-small" class="smc-tab__icon"></lightning-icon>
+                Action Queue
+            </button>
+            <button class={tabCls4} role="tab" aria-selected={isProgress} onclick={handleTabClick} data-tab="progress">
+                <lightning-icon icon-name="utility:metrics" size="xx-small" class="smc-tab__icon"></lightning-icon>
+                Progress
+            </button>
+        </div>
+
+        <!-- ── Content panels ────────────────────────────────────── -->
+        <div class="smc-panel">
+            <template lwc:if={isOverview}>
+                <c-security-m-d-c-overview
+                    key={overviewKey}
+                    onsecurityfilter={handleSecurityFilter}>
+                </c-security-m-d-c-overview>
+            </template>
+
+            <template lwc:elseif={isSecurities}>
+                <c-security-m-d-c-securities
+                    key={securitiesKey}
+                    initial-search={pendingSearch}
+                    selected-security-id={selectedSecurityId}
+                    onsecurityselected={handleSecuritySelected}>
+                </c-security-m-d-c-securities>
+            </template>
+
+            <template lwc:elseif={isDetail}>
+                <template lwc:if={selectedSecurityId}>
+                    <c-security-m-d-c-security-detail
+                        security-id={selectedSecurityId}
+                        onback={handleBackToList}
+                        onfieldupdated={handleFieldUpdated}
+                        onsecuritynameresolved={handleSecurityNameResolved}>
+                    </c-security-m-d-c-security-detail>
+                </template>
+                <template lwc:else>
+                    <div class="smc-empty-state">
+                        <div class="smc-empty-state__icon">
+                            <lightning-icon icon-name="utility:preview" size="large"></lightning-icon>
+                        </div>
+                        <p class="smc-empty-state__title">No security selected</p>
+                        <p class="smc-empty-state__body">Go to the Securities tab and click a row to open its detail.</p>
+                        <lightning-button label="Go to Securities" variant="brand"
+                            onclick={goToSecurities} class="slds-m-top_small"></lightning-button>
+                    </div>
+                </template>
+            </template>
+
+            <template lwc:elseif={isActions}>
+                <c-security-m-d-c-action-queue
+                    key={actionsKey}
+                    onsecurityselected={handleSecuritySelected}>
+                </c-security-m-d-c-action-queue>
+            </template>
+            <template lwc:else>
+                <c-security-m-d-c-progress
+                    key={progressKey}
+                    onsecurityselected={handleSecuritySelected}
+                    onshowtab={handleShowTab}>
+                </c-security-m-d-c-progress>
+            </template>
+        </div>
+
+    </div>
+</template>
