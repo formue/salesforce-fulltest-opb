@@ -1,0 +1,281 @@
+:host {
+    display: block;
+}
+
+.aui-root {
+    padding: 1rem;
+    font-size: 0.8125rem;
+    color: var(--text-main, #0f1c2d);
+    height: 100%;
+    box-sizing: border-box;
+}
+
+/* ── Saving banner ──────────────────────────────────────────── */
+.aui-saving-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    color: var(--text-muted, #5a6a7e);
+    margin-bottom: 0.75rem;
+}
+
+/* ── Active banner ──────────────────────────────────────────── */
+.aui-active-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: var(--brand-gold-light, #eff6ff);
+    border-left: 3px solid var(--brand-accent, #2563eb);
+    border-radius: 0 4px 4px 0;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.75rem;
+    color: var(--brand-accent-dark, #1d4ed8);
+    margin-bottom: 0.75rem;
+}
+
+/* ── Empty / loading states ─────────────────────────────────── */
+.aui-empty {
+    color: var(--text-muted, #5a6a7e);
+    font-size: 0.75rem;
+    padding: 0.5rem 0;
+}
+
+.aui-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 0.5rem;
+    padding: 2rem 1rem;
+    color: var(--text-muted, #5a6a7e);
+}
+
+.aui-empty-state svg {
+    opacity: 0.35;
+    color: var(--text-muted, #5a6a7e);
+}
+
+.aui-empty-title {
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-main, #0f1c2d);
+}
+
+.aui-empty-sub {
+    margin: 0;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    max-width: 28ch;
+}
+
+/* ── Preview block ──────────────────────────────────────────── */
+.aui-preview-block {
+    background: var(--bg-subtle, #f6f8fa);
+    border: 1px solid var(--border-color, #dde4ed);
+    border-radius: 6px;
+    padding: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.aui-preview-label {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted, #5a6a7e);
+    margin-bottom: 0.5rem;
+}
+
+.aui-preview-text {
+    margin: 0;
+    font-family: inherit;
+    font-size: 0.8125rem;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: var(--text-main, #0f1c2d);
+}
+
+/* ── Action row ─────────────────────────────────────────────── */
+.aui-action-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+/* ── Edit block ─────────────────────────────────────────────── */
+.aui-edit-block {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.aui-edit-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.aui-edit-title {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--text-main, #0f1c2d);
+}
+
+.aui-char-count {
+    font-size: 0.6875rem;
+    color: var(--text-muted, #5a6a7e);
+}
+
+.aui-textarea {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid var(--border-color, #dde4ed);
+    border-radius: 4px;
+    padding: 0.5rem 0.625rem;
+    font-family: inherit;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--text-main, #0f1c2d);
+    background: var(--bg-surface, #ffffff);
+    resize: vertical;
+    min-height: 160px;
+    transition: border-color 0.15s;
+}
+
+.aui-textarea:focus {
+    outline: none;
+    border-color: var(--brand-accent, #2563eb);
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.18);
+}
+
+.aui-edit-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* ── Shared button base ─────────────────────────────────────── */
+/* Buttons.
+   These adopt the suite's visual language rather than defining their own. The palette,
+   radius and weight below are lifted from .aa-footer-btn in advisorAssistant.css --
+   LWC styles are component-scoped, so the parent's rules cannot reach in here and the
+   values have to be restated. Sizing is deliberately one step smaller than the footer
+   buttons because these sit inline inside a card row, not in a modal footer. */
+.aui-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    font-family: inherit;
+    font-size: 0.82rem;
+    font-weight: 600;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s, border-color 0.15s, transform 0.1s, box-shadow 0.15s;
+}
+
+.aui-btn:disabled {
+    opacity: 0.55;
+    cursor: default;
+}
+
+.aui-btn--brand {
+    background: linear-gradient(135deg, #0f2044 0%, #1e3a5f 100%);
+    border-color: #0f2044;
+    color: #ffffff;
+    box-shadow: 0 4px 10px rgba(15, 32, 68, 0.22);
+}
+
+.aui-btn--brand:hover:not(:disabled) {
+    background: linear-gradient(135deg, #0a1830 0%, #14294a 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 14px rgba(15, 32, 68, 0.28);
+}
+
+/* "In use" -- a disabled confirmation state, so it keeps the success colour but drops
+   the gradient and shadow that signal "clickable". */
+.aui-btn--brand.aui-btn--active {
+    background: #2e844a;
+    border-color: #2e844a;
+    box-shadow: none;
+}
+
+.aui-btn--neutral {
+    background: #ffffff;
+    border-color: #cbd5e1;
+    color: #0f2044;
+}
+
+.aui-btn--neutral:hover:not(:disabled) {
+    background: #f8fafc;
+    border-color: #94a3b8;
+}
+
+.aui-btn--danger-text {
+    background: #ffffff;
+    border-color: #fca5a5;
+    color: #b91c1c;
+}
+
+.aui-btn--danger-text:hover:not(:disabled) {
+    background: #fef2f2;
+    border-color: #b91c1c;
+}
+
+/* The edit panel's Save/Cancel use the footer-button family, matching the modal footers
+   elsewhere in the suite. Restated here for the same component-scoping reason. */
+.aa-footer-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 18px;
+    border-radius: 10px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, transform 0.1s, box-shadow 0.15s;
+    font-family: inherit;
+}
+.aa-footer-btn:disabled { opacity: 0.55; cursor: default; }
+.aa-footer-btn--neutral {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    color: #0f2044;
+}
+.aa-footer-btn--neutral:hover:not(:disabled) {
+    background: #f8fafc;
+    border-color: #94a3b8;
+}
+.aa-footer-btn--brand {
+    background: linear-gradient(135deg, #0f2044 0%, #1e3a5f 100%);
+    border: 1px solid #0f2044;
+    color: #ffffff;
+    box-shadow: 0 4px 10px rgba(15, 32, 68, 0.22);
+}
+.aa-footer-btn--brand:hover:not(:disabled) {
+    background: linear-gradient(135deg, #0a1830 0%, #14294a 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 14px rgba(15, 32, 68, 0.28);
+}
+
+/* ── Error ──────────────────────────────────────────────────── */
+.aui-error {
+    margin-top: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    background: #fef2f2;
+    border-left: 3px solid var(--danger-red, #c0392b);
+    border-radius: 0 4px 4px 0;
+    font-size: 0.75rem;
+    color: var(--danger-red, #c0392b);
+    white-space: pre-wrap;
+    word-break: break-word;
+}
