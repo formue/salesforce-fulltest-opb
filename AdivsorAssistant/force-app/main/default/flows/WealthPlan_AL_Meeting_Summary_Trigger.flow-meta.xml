@@ -17,7 +17,7 @@
         <inputParameters>
             <name>Input:Notes</name>
             <value>
-                <elementReference>AdditionalContext</elementReference>
+                <elementReference>Notes</elementReference>
             </value>
         </inputParameters>
         <nameSegment>Wealth_Plan_AI_Helper_2_0_Meeting_Summary</nameSegment>
@@ -81,7 +81,7 @@
     </start>
     <status>Active</status>
     <variables>
-        <name>AdditionalContext</name>
+        <name>Notes</name>
         <dataType>String</dataType>
         <isCollection>false</isCollection>
         <isInput>true</isInput>

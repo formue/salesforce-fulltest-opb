@@ -604,6 +604,7 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
     }
     @api get freeText() { return this._freeText; }
     set freeText(v) { if (v !== undefined && v !== this._freeText) this._freeText = v || ''; }
+    @api userInstructions = '';
 
     // ── Parent-owned inputs (embedded layout) ────────────────────────────────
     // In embedded layout the parent hosts the Configuration column, so it owns the
@@ -1392,16 +1393,26 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
     // Ordered list [{documentId}] — artifact selections first, then uploads
     get noNoteFilesForFlow() {
         const files = [];
+        let attach = 0;
         for (const id of this._selectedArtifactFileIds) {
-            if (files.length >= 3) break;
+            if (attach >= 2) break;
             files.push({ documentId: id });
+            attach++;
         }
         for (const f of this._sharedFiles) {
             if (!f.included) continue;
-            if (files.length >= 3) break;
-            files.push({ documentId: f.documentId });
+            if (attach >= 2) break;
+            if (_fileKind(f.extension) !== 'txt') { files.push({ documentId: f.documentId }); attach++; }
         }
         return files;
+    }
+
+    get transcriptDocumentIdForFlow() {
+        for (const f of this._sharedFiles) {
+            if (!f.included) continue;
+            if (_fileKind(f.extension) === 'txt') return f.documentId;
+        }
+        return '';
     }
 
     // ── Main tab getters ─────────────────────────────────────────────────────
@@ -2130,24 +2141,19 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
         this._startSummaryLoadingCycle();
         try {
             const files = this.noNoteFilesForFlow;
-            let ctx = this._freeText || '';
-            if (this._selectedMeetingType)
-                ctx += (ctx ? '\n\n' : '') + `Meeting Category: ${MEETING_TYPE_LABELS[this._selectedMeetingType]}`;
-            if (this._hasTodos)
-                ctx += '\nInclude: To-Do\'s';
             const flowParams = {
-                flowApiName:        this.meetingSummaryFlowApiName,
-                eventId:            this._selectedEventId           || '',
-                accountId:          this._resolvedPrimaryMemberId   || '',
-                documentId1:        files[0]?.documentId            || '',
-                documentId2:        files[1]?.documentId            || '',
-                documentId3:        files[2]?.documentId            || '',
-                additionalContext:  ctx,
-                meetingType:        this._selectedMeetingType       || '',
-                hasTodos:           this._hasTodos,
-                saveDoc1AsArtifact: false,
-                saveDoc2AsArtifact: false,
-                saveDoc3AsArtifact: false
+                flowApiName:          this.meetingSummaryFlowApiName,
+                eventId:              this._selectedEventId           || '',
+                accountId:            this._resolvedPrimaryMemberId   || '',
+                documentId1:          files[0]?.documentId            || '',
+                documentId2:          files[1]?.documentId            || '',
+                notes:                this._freeText                  || '',
+                instructions:         this.userInstructions           || '',
+                transcriptDocumentId: this.transcriptDocumentIdForFlow,
+                meetingType:          this._selectedMeetingType       || '',
+                hasTodos:             this._hasTodos,
+                saveDoc1AsArtifact:   false,
+                saveDoc2AsArtifact:   false
             };
             const raw = await generateSummary(flowParams);
             // The older combined Flow returns JSON `{summary, brief}`; the split one
@@ -2181,15 +2187,16 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
         this._msTodosExpanded = false;
         try {
             const raw = await generateMeetingTodos({
-                flowApiName:       flowParams.flowApiName,
-                eventId:           flowParams.eventId,
-                accountId:         flowParams.accountId,
-                documentId1:       flowParams.documentId1,
-                documentId2:       flowParams.documentId2,
-                documentId3:       flowParams.documentId3,
-                meetingType:       flowParams.meetingType,
-                hasTodos:          flowParams.hasTodos,
-                additionalContext: flowParams.additionalContext
+                flowApiName:          flowParams.flowApiName,
+                eventId:              flowParams.eventId,
+                accountId:            flowParams.accountId,
+                documentId1:          flowParams.documentId1,
+                documentId2:          flowParams.documentId2,
+                meetingType:          flowParams.meetingType,
+                hasTodos:             flowParams.hasTodos,
+                notes:                flowParams.notes,
+                instructions:         flowParams.instructions,
+                transcriptDocumentId: flowParams.transcriptDocumentId
             });
             let parsed = [];
             try {
@@ -2582,15 +2589,16 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
         }
         const files = this.noNoteFilesForFlow;
         const flowParams = {
-            flowApiName:       this.meetingSummaryFlowApiName,
-            eventId:           this._selectedEventId         || '',
-            accountId:         this._resolvedPrimaryMemberId || '',
-            documentId1:       files[0]?.documentId          || '',
-            documentId2:       files[1]?.documentId          || '',
-            documentId3:       files[2]?.documentId          || '',
-            meetingType:       this._selectedMeetingType     || '',
-            hasTodos:          true,
-            additionalContext: this._freeText                || ''
+            flowApiName:          this.meetingSummaryFlowApiName,
+            eventId:              this._selectedEventId         || '',
+            accountId:            this._resolvedPrimaryMemberId || '',
+            documentId1:          files[0]?.documentId          || '',
+            documentId2:          files[1]?.documentId          || '',
+            notes:                this._freeText                || '',
+            instructions:         this.userInstructions         || '',
+            transcriptDocumentId: this.transcriptDocumentIdForFlow,
+            meetingType:          this._selectedMeetingType     || '',
+            hasTodos:             true
         };
         this._generateTodos(flowParams);
     }
@@ -2746,7 +2754,7 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
     /**
      * STEP 1 of the pipeline — ask the AI for a structured wealth plan.
      *
-     * Assembles `additionalContext` from everything the advisor supplied: free text,
+     * Assembles `notes` from everything the advisor supplied: free text,
      * the selected Event's subject/date/description/category, and any Tasks ticked
      * as relevant. The meeting note travels SEPARATELY as `meetingNoteText`, not
      * inside the context blob, so the Flow can prompt on it distinctly.
@@ -2781,54 +2789,44 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
             return;
         }
 
-        // Build additionalContext — free text, event details, selected action items
-        let context = '';
-        if (this._freeText) context += this._freeText + '\n\n';
-
-        if (this._selectedEventId) {
-            const evt = (this.inputEvents || []).find(e => e.Id === this._selectedEventId);
-            if (evt) {
-                context += `--- Meeting Event ---\nSubject: ${evt.Subject || ''}\n`;
-                context += `Date: ${evt.ActivityDate || evt.StartDateTime || ''}\n`;
-                if (evt.Description) context += `Notes: ${evt.Description}\n`;
-                if (this._selectedMeetingType) {
-                            context += `Meeting Category: ${MEETING_TYPE_LABELS[this._selectedMeetingType] || this._selectedMeetingType}\n`;
-                }
-                if (this._hasTodos) context += `Include: To-Do's\n`;
-                context += '\n';
-            }
-        }
-
+        // Build notes — advisor free text and selected action items
+        let wpNotes = this._freeText || '';
         if (this.selectedTaskCount > 0) {
-            context += '--- Selected Action Items ---\n';
+            let taskLines = '';
             (this.inputTasks || []).forEach(t => {
                 if (this._selectedTaskIds[t.Id]) {
-                    context += `- ${t.Subject || 'Task'} (${t.Status || 'Open'})${t.Description ? ': ' + t.Description : ''}\n`;
+                    taskLines += `- ${t.Subject || 'Task'} (${t.Status || 'Open'})${t.Description ? ': ' + t.Description : ''}\n`;
                 }
             });
-            context += '\n';
+            if (taskLines) wpNotes += (wpNotes ? '\n\n' : '') + '--- Selected Action Items ---\n' + taskLines;
         }
 
-        // Meeting note passed as a dedicated flow variable (MeetingNoteText), not embedded in context
+        // Meeting note passed as a dedicated flow variable (MeetingNoteText), not embedded in notes
         const meetingNoteText = (this._includeMeetingSummary)
             ? (this._currentNoteHtml ?? this.selectedEventNote?.Note__c ?? '')
             : '';
 
-        // Up to 3 document IDs: artifact selections first, then uploaded doc files
-        const allDocIds = [
-            ...[...this._selectedArtifactFileIds],
-            ...this._sharedFiles.map(f => f.documentId)
-        ];
-        const docId1 = allDocIds[0] || '';
-        const docId2 = allDocIds[1] || '';
-        const docId3 = allDocIds[2] || '';
+        // All files (max 3, including .txt) as ContentDocumentId1/2/3.
+        // The flow handles txt-to-string conversion internally.
+        const wpAllDocIds = [];
+        for (const id of [...this._selectedArtifactFileIds]) {
+            if (wpAllDocIds.length >= 3) break;
+            wpAllDocIds.push(id);
+        }
+        for (const f of this._sharedFiles) {
+            if (!f.included) continue;
+            if (wpAllDocIds.length < 3) wpAllDocIds.push(f.documentId);
+        }
+        const docId1 = wpAllDocIds[0] || '';
+        const docId2 = wpAllDocIds[1] || '';
+        const docId3 = wpAllDocIds[2] || '';
 
         // ── Pre-flight ──────────────────────────────────────────────────────
         // Apex guards every input with String.isNotBlank, so blank ones are never injected
         // into the Flow. With all of them blank the model is handed an empty prompt and
         // replies in prose ("The user did not provide any text..."), which used to render as
         // a completed-but-empty wealth plan. Say so here instead of spending the invocation.
-        if (!docId1 && !context.trim() && !meetingNoteText.trim()) {
+        if (!docId1 && !wpNotes.trim() && !meetingNoteText.trim()) {
             this._showToast(
                 'Nothing to Generate From',
                 'Select a document, add context, or include the meeting summary before generating.',
@@ -2854,14 +2852,17 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
             const tasks = [];
             if (this._modeWealthPlan) {
                 tasks.push(generateSummary({
-                    flowApiName:       this.flowApiName,
-                    documentId1:       docId1,
-                    documentId2:       docId2,
-                    documentId3:       docId3,
-                    additionalContext: context       || '',
-                    meetingNoteText:   meetingNoteText || ''
-                    // eventId, accountId, saveDocNAsArtifact intentionally omitted —
-                    // Apex receives null → isNotBlank / != null guards skip them → not injected into flow
+                    flowApiName:          this.flowApiName,
+                    documentId1:          docId1,
+                    documentId2:          docId2,
+                    documentId3:          docId3,
+                    notes:                wpNotes,
+                    // Apex extracts the transcript text server-side and passes it to the Flow as
+                    // Transcription, the same way the meeting summary path does -- the Flow no
+                    // longer reads the .txt itself.
+                    transcriptDocumentId: this.transcriptDocumentIdForFlow,
+                    instructions:         this.userInstructions || '',
+                    meetingNoteText:      meetingNoteText || ''
                 }).then(r => ({ kind: 'wealthplan', value: r })));
             }
 

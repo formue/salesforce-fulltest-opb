@@ -1197,7 +1197,8 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
     @track _todosSaving          = false;
 
     // ── Main tab navigation (within summary step) ────────────────────────────
-    @track _activeTab           = 'summary'; // 'summary' | 'wealthplan' | 'existing'
+    @track _activeTab           = 'summary'; // 'summary' | 'wealthplan' | 'internalnotes' | 'myinstructions' | 'existing'
+    @track _activeUserInstructions = ''; // non-empty when user has clicked "Use Instructions"
     @track _activeMsSection     = 'meeting'; // 'meeting' | 'todos'
     @track _showPublishConfirm          = false;
     @track _showGenerateOverwriteConfirm = false;
@@ -2953,17 +2954,17 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
         if (this._activeTab === 'summary' && this._activeMsSection === 'todos') return 'todos';
         return this._activeTab === 'summary' ? 'summary' : this._activeTab;
     }
-    get aaTabSummaryClass()    { return this.activeTabValue === 'summary'    ? 'aa-tab-li aa-tab-li--active' : 'aa-tab-li'; }
-    get aaTabWealthPlanClass() { return this.activeTabValue === 'wealthplan' ? 'aa-tab-li aa-tab-li--active' : 'aa-tab-li'; }
-    get aaTabTodosClass()      { return this.activeTabValue === 'todos'     ? 'aa-tab-li aa-tab-li--active' : 'aa-tab-li'; }
-    get aaTabInternalNotesClass() { return this.activeTabValue === 'internalnotes' ? 'aa-tab-li aa-tab-li--active' : 'aa-tab-li'; }
-
+    get aaTabSummaryClass()        { return this.activeTabValue === 'summary'        ? 'aa-tab-li aa-tab-li--active' : 'aa-tab-li'; }
+    get aaTabWealthPlanClass()     { return this.activeTabValue === 'wealthplan'     ? 'aa-tab-li aa-tab-li--active' : 'aa-tab-li'; }
+    get aaTabTodosClass()          { return this.activeTabValue === 'todos'          ? 'aa-tab-li aa-tab-li--active' : 'aa-tab-li'; }
+    get aaTabInternalNotesClass()  { return this.activeTabValue === 'internalnotes'  ? 'aa-tab-li aa-tab-li--active' : 'aa-tab-li'; }
     // ── Tabs with no generation step ─────────────────────────────────────────
     // Internal Notes renders and saves, but has nothing to generate — so it must stay out
     // of the primary CTA's path. Named for the rule it enforces.
-    get isInternalNotesTab() { return this.activeTabValue === 'internalnotes'; }
-    get tabHasNoGeneration() { return this.isInternalNotesTab; }
-    get isInternalNotesTabSelected() { return String(this.isInternalNotesTab); }
+    get isInternalNotesTab()    { return this.activeTabValue === 'internalnotes'; }
+    get tabHasNoGeneration()    { return this.isInternalNotesTab; }
+    get isInternalNotesTabSelected()  { return String(this.isInternalNotesTab); }
+    get hasActiveUserInstructions()   { return !!this._activeUserInstructions; }
 
     // ── Internal Notes tab ──────────────────────────────────────────────────
     // The editor, its state, its per-event cache and its Apex call all live in
@@ -3040,6 +3041,14 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
     }
     // Kept for compatibility with any leftover references — no longer wired to a lightning-tab.
     handleTabActivate(event) { return this.handleAaTabClick(event); }
+
+    handleUseInstructions(event) {
+        this._activeUserInstructions = (event.detail && event.detail.instructionText) || '';
+    }
+
+    handleDiscardInstruction() {
+        this._activeUserInstructions = '';
+    }
 
     handleParentRegenerate() {
         // Ensure Wealth Plan tab is active so the child is mounted, then invoke its @api regenerate().
@@ -3293,7 +3302,7 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
     get wpPanelClass()      { return this._panelClass(this.activeTabValue === 'wealthplan' && this.wpTabHasData && !this.isWpGenerating); }
     get todosPanelClass()   { return this._panelClass(this.activeTabValue === 'todos' && this.todosTabHasData && !this.isTodosGenerating); }
     // Internal Notes has no "has data" or "generating" gate — it is an editor, always ready.
-    get internalNotesPanelClass() { return this._panelClass(this.activeTabValue === 'internalnotes'); }
+    get internalNotesPanelClass()    { return this._panelClass(this.activeTabValue === 'internalnotes'); }
 
     // Tab-label pill class — spinner when generating, otherwise hidden.
     get summaryTabPillClass() { return this.isSummaryGenerating ? 'aa-tab-pill aa-tab-pill--running' : 'aa-tab-pill aa-tab-pill--hidden'; }
@@ -3402,10 +3411,11 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
     // `undefined` = auto (open if the card has data). Setting true/false is an explicit user override.
     @track _cardOpen = { category: undefined, notes: undefined, files: undefined, docs: undefined, regen: undefined };
     // String mirrors for aria-expanded on the collapsible Configuration cards.
-    get categoryExpanded() { return String(this.isCategoryOpen); }
-    get notesExpanded()    { return String(this.isNotesOpen); }
-    get filesExpanded()    { return String(this.isFilesOpen); }
-    get docsExpanded()     { return String(this.isDocsOpen); }
+    get categoryExpanded()     { return String(this.isCategoryOpen); }
+    get notesExpanded()        { return String(this.isNotesOpen); }
+    get filesExpanded()        { return String(this.isFilesOpen); }
+    get docsExpanded()         { return String(this.isDocsOpen); }
+    get instructionsExpanded() { return String(this.isInstructionsOpen); }
 
     get isCategoryOpen() {
         // Auto-open only once an event is selected and no category has been chosen —
@@ -3428,18 +3438,24 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
     }
 
     // categoryCardClass is defined once, above, alongside the required-field handling.
-    get notesCardClass()    { return this.isNotesOpen    ? 'aa-card aa-card--open' : 'aa-card aa-card--closed'; }
-    get filesCardClass()    { return this.isFilesOpen    ? 'aa-card aa-card--open' : 'aa-card aa-card--closed'; }
-    get docsCardClass()     { return this.isDocsOpen     ? 'aa-card aa-card--open' : 'aa-card aa-card--closed'; }
+    get notesCardClass()        { return this.isNotesOpen        ? 'aa-card aa-card--open' : 'aa-card aa-card--closed'; }
+    get filesCardClass()        { return this.isFilesOpen        ? 'aa-card aa-card--open' : 'aa-card aa-card--closed'; }
+    get docsCardClass()         { return this.isDocsOpen         ? 'aa-card aa-card--open' : 'aa-card aa-card--closed'; }
+    get instructionsCardClass() { return this.isInstructionsOpen ? 'aa-card aa-card--open' : 'aa-card aa-card--closed'; }
+
+    get isInstructionsOpen() {
+        return this._cardOpen.instructions ?? false;
+    }
 
     handleCardToggle(event) {
         const key = event.currentTarget.dataset.card;
         if (!key) return;
         const currentlyOpen =
-            key === 'category' ? this.isCategoryOpen :
-            key === 'notes'    ? this.isNotesOpen    :
-            key === 'files'    ? this.isFilesOpen    :
-            key === 'docs'     ? this.isDocsOpen     : false;
+            key === 'category'     ? this.isCategoryOpen     :
+            key === 'notes'        ? this.isNotesOpen        :
+            key === 'files'        ? this.isFilesOpen        :
+            key === 'docs'         ? this.isDocsOpen         :
+            key === 'instructions' ? this.isInstructionsOpen : false;
         this._cardOpen = { ...this._cardOpen, [key]: !currentlyOpen };
     }
 

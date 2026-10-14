@@ -60,7 +60,7 @@
     </start>
     <status>Active</status>
     <variables>
-        <name>AdditionalContext</name>
+        <name>Notes</name>
         <dataType>String</dataType>
         <isCollection>false</isCollection>
         <isInput>true</isInput>

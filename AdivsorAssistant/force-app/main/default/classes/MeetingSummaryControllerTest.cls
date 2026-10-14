@@ -10,24 +10,17 @@ private class MeetingSummaryControllerTest {
         Test.startTest();
         try {
             MeetingSummaryController.generateSummary(
-                INVALID_FLOW, null, null, null, null, null,
-                null, null, 'annual', false, false, false, false, null
-            );
-            Assert.fail('Expected AuraHandledException');
-        } catch (AuraHandledException e) {
-            Assert.isNotNull(e, 'AuraHandledException should be thrown for invalid flow');
-        }
-        Test.stopTest();
-    }
-
-    @IsTest
-    static void testGenerateSummary_BriefMode_InvalidFlow_ThrowsException() {
-        // Passing currentSummary triggers GenerateMode = 'brief'
-        Test.startTest();
-        try {
-            MeetingSummaryController.generateSummary(
-                INVALID_FLOW, null, null, null, null, null,
-                null, null, null, null, null, null, null, 'existing summary text'
+                INVALID_FLOW,      // flowApiName
+                null, null,        // eventId, accountId
+                null, null, null,  // documentId1..3
+                null,              // additionalContext (legacy alias for notes)
+                null,              // notes
+                null,              // instructions
+                null,              // transcriptDocumentId
+                null,              // meetingNoteText
+                'annual',          // meetingType
+                false,             // hasTodos
+                false, false       // saveDoc1AsArtifact, saveDoc2AsArtifact
             );
             Assert.fail('Expected AuraHandledException');
         } catch (AuraHandledException e) {
@@ -59,7 +52,14 @@ private class MeetingSummaryControllerTest {
         Test.startTest();
         try {
             MeetingSummaryController.generateMeetingTodos(
-                INVALID_FLOW, null, null, null, null, null, 'annual', false, null
+                INVALID_FLOW,      // flowApiName
+                null, null,        // eventId, accountId
+                null, null,        // documentId1, documentId2
+                'annual',          // meetingType
+                false,             // hasTodos
+                null,              // notes
+                null,              // instructions
+                null               // transcriptDocumentId
             );
             Assert.fail('Expected AuraHandledException');
         } catch (AuraHandledException e) {

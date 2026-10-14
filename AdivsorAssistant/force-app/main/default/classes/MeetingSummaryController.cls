@@ -2,9 +2,11 @@ public with sharing class MeetingSummaryController {
     
     /**
      * Calls an Autolaunched Flow dynamically to generate a summary.
-     * @param flowApiName The API name of the Flow to execute.
-     * @param documentId The ContentDocumentId of the uploaded file.
-     * @param additionalContext Text input from the advisor.
+     *
+     * Prompt template inputs: Attachment (documentId1), Attachment 2 (documentId2),
+     * Notes (advisor free-text), Instructions (user AI instructions), and
+     * Transcription (plain text extracted server-side from a .txt file).
+     *
      * @return The generated summary string from the Flow.
      */
     @AuraEnabled
@@ -16,57 +18,76 @@ public with sharing class MeetingSummaryController {
             String documentId2,
             String documentId3,
             String additionalContext,
+            String notes,
+            String instructions,
+            String transcriptDocumentId,
             String meetingNoteText,
             String meetingType,
             Boolean hasTodos,
             Boolean saveDoc1AsArtifact,
-            Boolean saveDoc2AsArtifact,
-            Boolean saveDoc3AsArtifact,
-            String currentSummary) {
+            Boolean saveDoc2AsArtifact) {
         try {
             Map<String, Object> flowInputs = new Map<String, Object>();
-            // When currentSummary is provided this is a brief-only call; otherwise generate full summary
-            flowInputs.put('GenerateMode', String.isNotBlank(currentSummary) ? 'brief' : 'summary');
-            if (String.isNotBlank(currentSummary)) flowInputs.put('CurrentSummary', currentSummary);
-            if (String.isNotBlank(eventId))          flowInputs.put('EventId', eventId);
-            if (String.isNotBlank(accountId))        flowInputs.put('AccountId', accountId);
-            if (String.isNotBlank(documentId1))      flowInputs.put('ContentDocumentId1', documentId1);
-            if (String.isNotBlank(documentId2))      flowInputs.put('ContentDocumentId2', documentId2);
-            if (String.isNotBlank(documentId3))      flowInputs.put('ContentDocumentId3', documentId3);
-            if (String.isNotBlank(additionalContext)) flowInputs.put('AdditionalContext', additionalContext);
-            if (String.isNotBlank(meetingNoteText))  flowInputs.put('MeetingNoteText', meetingNoteText);
-            if (String.isNotBlank(meetingType))      flowInputs.put('MeetingType', meetingType);
-            if (hasTodos != null)                    flowInputs.put('HasTodos', hasTodos);
-            Map<String, String> typeLabels = new Map<String, String>{
-                'whiteboard' => 'Whiteboard Meeting',
-                'status'     => 'Status Meeting',
-                'annual'     => 'Annual Review'
-            };
-            String typeLabel = typeLabels.containsKey(meetingType) ? typeLabels.get(meetingType) : meetingType;
-            String meetingContext = (String.isNotBlank(typeLabel) ? typeLabel : 'Unspecified')
-                + ' | To-Dos: ' + (hasTodos == true ? 'Yes' : 'No');
-            flowInputs.put('MeetingContext', meetingContext);
+            if (String.isNotBlank(eventId))          flowInputs.put('EventId',           eventId);
+            if (String.isNotBlank(accountId))        flowInputs.put('AccountId',         accountId);
+            if (String.isNotBlank(documentId1))  flowInputs.put('ContentDocumentId1', documentId1);
+            if (String.isNotBlank(documentId2))  flowInputs.put('ContentDocumentId2', documentId2);
+            if (String.isNotBlank(documentId3))  flowInputs.put('ContentDocumentId3', documentId3);
+            // The advisor's context box, accepted and sent under BOTH names on purpose.
+            //
+            // The 5-input prompt restructure renamed this from additionalContext/AdditionalContext
+            // to notes/Notes and updated the meeting-summary flow, but the WealthPlan flow
+            // (v13 Active, v21 Draft) still declares AdditionalContext -- so sending only Notes
+            // silently dropped the context there, leaving the prompt with nothing to work from.
+            //
+            // Inbound: advisorMeetingSummary and advisorWealthPlan send `notes`, while the deployed
+            // advisorAssistant and wealthPlanHelper still send `additionalContext`. Accept either.
+            // Outbound: createInterview ignores keys a flow does not declare, so sending both names
+            // lets each flow pick up the one it knows.
+            //
+            // Once every flow and component is on Notes, drop the fallback and the second put.
+            String contextText = String.isNotBlank(notes) ? notes : additionalContext;
+            if (String.isNotBlank(contextText)) {
+                flowInputs.put('Notes',             contextText);  // MeetingSummary flow
+                flowInputs.put('AdditionalContext', contextText);  // WealthPlan flow
+            }
+            if (String.isNotBlank(instructions))     flowInputs.put('Instructions',      instructions);
+            if (String.isNotBlank(meetingNoteText))  flowInputs.put('MeetingNoteText',   meetingNoteText);
+            if (String.isNotBlank(meetingType))      flowInputs.put('MeetingType',       meetingType);
+            if (hasTodos != null)                    flowInputs.put('HasTodos',          hasTodos);
+
+            // Extract transcript text server-side so the prompt receives plain text, not a document ID
+            String transcription = extractTranscriptText(transcriptDocumentId);
+            if (String.isNotBlank(transcription))    flowInputs.put('Transcription',     transcription);
+
+            // GenerateMode is sent unconditionally: it drives the Flow's mode decision, and gating
+            // it on meetingType meant a summary generated before a category was chosen sent no mode
+            // at all and fell through to the Flow's unexpected-state branch. The WealthPlan flow does
+            // not declare it, and createInterview ignores keys a flow does not declare.
+            flowInputs.put('GenerateMode', 'summary');
+            if (String.isNotBlank(meetingType)) {
+                Map<String, String> typeLabels = new Map<String, String>{
+                    'whiteboard' => 'Whiteboard Meeting',
+                    'status'     => 'Status Meeting',
+                    'annual'     => 'Annual Review'
+                };
+                String typeLabel = typeLabels.containsKey(meetingType) ? typeLabels.get(meetingType) : meetingType;
+                String meetingContext = (String.isNotBlank(typeLabel) ? typeLabel : 'Unspecified')
+                    + ' | To-Dos: ' + (hasTodos == true ? 'Yes' : 'No');
+                flowInputs.put('MeetingContext', meetingContext);
+            }
             if (saveDoc1AsArtifact != null) flowInputs.put('SaveDoc1AsArtifact', saveDoc1AsArtifact);
             if (saveDoc2AsArtifact != null) flowInputs.put('SaveDoc2AsArtifact', saveDoc2AsArtifact);
-            if (saveDoc3AsArtifact != null) flowInputs.put('SaveDoc3AsArtifact', saveDoc3AsArtifact);
-            
+
             // Create and start the Flow interview
             Flow.Interview myFlow = Flow.Interview.createInterview(flowApiName, flowInputs);
             myFlow.start();
-            
-            String result = (String) myFlow.getVariableValue('GeneratedSummary');
-            String brief  = (String) myFlow.getVariableValue('MeetingBrief');
 
-            if (String.isBlank(result)) {
-                // Brief-only call: flow populates MeetingBrief but not GeneratedSummary
-                if (String.isNotBlank(brief)) return brief;
-                return 'No summary was generated by the prompt template. Please check the flow outputs.';
-            }
-            if (String.isNotBlank(brief)) {
-                return JSON.serialize(new Map<String, String>{ 'summary' => result, 'brief' => brief });
-            }
-            return result;
-            
+            return readFlowResult(myFlow, 'GeneratedSummary',
+                'No summary was generated by the prompt template. Please check the flow outputs.');
+
+        } catch (AuraHandledException ahe) {
+            throw ahe;   // already carries the Flow's ErrorMessage -- do not re-wrap
         } catch (Exception e) {
             throw new AuraHandledException('Error executing summary flow: ' + e.getMessage());
         }
@@ -121,29 +142,82 @@ public with sharing class MeetingSummaryController {
             String accountId,
             String documentId1,
             String documentId2,
-            String documentId3,
             String meetingType,
             Boolean hasTodos,
-            String additionalContext) {
+            String notes,
+            String instructions,
+            String transcriptDocumentId) {
         try {
             Map<String, Object> flowInputs = new Map<String, Object>();
             flowInputs.put('GenerateMode', 'todos');
-            if (String.isNotBlank(eventId))           flowInputs.put('EventId', eventId);
-            if (String.isNotBlank(accountId))         flowInputs.put('AccountId', accountId);
-            if (String.isNotBlank(documentId1))       flowInputs.put('ContentDocumentId1', documentId1);
-            if (String.isNotBlank(documentId2))       flowInputs.put('ContentDocumentId2', documentId2);
-            if (String.isNotBlank(documentId3))       flowInputs.put('ContentDocumentId3', documentId3);
-            if (String.isNotBlank(additionalContext)) flowInputs.put('AdditionalContext', additionalContext);
-            if (String.isNotBlank(meetingType))       flowInputs.put('MeetingType', meetingType);
-            if (hasTodos != null)                     flowInputs.put('HasTodos', hasTodos);
+            if (String.isNotBlank(eventId))      flowInputs.put('EventId',            eventId);
+            if (String.isNotBlank(accountId))    flowInputs.put('AccountId',          accountId);
+            if (String.isNotBlank(documentId1))  flowInputs.put('ContentDocumentId1', documentId1);
+            if (String.isNotBlank(documentId2))  flowInputs.put('ContentDocumentId2', documentId2);
+            if (String.isNotBlank(notes))        flowInputs.put('Notes',              notes);
+            if (String.isNotBlank(instructions)) flowInputs.put('Instructions',       instructions);
+            if (String.isNotBlank(meetingType))  flowInputs.put('MeetingType',        meetingType);
+            if (hasTodos != null)                flowInputs.put('HasTodos',           hasTodos);
+
+            String transcription = extractTranscriptText(transcriptDocumentId);
+            if (String.isNotBlank(transcription)) flowInputs.put('Transcription',     transcription);
 
             Flow.Interview myFlow = Flow.Interview.createInterview(flowApiName, flowInputs);
             myFlow.start();
 
-            String result = (String) myFlow.getVariableValue('GeneratedTodos');
-            return String.isBlank(result) ? '[]' : result;
+            return readFlowResult(myFlow, 'GeneratedTodos', '[]');
+        } catch (AuraHandledException ahe) {
+            throw ahe;   // already carries the Flow's ErrorMessage -- do not re-wrap
         } catch (Exception e) {
             throw new AuraHandledException('Error generating meeting todos: ' + e.getMessage());
+        }
+    }
+
+    /**
+     * Reads a generation Flow's result, surfacing the Flow's own diagnostics.
+     *
+     * Both generation flows set ErrorMessage on every fault path and on their
+     * unexpected-state branches, and DebugLog at a checkpoint before the prompt branch is
+     * chosen. Without reading them a failure surfaces as a generic "nothing was generated",
+     * which is what made every failure require an Apex debug log to diagnose.
+     */
+    private static String readFlowResult(Flow.Interview flow, String resultVar, String emptyMessage) {
+        String debug = (String) flow.getVariableValue('DebugLog');
+        if (String.isNotBlank(debug)) System.debug(LoggingLevel.INFO, 'Flow DebugLog: ' + debug);
+
+        String err = (String) flow.getVariableValue('ErrorMessage');
+        if (String.isNotBlank(err)) {
+            throw new AuraHandledException(
+                err + (String.isNotBlank(debug) ? ' [' + debug + ']' : ''));
+        }
+        String result = (String) flow.getVariableValue(resultVar);
+        if (String.isBlank(result)) {
+            return String.isNotBlank(debug) ? emptyMessage + ' [' + debug + ']' : emptyMessage;
+        }
+        return result;
+    }
+
+    /**
+     * Reads the plain text body of a ContentDocument (identified by its ContentDocumentId).
+     * Only processes TXT/TEXT file types; returns empty string for anything else or on error.
+     * Called before invoking generation flows so the prompt receives plain text, not a document ID.
+     */
+    private static String extractTranscriptText(String contentDocumentId) {
+        if (String.isBlank(contentDocumentId)) return '';
+        try {
+            List<ContentVersion> versions = [
+                SELECT VersionData, FileType
+                FROM   ContentVersion
+                WHERE  ContentDocumentId = :contentDocumentId
+                  AND  IsLatest = true
+                LIMIT 1
+            ];
+            if (versions.isEmpty()) return '';
+            ContentVersion cv = versions[0];
+            if (!new Set<String>{ 'TXT', 'TEXT' }.contains((cv.FileType ?? '').toUpperCase())) return '';
+            return cv.VersionData.toString();
+        } catch (Exception e) {
+            return '';
         }
     }
 

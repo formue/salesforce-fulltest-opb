@@ -1,45 +1,30 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Flow xmlns="http://soap.sforce.com/2006/04/metadata">
     <actionCalls>
-        <name>Convert_TEXT_File_to_String</name>
-        <label>Convert TEXT File to String</label>
+        <name>WealthPlan_AI_Create_And_Edit_V3_No_Docs</name>
+        <label>WealthPlan - AI Create And Edit V3 (No Docs)</label>
         <locationX>0</locationX>
         <locationY>0</locationY>
-        <actionName>ConvertBlobToString</actionName>
-        <actionType>apex</actionType>
+        <actionName>WealthPlan_AI_Create_And_Edit_V3</actionName>
+        <actionType>generatePromptResponse</actionType>
         <connector>
-            <targetReference>Assign_Values</targetReference>
+            <targetReference>END_ELEMENT_5</targetReference>
         </connector>
-        <flowTransactionModel>Automatic</flowTransactionModel>
-        <inputParameters>
-            <name>contentVersionIds</name>
-            <value>
-                <elementReference>GET_Contentversion.Id</elementReference>
-            </value>
-        </inputParameters>
-        <nameSegment>ConvertBlobToString</nameSegment>
-        <offset>0</offset>
-        <storeOutputAutomatically>true</storeOutputAutomatically>
-    </actionCalls>
-    <actionCalls>
-        <name>WealthPlan_AI_Create_And_Edit_V4_No_Doc</name>
-        <label>WealthPlan - AI Create And Edit V4 (No Doc)</label>
-        <locationX>0</locationX>
-        <locationY>0</locationY>
-        <actionName>WealthPlan_AI_Create_And_Edit_V4</actionName>
-        <actionType>generatePromptResponse</actionType>
+        <faultConnector>
+            <targetReference>Assign_Fault</targetReference>
+        </faultConnector>
         <flowTransactionModel>CurrentTransaction</flowTransactionModel>
         <inputParameters>
-            <name>Input:Additional_Context</name>
+            <name>Input:TextFileInput</name>
             <value>
-                <elementReference>formAdditionalContext</elementReference>
+                <elementReference>formTranscription</elementReference>
                 <inputConfiguratorMode>Resource</inputConfiguratorMode>
             </value>
         </inputParameters>
         <inputParameters>
-            <name>Input:TextFileInput</name>
+            <name>Input:Additional_Context</name>
             <value>
-                <elementReference>formTextFileInput</elementReference>
+                <elementReference>formNotes</elementReference>
                 <inputConfiguratorMode>Resource</inputConfiguratorMode>
             </value>
         </inputParameters>
@@ -50,7 +35,7 @@
                 <inputConfiguratorMode>Resource</inputConfiguratorMode>
             </value>
         </inputParameters>
-        <nameSegment>WealthPlan_AI_Create_And_Edit_V4</nameSegment>
+        <nameSegment>WealthPlan_AI_Create_And_Edit_V3</nameSegment>
         <offset>0</offset>
         <outputParameters>
             <assignToReference>GeneratedSummary</assignToReference>
@@ -58,31 +43,30 @@
         </outputParameters>
     </actionCalls>
     <actionCalls>
-        <name>WealthPlan_AI_Create_And_Edit_V4_One_Doc</name>
-        <label>WealthPlan - AI Create And Edit V4 (One Doc)</label>
+        <name>WealthPlan_AI_Create_And_Edit_V3_One_Doc</name>
+        <label>WealthPlan - AI Create And Edit V3 (One Doc)</label>
         <locationX>0</locationX>
         <locationY>0</locationY>
-        <actionName>WealthPlan_AI_Create_And_Edit_V4</actionName>
+        <actionName>WealthPlan_AI_Create_And_Edit_V3</actionName>
         <actionType>generatePromptResponse</actionType>
+        <connector>
+            <targetReference>END_ELEMENT_6</targetReference>
+        </connector>
+        <faultConnector>
+            <targetReference>Assign_Fault</targetReference>
+        </faultConnector>
         <flowTransactionModel>CurrentTransaction</flowTransactionModel>
         <inputParameters>
-            <name>Input:Document_1</name>
+            <name>Input:TextFileInput</name>
             <value>
-                <elementReference>Get_Content_Document</elementReference>
+                <elementReference>formTranscription</elementReference>
                 <inputConfiguratorMode>Resource</inputConfiguratorMode>
             </value>
         </inputParameters>
         <inputParameters>
             <name>Input:Additional_Context</name>
             <value>
-                <elementReference>formAdditionalContext</elementReference>
-                <inputConfiguratorMode>Resource</inputConfiguratorMode>
-            </value>
-        </inputParameters>
-        <inputParameters>
-            <name>Input:TextFileInput</name>
-            <value>
-                <elementReference>formTextFileInput</elementReference>
+                <elementReference>formNotes</elementReference>
                 <inputConfiguratorMode>Resource</inputConfiguratorMode>
             </value>
         </inputParameters>
@@ -93,7 +77,14 @@
                 <inputConfiguratorMode>Resource</inputConfiguratorMode>
             </value>
         </inputParameters>
-        <nameSegment>WealthPlan_AI_Create_And_Edit_V4</nameSegment>
+        <inputParameters>
+            <name>Input:Document_1</name>
+            <value>
+                <elementReference>varContentDoc1</elementReference>
+                <inputConfiguratorMode>Resource</inputConfiguratorMode>
+            </value>
+        </inputParameters>
+        <nameSegment>WealthPlan_AI_Create_And_Edit_V3</nameSegment>
         <offset>0</offset>
         <outputParameters>
             <assignToReference>GeneratedSummary</assignToReference>
@@ -101,49 +92,55 @@
         </outputParameters>
     </actionCalls>
     <actionCalls>
-        <name>WealthPlan_AI_Create_And_Edit_V4_Two_Docs</name>
-        <label>WealthPlan - AI Create And Edit V4 (Two Docs)</label>
+        <name>WealthPlan_AI_Create_And_Edit_V3_Two_Docs</name>
+        <label>WealthPlan - AI Create And Edit V3 (Two Docs)</label>
         <locationX>0</locationX>
         <locationY>0</locationY>
-        <actionName>WealthPlan_AI_Create_And_Edit_V4</actionName>
+        <actionName>WealthPlan_AI_Create_And_Edit_V3</actionName>
         <actionType>generatePromptResponse</actionType>
+        <connector>
+            <targetReference>END_ELEMENT_7</targetReference>
+        </connector>
+        <faultConnector>
+            <targetReference>Assign_Fault</targetReference>
+        </faultConnector>
         <flowTransactionModel>CurrentTransaction</flowTransactionModel>
         <inputParameters>
-            <name>Input:Document_1</name>
+            <name>Input:TextFileInput</name>
             <value>
-                <elementReference>Get_Content_Document</elementReference>
+                <elementReference>formTranscription</elementReference>
                 <inputConfiguratorMode>Resource</inputConfiguratorMode>
             </value>
         </inputParameters>
         <inputParameters>
             <name>Input:Additional_Context</name>
             <value>
-                <elementReference>formAdditionalContext</elementReference>
+                <elementReference>formNotes</elementReference>
+                <inputConfiguratorMode>Resource</inputConfiguratorMode>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>Input:MeetingNoteText</name>
+            <value>
+                <elementReference>formMeetingNote</elementReference>
+                <inputConfiguratorMode>Resource</inputConfiguratorMode>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>Input:Document_1</name>
+            <value>
+                <elementReference>varContentDoc1</elementReference>
                 <inputConfiguratorMode>Resource</inputConfiguratorMode>
             </value>
         </inputParameters>
         <inputParameters>
             <name>Input:Document_2</name>
             <value>
-                <elementReference>GET_ContentDocument_2</elementReference>
+                <elementReference>varContentDoc2</elementReference>
                 <inputConfiguratorMode>Resource</inputConfiguratorMode>
             </value>
         </inputParameters>
-        <inputParameters>
-            <name>Input:TextFileInput</name>
-            <value>
-                <elementReference>formTextFileInput</elementReference>
-                <inputConfiguratorMode>Resource</inputConfiguratorMode>
-            </value>
-        </inputParameters>
-        <inputParameters>
-            <name>Input:MeetingNoteText</name>
-            <value>
-                <elementReference>formMeetingNote</elementReference>
-                <inputConfiguratorMode>Resource</inputConfiguratorMode>
-            </value>
-        </inputParameters>
-        <nameSegment>WealthPlan_AI_Create_And_Edit_V4</nameSegment>
+        <nameSegment>WealthPlan_AI_Create_And_Edit_V3</nameSegment>
         <offset>0</offset>
         <outputParameters>
             <assignToReference>GeneratedSummary</assignToReference>
@@ -153,19 +150,97 @@
     <apiVersion>66.0</apiVersion>
     <areMetricsLoggedToDataCloud>false</areMetricsLoggedToDataCloud>
     <assignments>
-        <name>Assign_Values</name>
-        <label>Assign Values</label>
+        <name>Assign_Fault</name>
+        <label>Assign Fault</label>
         <locationX>0</locationX>
         <locationY>0</locationY>
         <assignmentItems>
-            <assignToReference>varTextFileInput</assignToReference>
+            <assignToReference>ErrorMessage</assignToReference>
             <operator>Assign</operator>
             <value>
-                <elementReference>Convert_TEXT_File_to_String</elementReference>
+                <elementReference>$Flow.FaultMessage</elementReference>
+            </value>
+        </assignmentItems>
+        <connector>
+            <targetReference>END_FAULT</targetReference>
+        </connector>
+    </assignments>
+    <assignments>
+        <name>Assign_Unexpected_Docs</name>
+        <label>Assign Unexpected Document Count</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <assignmentItems>
+            <assignToReference>ErrorMessage</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <stringValue>Unexpected document count - no prompt branch matched. See DebugLog.</stringValue>
+            </value>
+        </assignmentItems>
+        <connector>
+            <targetReference>END_FAULT</targetReference>
+        </connector>
+    </assignments>
+    <assignments>
+        <name>Assign_Debug</name>
+        <label>Assign Debug Log</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <assignmentItems>
+            <assignToReference>DebugLog</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <elementReference>formDebug</elementReference>
             </value>
         </assignmentItems>
         <connector>
             <targetReference>DEC_Check_Number_of_Docs</targetReference>
+        </connector>
+    </assignments>
+    <assignments>
+        <name>Assign_Doc1</name>
+        <label>Assign Document 1</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <assignmentItems>
+            <assignToReference>varContentDoc1</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <elementReference>LOOP_NonText</elementReference>
+            </value>
+        </assignmentItems>
+        <assignmentItems>
+            <assignToReference>varDocCounter</assignToReference>
+            <operator>Add</operator>
+            <value>
+                <numberValue>1.0</numberValue>
+            </value>
+        </assignmentItems>
+        <connector>
+            <targetReference>LOOP_NonText</targetReference>
+        </connector>
+    </assignments>
+    <assignments>
+        <name>Assign_Doc2</name>
+        <label>Assign Document 2</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <assignmentItems>
+            <assignToReference>varContentDoc2</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <elementReference>LOOP_NonText</elementReference>
+            </value>
+        </assignmentItems>
+        <assignmentItems>
+            <assignToReference>varDocCounter</assignToReference>
+            <operator>Add</operator>
+            <value>
+                <numberValue>1.0</numberValue>
+            </value>
+        </assignmentItems>
+        <connector>
+            <targetReference>LOOP_NonText</targetReference>
         </connector>
     </assignments>
     <assignments>
@@ -195,27 +270,70 @@
             </value>
         </assignmentItems>
         <connector>
-            <targetReference>Get_Content_Document</targetReference>
+            <targetReference>Get_Content_Documents_NonText</targetReference>
         </connector>
     </assignments>
     <decisions>
-        <name>DEC_Check_Number_of_Docs</name>
-        <label>DEC Check Number of Docs</label>
+        <name>DEC_Doc_Counter</name>
+        <label>DEC Doc Counter</label>
         <locationX>0</locationX>
         <locationY>0</locationY>
-        <defaultConnectorLabel>Default Outcome</defaultConnectorLabel>
+        <defaultConnector>
+            <targetReference>LOOP_NonText</targetReference>
+        </defaultConnector>
+        <defaultConnectorLabel>Skip extra documents</defaultConnectorLabel>
         <rules>
-            <name>Document_1</name>
+            <name>Doc_Slot_1</name>
             <conditionLogic>and</conditionLogic>
             <conditions>
-                <leftValueReference>formNumberOfDocs</leftValueReference>
+                <leftValueReference>varDocCounter</leftValueReference>
+                <operator>EqualTo</operator>
+                <rightValue>
+                    <numberValue>0.0</numberValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>Assign_Doc1</targetReference>
+            </connector>
+            <label>Doc Slot 1</label>
+        </rules>
+        <rules>
+            <name>Doc_Slot_2</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>varDocCounter</leftValueReference>
                 <operator>EqualTo</operator>
                 <rightValue>
                     <numberValue>1.0</numberValue>
                 </rightValue>
             </conditions>
             <connector>
-                <targetReference>WealthPlan_AI_Create_And_Edit_V4_One_Doc</targetReference>
+                <targetReference>Assign_Doc2</targetReference>
+            </connector>
+            <label>Doc Slot 2</label>
+        </rules>
+    </decisions>
+    <decisions>
+        <name>DEC_Check_Number_of_Docs</name>
+        <label>DEC Check Number of Docs</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <defaultConnector>
+            <targetReference>Assign_Unexpected_Docs</targetReference>
+        </defaultConnector>
+        <defaultConnectorLabel>Default Outcome</defaultConnectorLabel>
+        <rules>
+            <name>Document_1</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>varDocCounter</leftValueReference>
+                <operator>EqualTo</operator>
+                <rightValue>
+                    <numberValue>1.0</numberValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>WealthPlan_AI_Create_And_Edit_V3_One_Doc</targetReference>
             </connector>
             <label>Document 1</label>
         </rules>
@@ -223,14 +341,14 @@
             <name>Document_2</name>
             <conditionLogic>and</conditionLogic>
             <conditions>
-                <leftValueReference>formNumberOfDocs</leftValueReference>
+                <leftValueReference>varDocCounter</leftValueReference>
                 <operator>EqualTo</operator>
                 <rightValue>
                     <numberValue>2.0</numberValue>
                 </rightValue>
             </conditions>
             <connector>
-                <targetReference>WealthPlan_AI_Create_And_Edit_V4_Two_Docs</targetReference>
+                <targetReference>WealthPlan_AI_Create_And_Edit_V3_Two_Docs</targetReference>
             </connector>
             <label>Document 2</label>
         </rules>
@@ -238,69 +356,87 @@
             <name>No_Docs</name>
             <conditionLogic>and</conditionLogic>
             <conditions>
-                <leftValueReference>formNumberOfDocs</leftValueReference>
+                <leftValueReference>varDocCounter</leftValueReference>
                 <operator>EqualTo</operator>
                 <rightValue>
                     <numberValue>0.0</numberValue>
                 </rightValue>
             </conditions>
             <connector>
-                <targetReference>WealthPlan_AI_Create_And_Edit_V4_No_Doc</targetReference>
+                <targetReference>WealthPlan_AI_Create_And_Edit_V3_No_Docs</targetReference>
             </connector>
             <label>No Docs</label>
         </rules>
     </decisions>
-    <decisions>
-        <name>DEC_Check_Text_File_Exist</name>
-        <label>DEC Check Text File Exist</label>
+    <ends>
+        <name>END_FAULT</name>
+        <label>End (Fault)</label>
         <locationX>0</locationX>
         <locationY>0</locationY>
-        <defaultConnector>
-            <targetReference>DEC_Check_Number_of_Docs</targetReference>
-        </defaultConnector>
-        <defaultConnectorLabel>Default Outcome</defaultConnectorLabel>
-        <rules>
-            <name>TEXT_File_Exists</name>
-            <conditionLogic>and</conditionLogic>
-            <conditions>
-                <leftValueReference>Get_Content_Document_TEXT</leftValueReference>
-                <operator>IsNull</operator>
-                <rightValue>
-                    <booleanValue>false</booleanValue>
-                </rightValue>
-            </conditions>
-            <connector>
-                <targetReference>GET_Contentversion</targetReference>
-            </connector>
-            <label>TEXT File Exists</label>
-        </rules>
-    </decisions>
+    </ends>
+    <ends>
+        <name>END_ELEMENT_5</name>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+    </ends>
+    <ends>
+        <name>END_ELEMENT_6</name>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+    </ends>
+    <ends>
+        <name>END_ELEMENT_7</name>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+    </ends>
     <environments>Default</environments>
     <formulas>
-        <name>formAdditionalContext</name>
+        <name>formDebug</name>
         <dataType>String</dataType>
-        <expression>IF({!AdditionalContext} = null, &apos; &apos; , {!AdditionalContext})</expression>
+        <expression>&apos;nonTextDocs=&apos; &amp; TEXT(BLANKVALUE({!varDocCounter}, 0))
+&amp; &apos; | transcriptChars=&apos; &amp; TEXT(LEN({!formTranscription}))
+&amp; &apos; | notesChars=&apos; &amp; TEXT(LEN({!formNotes}))
+&amp; &apos; | meetingNoteChars=&apos; &amp; TEXT(LEN({!formMeetingNote}))
+&amp; &apos; | doc1=&apos; &amp; BLANKVALUE({!ContentDocumentId1}, &apos;-&apos;)
+&amp; &apos; | doc2=&apos; &amp; BLANKVALUE({!ContentDocumentId2}, &apos;-&apos;)
+&amp; &apos; | doc3=&apos; &amp; BLANKVALUE({!ContentDocumentId3}, &apos;-&apos;)</expression>
+    </formulas>
+    <formulas>
+        <name>formTranscription</name>
+        <dataType>String</dataType>
+        <expression>IF({!Transcription} = null, &apos; &apos;, {!Transcription})</expression>
+    </formulas>
+    <formulas>
+        <name>formInstructions</name>
+        <dataType>String</dataType>
+        <expression>IF({!Instructions} = null, &apos; &apos;, {!Instructions})</expression>
+    </formulas>
+    <formulas>
+        <name>formNotes</name>
+        <dataType>String</dataType>
+        <expression>IF({!Notes} = null, &apos; &apos; , {!Notes})</expression>
     </formulas>
     <formulas>
         <name>formMeetingNote</name>
         <dataType>String</dataType>
         <expression>IF({!MeetingNoteText}= null, &apos; &apos;, {!MeetingNoteText})</expression>
     </formulas>
-    <formulas>
-        <name>formNumberOfDocs</name>
-        <dataType>Number</dataType>
-        <expression>IF(ISBLANK({!ContentDocumentId1}), 0, 1) +
-IF(ISBLANK({!ContentDocumentId2}), 0, 1) +
-IF(ISBLANK({!ContentDocumentId3}), 0, 1)</expression>
-        <scale>0</scale>
-    </formulas>
-    <formulas>
-        <name>formTextFileInput</name>
-        <dataType>String</dataType>
-        <expression>IF({!varTextFileInput} = null, &apos; &apos; , {!varTextFileInput})</expression>
-    </formulas>
     <interviewLabel>WealthPlan - AL - AI Helper Trigger {!$Flow.CurrentDateTime}</interviewLabel>
     <label>WealthPlan - AL - AI Helper Trigger</label>
+    <loops>
+        <name>LOOP_NonText</name>
+        <label>Loop Non-Text Documents</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <collectionReference>Get_Content_Documents_NonText</collectionReference>
+        <iterationOrder>Asc</iterationOrder>
+        <nextValueConnector>
+            <targetReference>DEC_Doc_Counter</targetReference>
+        </nextValueConnector>
+        <noMoreValuesConnector>
+            <targetReference>Assign_Debug</targetReference>
+        </noMoreValuesConnector>
+    </loops>
     <processMetadataValues>
         <name>BuilderType</name>
         <value>
@@ -321,35 +457,17 @@ IF(ISBLANK({!ContentDocumentId3}), 0, 1)</expression>
     </processMetadataValues>
     <processType>AutoLaunchedFlow</processType>
     <recordLookups>
-        <name>Get_Content_Document</name>
-        <label>Get Content Document</label>
+        <name>Get_Content_Documents_NonText</name>
+        <label>Get Content Documents (Non-Text)</label>
         <locationX>0</locationX>
         <locationY>0</locationY>
         <assignNullValuesIfNoRecordsFound>false</assignNullValuesIfNoRecordsFound>
         <connector>
-            <targetReference>GET_ContentDocument_2</targetReference>
+            <targetReference>LOOP_NonText</targetReference>
         </connector>
-        <filterLogic>and</filterLogic>
-        <filters>
-            <field>Id</field>
-            <operator>EqualTo</operator>
-            <value>
-                <elementReference>ContentDocumentId1</elementReference>
-            </value>
-        </filters>
-        <getFirstRecordOnly>true</getFirstRecordOnly>
-        <object>ContentDocument</object>
-        <storeOutputAutomatically>true</storeOutputAutomatically>
-    </recordLookups>
-    <recordLookups>
-        <name>Get_Content_Document_TEXT</name>
-        <label>Get Content Document TEXT</label>
-        <locationX>0</locationX>
-        <locationY>0</locationY>
-        <assignNullValuesIfNoRecordsFound>false</assignNullValuesIfNoRecordsFound>
-        <connector>
-            <targetReference>DEC_Check_Text_File_Exist</targetReference>
-        </connector>
+        <faultConnector>
+            <targetReference>Assign_Fault</targetReference>
+        </faultConnector>
         <filterLogic>and</filterLogic>
         <filters>
             <field>Id</field>
@@ -360,83 +478,13 @@ IF(ISBLANK({!ContentDocumentId3}), 0, 1)</expression>
         </filters>
         <filters>
             <field>FileType</field>
-            <operator>EqualTo</operator>
+            <operator>NotEqualTo</operator>
             <value>
                 <stringValue>TEXT</stringValue>
             </value>
         </filters>
-        <getFirstRecordOnly>true</getFirstRecordOnly>
+        <getFirstRecordOnly>false</getFirstRecordOnly>
         <object>ContentDocument</object>
-        <storeOutputAutomatically>true</storeOutputAutomatically>
-    </recordLookups>
-    <recordLookups>
-        <name>GET_ContentDocument_2</name>
-        <label>GET ContentDocument 2</label>
-        <locationX>0</locationX>
-        <locationY>0</locationY>
-        <assignNullValuesIfNoRecordsFound>false</assignNullValuesIfNoRecordsFound>
-        <connector>
-            <targetReference>GET_ContentDocument_3</targetReference>
-        </connector>
-        <filterLogic>and</filterLogic>
-        <filters>
-            <field>Id</field>
-            <operator>EqualTo</operator>
-            <value>
-                <elementReference>ContentDocumentId2</elementReference>
-            </value>
-        </filters>
-        <getFirstRecordOnly>true</getFirstRecordOnly>
-        <object>ContentDocument</object>
-        <storeOutputAutomatically>true</storeOutputAutomatically>
-    </recordLookups>
-    <recordLookups>
-        <name>GET_ContentDocument_3</name>
-        <label>GET ContentDocument 3</label>
-        <locationX>0</locationX>
-        <locationY>0</locationY>
-        <assignNullValuesIfNoRecordsFound>false</assignNullValuesIfNoRecordsFound>
-        <connector>
-            <targetReference>Get_Content_Document_TEXT</targetReference>
-        </connector>
-        <filterLogic>and</filterLogic>
-        <filters>
-            <field>Id</field>
-            <operator>EqualTo</operator>
-            <value>
-                <elementReference>ContentDocumentId3</elementReference>
-            </value>
-        </filters>
-        <getFirstRecordOnly>true</getFirstRecordOnly>
-        <object>ContentDocument</object>
-        <storeOutputAutomatically>true</storeOutputAutomatically>
-    </recordLookups>
-    <recordLookups>
-        <name>GET_Contentversion</name>
-        <label>GET Contentversion</label>
-        <locationX>0</locationX>
-        <locationY>0</locationY>
-        <assignNullValuesIfNoRecordsFound>false</assignNullValuesIfNoRecordsFound>
-        <connector>
-            <targetReference>Convert_TEXT_File_to_String</targetReference>
-        </connector>
-        <filterLogic>and</filterLogic>
-        <filters>
-            <field>ContentDocumentId</field>
-            <operator>EqualTo</operator>
-            <value>
-                <elementReference>Get_Content_Document_TEXT.Id</elementReference>
-            </value>
-        </filters>
-        <filters>
-            <field>IsLatest</field>
-            <operator>EqualTo</operator>
-            <value>
-                <booleanValue>true</booleanValue>
-            </value>
-        </filters>
-        <getFirstRecordOnly>true</getFirstRecordOnly>
-        <object>ContentVersion</object>
         <storeOutputAutomatically>true</storeOutputAutomatically>
     </recordLookups>
     <start>
@@ -448,14 +496,62 @@ IF(ISBLANK({!ContentDocumentId3}), 0, 1)</expression>
     </start>
     <status>Active</status>
     <variables>
-        <name>AdditionalContext</name>
+        <name>ErrorMessage</name>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
+        <isOutput>true</isOutput>
+    </variables>
+    <variables>
+        <name>DebugLog</name>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
+        <isOutput>true</isOutput>
+    </variables>
+    <variables>
+        <name>Transcription</name>
         <dataType>String</dataType>
         <isCollection>false</isCollection>
         <isInput>true</isInput>
         <isOutput>false</isOutput>
     </variables>
     <variables>
-        <name>ContentDocumentId</name>
+        <name>Instructions</name>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+    </variables>
+    <variables>
+        <name>varContentDoc1</name>
+        <dataType>SObject</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
+        <isOutput>false</isOutput>
+        <objectType>ContentDocument</objectType>
+    </variables>
+    <variables>
+        <name>varContentDoc2</name>
+        <dataType>SObject</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
+        <isOutput>false</isOutput>
+        <objectType>ContentDocument</objectType>
+    </variables>
+    <variables>
+        <name>varDocCounter</name>
+        <dataType>Number</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
+        <isOutput>false</isOutput>
+        <scale>0</scale>
+        <value>
+            <numberValue>0.0</numberValue>
+        </value>
+    </variables>
+    <variables>
+        <name>Notes</name>
         <dataType>String</dataType>
         <isCollection>false</isCollection>
         <isInput>true</isInput>
@@ -500,13 +596,6 @@ IF(ISBLANK({!ContentDocumentId3}), 0, 1)</expression>
         <name>varContentDocumentColl</name>
         <dataType>String</dataType>
         <isCollection>true</isCollection>
-        <isInput>false</isInput>
-        <isOutput>false</isOutput>
-    </variables>
-    <variables>
-        <name>varTextFileInput</name>
-        <dataType>String</dataType>
-        <isCollection>false</isCollection>
         <isInput>false</isInput>
         <isOutput>false</isOutput>
     </variables>

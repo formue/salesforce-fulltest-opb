@@ -4151,11 +4151,12 @@ b, strong { font-weight: 800; color: var(--text-main); }
 .wph-prose h6 { font-size: 0.9rem; margin: 14px 0 4px; color: var(--text-secondary); }
 
 .wph-prose p { margin: 0 0 12px; }
-.wph-prose ul,
-.wph-prose ol { padding-left: 20px; margin: 8px 0 14px; }
-.wph-prose li { margin-bottom: 5px; }
-.wph-prose li > ul,
-.wph-prose li > ol { margin: 5px 0 0; }
+.wph-prose ul  { list-style-type: disc;    padding-left: 20px; margin: 8px 0 14px; }
+.wph-prose ol  { list-style-type: decimal; padding-left: 20px; margin: 8px 0 14px; }
+.wph-prose li  { margin-bottom: 5px; }
+/* SLDS resets list-style:none globally; be explicit at every nesting level. */
+.wph-prose li > ul { list-style-type: circle;      margin: 5px 0 0; }
+.wph-prose li > ol { list-style-type: lower-alpha;  margin: 5px 0 0; }
 .wph-prose strong,
 .wph-prose b { font-weight: 700; color: var(--text-main); }
 .wph-prose em, .wph-prose i { font-style: italic; }

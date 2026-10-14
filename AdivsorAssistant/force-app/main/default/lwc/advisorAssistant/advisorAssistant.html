@@ -931,6 +931,33 @@
 
 
 
+                    <template lwc:if={isSummaryTab}>
+                    <!-- My Instructions card — personal AI instructions stored per user -->
+                    <section class={instructionsCardClass}>
+                        <button type="button" class="aa-card-header" data-card="instructions" onclick={handleCardToggle} aria-expanded={instructionsExpanded}>
+                            <span class="aa-card-icon aa-icon-amber">
+                                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                </svg>
+                            </span>
+                            <span class="aa-card-title">My Instructions</span>
+                            <template lwc:if={hasActiveUserInstructions}>
+                                <span class="aa-chip aa-chip-success" title="Instructions active this session">Active</span>
+                            </template>
+                            <svg class="aa-card-chevron" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6 9 12 15 18 9"/></svg>
+                        </button>
+                        <template lwc:if={isInstructionsOpen}>
+                        <div class="aa-card-body">
+                            <c-advisor-user-instructions
+                                onuseinstructions={handleUseInstructions}
+                                ondiscardinstruction={handleDiscardInstruction}>
+                            </c-advisor-user-instructions>
+                        </div>
+                        </template>
+                    </section>
+                    </template>
+
                         </div><!-- end aa-config-body -->
                     </section><!-- end aa-config -->
                 </div>
@@ -1132,6 +1159,7 @@
                                         shared-files={_sharedFiles}
                                         artifact-file-ids={_selectedArtifactFileIds}
                                         free-text={_freeText}
+                                        user-instructions={_activeUserInstructions}
                                         meeting-summary-flow-api-name={meetingSummaryFlowApiName}
                                         regenerate-summary-flow-api-name={regenerateSummaryFlowApiName}
                                         save-summary-flow-api-name={saveSummaryFlowApiName}
@@ -1162,8 +1190,11 @@
                                         record-id={recordId}
                                         selected-event-id={_selectedEventId}
                                         shared-files={_sharedFiles}
+                                        input-content-documents={inputContentDocuments}
+                                        input-content-document-links={inputContentDocumentLinks}
                                         artifact-file-ids={_selectedArtifactFileIds}
                                         free-text={_freeText}
+                                        user-instructions={_activeUserInstructions}
                                         flow-api-name={flowApiName}
                                         wealth-plan-save-flow-api-name={wealthPlanSaveFlowApiName}
                                         save-todos-flow-api-name={saveTodosFlowApiName}
@@ -1218,6 +1249,7 @@
                                         shared-files={_sharedFiles}
                                         artifact-file-ids={_selectedArtifactFileIds}
                                         free-text={_freeText}
+                                        user-instructions={_activeUserInstructions}
                                         meeting-summary-flow-api-name={meetingSummaryFlowApiName}
                                         regenerate-summary-flow-api-name={regenerateSummaryFlowApiName}
                                         save-summary-flow-api-name={saveSummaryFlowApiName}
@@ -1240,6 +1272,7 @@
                                         onmsstatechange={handleMsStateChange}
                                     ></c-advisor-meeting-summary>
                             </div><!-- end todos panel -->
+
                         </div><!-- end aa-tab-content -->
                     </div>
                 </div>

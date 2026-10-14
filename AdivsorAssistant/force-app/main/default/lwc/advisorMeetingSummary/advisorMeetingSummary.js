@@ -609,6 +609,7 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
     }
     @api get freeText() { return this._freeText; }
     set freeText(v) { if (v !== undefined && v !== this._freeText) this._freeText = v || ''; }
+    @api userInstructions = '';
 
     /**
      * Id of a MeetingNote__c the PARENT created — which happens when internal notes are
@@ -860,6 +861,9 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
                 // Same untrusted source as the read view — scrub before injecting.
                 // eslint-disable-next-line @lwc/lwc/no-inner-html
                 el.innerHTML = sanitizeRichText(this._summaryEditValue || '');
+                // Existing list nodes from a saved summary may lack the LWC scope
+                // token on this first paint; stamp inline styles so they show correctly.
+                this._applyListStyles(el);
                 this._editorNeedsInit = false;
                 el.focus();
             }
@@ -1694,21 +1698,30 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
     // Ordered list [{documentId}] — artifact selections first, then uploads
     get noNoteFilesForFlow() {
         const files = [];
-        let text = 0, attach = 0;
-        const take = (documentId, isText) => {
-            if (isText) { if (text   >= MAX_TRANSCRIPTS) return; text++; }
-            else        { if (attach >= MAX_ATTACHMENTS) return; attach++; }
-            files.push({ documentId });
-        };
+        let attach = 0;
         const byId = new Map((this.artifactFiles || []).map(f => [f.id, f]));
         for (const id of this._selectedArtifactFileIds) {
-            take(id, _fileKind(byId.get(id)?.fileType) === 'txt');
+            if (attach >= MAX_ATTACHMENTS) break;
+            if (_fileKind(byId.get(id)?.fileType) !== 'txt') { files.push({ documentId: id }); attach++; }
         }
         for (const f of this._sharedFiles) {
             if (!f.included) continue;
-            take(f.documentId, _fileKind(f.extension) === 'txt');
+            if (attach >= MAX_ATTACHMENTS) break;
+            if (_fileKind(f.extension) !== 'txt') { files.push({ documentId: f.documentId }); attach++; }
         }
         return files;
+    }
+
+    get transcriptDocumentIdForFlow() {
+        const byId = new Map((this.artifactFiles || []).map(f => [f.id, f]));
+        for (const id of this._selectedArtifactFileIds) {
+            if (_fileKind(byId.get(id)?.fileType) === 'txt') return id;
+        }
+        for (const f of this._sharedFiles) {
+            if (!f.included) continue;
+            if (_fileKind(f.extension) === 'txt') return f.documentId;
+        }
+        return '';
     }
 
     // ── Main tab getters ─────────────────────────────────────────────────────
@@ -2141,7 +2154,12 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
         event.preventDefault();
         const html = (event.clipboardData || window.clipboardData).getData('text/html');
         const text = (event.clipboardData || window.clipboardData).getData('text/plain');
-        document.execCommand('insertHTML', false, html || text);
+        // Strip colours, font sizes, backgrounds and unknown tags from pasted content.
+        // sanitizeRichText removes all style/class/id attributes and drops anything
+        // not in the structural allowlist, while keeping bold, italic, underline,
+        // headings, and lists. Plain text (no html flavour) is inserted as-is.
+        const clean = html ? sanitizeRichText(html) : (text || '');
+        document.execCommand('insertHTML', false, clean);
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -2181,6 +2199,28 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
     }
 
     /**
+     * execCommand('insertUnorderedList'/'insertOrderedList') creates DOM nodes via the
+     * browser, not through LWC's innerHTML path, so they never receive the LWC scope
+     * token. The compiled CSS selector `.wph-prose[tok] ul[tok]` therefore cannot match
+     * those nodes. Stamp inline list-style-type so bullets show immediately during
+     * editing. Content saved and reloaded through innerHTML will pick up the CSS rule.
+     */
+    _applyListStyles(el) {
+        el.querySelectorAll('ul').forEach(node => {
+            if (!node.style.listStyleType) {
+                node.style.listStyleType = node.closest('li') ? 'circle' : 'disc';
+            }
+            if (!node.style.paddingLeft) node.style.paddingLeft = '20px';
+        });
+        el.querySelectorAll('ol').forEach(node => {
+            if (!node.style.listStyleType) {
+                node.style.listStyleType = node.closest('li') ? 'lower-alpha' : 'decimal';
+            }
+            if (!node.style.paddingLeft) node.style.paddingLeft = '20px';
+        });
+    }
+
+    /**
      * REQUIRED on every toolbar control. Without it the button takes focus on mousedown, the
      * caret selection inside the editor is discarded, and every command silently does nothing.
      */
@@ -2199,6 +2239,13 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
         // the prompt template produces.
         try { document.execCommand('styleWithCSS', false, false); } catch { /* not supported — harmless */ }
         document.execCommand(spec[0], false, spec.length > 1 ? spec[1] : null);
+
+        // Browser-created list nodes lack the LWC scope token; stamp inline styles so
+        // bullets are visible immediately, not just after save+reopen.
+        if (cmd === 'ul' || cmd === 'ol') {
+            this._applyListStyles(el);
+        }
+
         this._syncEditorValue();
     }
 
@@ -2762,24 +2809,19 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
         this._startSummaryLoadingCycle();
         try {
             const files = this.noNoteFilesForFlow;
-            let ctx = this._freeText || '';
-            if (this._selectedMeetingType)
-                ctx += (ctx ? '\n\n' : '') + `Meeting Category: ${MEETING_TYPE_LABELS[this._selectedMeetingType]}`;
-            if (this._hasTodos)
-                ctx += '\nInclude: To-Do\'s';
             const flowParams = {
-                flowApiName:        this.meetingSummaryFlowApiName,
-                eventId:            this._selectedEventId           || '',
-                accountId:          this._resolvedPrimaryMemberId   || '',
-                documentId1:        files[0]?.documentId            || '',
-                documentId2:        files[1]?.documentId            || '',
-                documentId3:        files[2]?.documentId            || '',
-                additionalContext:  ctx,
-                meetingType:        this._selectedMeetingType       || '',
-                hasTodos:           this._hasTodos,
-                saveDoc1AsArtifact: false,
-                saveDoc2AsArtifact: false,
-                saveDoc3AsArtifact: false
+                flowApiName:          this.meetingSummaryFlowApiName,
+                eventId:              this._selectedEventId           || '',
+                accountId:            this._resolvedPrimaryMemberId   || '',
+                documentId1:          files[0]?.documentId            || '',
+                documentId2:          files[1]?.documentId            || '',
+                notes:                this._freeText                  || '',
+                instructions:         this.userInstructions           || '',
+                transcriptDocumentId: this.transcriptDocumentIdForFlow,
+                meetingType:          this._selectedMeetingType       || '',
+                hasTodos:             this._hasTodos,
+                saveDoc1AsArtifact:   false,
+                saveDoc2AsArtifact:   false
             };
             const raw = await generateSummary(flowParams);
             // The older combined Flow returns JSON `{summary, brief}`; the split one
@@ -2839,15 +2881,16 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
         this._msTodosExpanded = false;
         try {
             const raw = await generateMeetingTodos({
-                flowApiName:       flowParams.flowApiName,
-                eventId:           flowParams.eventId,
-                accountId:         flowParams.accountId,
-                documentId1:       flowParams.documentId1,
-                documentId2:       flowParams.documentId2,
-                documentId3:       flowParams.documentId3,
-                meetingType:       flowParams.meetingType,
-                hasTodos:          flowParams.hasTodos,
-                additionalContext: flowParams.additionalContext
+                flowApiName:          flowParams.flowApiName,
+                eventId:              flowParams.eventId,
+                accountId:            flowParams.accountId,
+                documentId1:          flowParams.documentId1,
+                documentId2:          flowParams.documentId2,
+                meetingType:          flowParams.meetingType,
+                hasTodos:             flowParams.hasTodos,
+                notes:                flowParams.notes,
+                instructions:         flowParams.instructions,
+                transcriptDocumentId: flowParams.transcriptDocumentId
             });
             let parsed = [];
             try {
@@ -3277,15 +3320,16 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
         }
         const files = this.noNoteFilesForFlow;
         const flowParams = {
-            flowApiName:       this.meetingSummaryFlowApiName,
-            eventId:           this._selectedEventId         || '',
-            accountId:         this._resolvedPrimaryMemberId || '',
-            documentId1:       files[0]?.documentId          || '',
-            documentId2:       files[1]?.documentId          || '',
-            documentId3:       files[2]?.documentId          || '',
-            meetingType:       this._selectedMeetingType     || '',
-            hasTodos:          true,
-            additionalContext: this._freeText                || ''
+            flowApiName:          this.meetingSummaryFlowApiName,
+            eventId:              this._selectedEventId         || '',
+            accountId:            this._resolvedPrimaryMemberId || '',
+            documentId1:          files[0]?.documentId          || '',
+            documentId2:          files[1]?.documentId          || '',
+            notes:                this._freeText                || '',
+            instructions:         this.userInstructions         || '',
+            transcriptDocumentId: this.transcriptDocumentIdForFlow,
+            meetingType:          this._selectedMeetingType     || '',
+            hasTodos:             true
         };
         this._generateTodos(flowParams);
     }
@@ -3456,47 +3500,40 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
             return;
         }
 
-        // Build additionalContext — free text, event details, selected action items
-        let context = '';
-        if (this._freeText) context += this._freeText + '\n\n';
-
-        if (this._selectedEventId) {
-            const evt = (this.inputEvents || []).find(e => e.Id === this._selectedEventId);
-            if (evt) {
-                context += `--- Meeting Event ---\nSubject: ${evt.Subject || ''}\n`;
-                context += `Date: ${evt.ActivityDate || evt.StartDateTime || ''}\n`;
-                if (evt.Description) context += `Notes: ${evt.Description}\n`;
-                if (this._selectedMeetingType) {
-                            context += `Meeting Category: ${MEETING_TYPE_LABELS[this._selectedMeetingType] || this._selectedMeetingType}\n`;
-                }
-                if (this._hasTodos) context += `Include: To-Do's\n`;
-                context += '\n';
-            }
-        }
-
+        // Build notes — advisor free text and selected action items
+        let wpNotes = this._freeText || '';
         if (this.selectedTaskCount > 0) {
-            context += '--- Selected Action Items ---\n';
+            let taskLines = '';
             (this.inputTasks || []).forEach(t => {
                 if (this._selectedTaskIds[t.Id]) {
-                    context += `- ${t.Subject || 'Task'} (${t.Status || 'Open'})${t.Description ? ': ' + t.Description : ''}\n`;
+                    taskLines += `- ${t.Subject || 'Task'} (${t.Status || 'Open'})${t.Description ? ': ' + t.Description : ''}\n`;
                 }
             });
-            context += '\n';
+            if (taskLines) wpNotes += (wpNotes ? '\n\n' : '') + '--- Selected Action Items ---\n' + taskLines;
         }
 
-        // Meeting note passed as a dedicated flow variable (MeetingNoteText), not embedded in context
+        // Meeting note passed as a dedicated flow variable (MeetingNoteText), not embedded in notes
         const meetingNoteText = (this._includeMeetingSummary)
             ? (this._currentNoteHtml ?? this.selectedEventNote?.Note__c ?? '')
             : '';
 
-        // Up to 3 document IDs: artifact selections first, then uploaded doc files
-        const allDocIds = [
-            ...[...this._selectedArtifactFileIds],
-            ...this._sharedFiles.map(f => f.documentId)
-        ];
-        const docId1 = allDocIds[0] || '';
-        const docId2 = allDocIds[1] || '';
-        const docId3 = allDocIds[2] || '';
+        // Separate attachments (max 2) from transcript (.txt, max 1)
+        const wpAttachDocIds = [];
+        let wpTranscriptDocId = '';
+        for (const id of [...this._selectedArtifactFileIds]) {
+            if (wpAttachDocIds.length >= 2) break;
+            wpAttachDocIds.push(id);
+        }
+        for (const f of this._sharedFiles) {
+            if (!f.included) continue;
+            if (_fileKind(f.extension) === 'txt') {
+                if (!wpTranscriptDocId) wpTranscriptDocId = f.documentId;
+            } else if (wpAttachDocIds.length < 2) {
+                wpAttachDocIds.push(f.documentId);
+            }
+        }
+        const docId1 = wpAttachDocIds[0] || '';
+        const docId2 = wpAttachDocIds[1] || '';
 
         this._cancelled = false;
         this._wpGenerating = true;
@@ -3508,14 +3545,15 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
             const tasks = [];
             if (this._modeWealthPlan) {
                 tasks.push(generateSummary({
-                    flowApiName:       this.flowApiName,
-                    documentId1:       docId1,
-                    documentId2:       docId2,
-                    documentId3:       docId3,
-                    additionalContext: context       || '',
-                    meetingNoteText:   meetingNoteText || ''
-                    // eventId, accountId, saveDocNAsArtifact intentionally omitted —
-                    // Apex receives null → isNotBlank / != null guards skip them → not injected into flow
+                    flowApiName:          this.flowApiName,
+                    documentId1:          docId1,
+                    documentId2:          docId2,
+                    notes:                wpNotes,
+                    instructions:         this.userInstructions  || '',
+                    transcriptDocumentId: wpTranscriptDocId,
+                    meetingNoteText:      meetingNoteText || ''
+                    // eventId, accountId intentionally omitted —
+                    // Apex receives null → isNotBlank guards skip them → not injected into flow
                 }).then(r => ({ kind: 'wealthplan', value: r })));
             }
 
