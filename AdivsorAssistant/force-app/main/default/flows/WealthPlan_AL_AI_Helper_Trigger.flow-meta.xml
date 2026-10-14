@@ -5,7 +5,7 @@
         <label>WealthPlan - AI Create And Edit V3 (No Docs)</label>
         <locationX>0</locationX>
         <locationY>0</locationY>
-        <actionName>WealthPlan_AI_Create_And_Edit_V3</actionName>
+        <actionName>WealthPlan_AI_Create_And_Edit_V3_NoDocs</actionName>
         <actionType>generatePromptResponse</actionType>
         <connector>
             <targetReference>END_ELEMENT_5</targetReference>
@@ -35,7 +35,7 @@
                 <inputConfiguratorMode>Resource</inputConfiguratorMode>
             </value>
         </inputParameters>
-        <nameSegment>WealthPlan_AI_Create_And_Edit_V3</nameSegment>
+        <nameSegment>WealthPlan_AI_Create_And_Edit_V3_NoDocs</nameSegment>
         <offset>0</offset>
         <outputParameters>
             <assignToReference>GeneratedSummary</assignToReference>

@@ -1,0 +1,267 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<GenAiPromptTemplate xmlns="http://soap.sforce.com/2006/04/metadata">
+    <developerName>WealthPlan_AI_Create_And_Edit_V3_NoDocs</developerName>
+    <masterLabel>WealthPlan - AI Create And Edit V3 (No Documents)</masterLabel>
+    <overridable>false</overridable>
+    <templateVersions>
+        <content>Extract information from the input and structure it into Wealth Plan sections.
+
+Input: 
+Manual Input and Instructions: {!$Input:Additional_Context}
+Meeting Note: {!$Input:MeetingNoteText}
+TextFile Input: {!$Input:TextFileInput}
+
+Create a combined output for Goals, Income, Assets &amp; Liabilities, Milestones, Company Ownership, Sustainability Preferences, Personal Greeting, and Action Items.
+GLOBAL SCOPE: Read the entire input text carefully. You must evaluate the context to find and extract data for Sections 1-6 and 8. For Section 7, you will generate a personalized greeting based on the extracted data.
+
+═══════════════════════════════════
+SECTION 1: GOALS
+═══════════════════════════════════
+
+From the input text, create a record for each distinct goal item you find, with:
+- &quot;category&quot; — MUST be one of the exact fixed categories below.
+- &quot;description&quot; — one concise sentence (20–35 words).
+- &quot;status&quot; — always &quot;Not Started&quot;.
+- &quot;customGoal&quot; — if category is &quot;Other&quot;, provide a 5–10 word phrase; otherwise &quot;&quot;.
+
+Section Scope
+Scan the ENTIRE input text. Look for any statements where the client discusses future aspirations, financial objectives, planned purchases, lifestyle targets, or wealth planning needs. Extract these as Goals.
+
+Fixed Goal Categories (exact strings):
+Secure the next generation&apos;s future | Help the children financially | Help the grandchildren financially | Live well in old age | Flexibility for consumption and unforseen events | Further develop business | Contribute in developing new businesses | Spend time on what&apos;s important | Give something back | Purchase &quot;the dream&quot; | Sustainable investing | Maintain value of past work | Be day-to-day financially independet of the portfolio | Financing day-to-day cost of living | Enable the next generation to take over | Other
+
+═══════════════════════════════════
+SECTION 2: INCOME
+═══════════════════════════════════
+
+From the input text, create a record for each distinct income source, with:
+- &quot;name&quot; — descriptive name (e.g., &quot;Salary - Anne&quot;).
+- &quot;type&quot; — MUST be one of the exact fixed types below.
+- &quot;customType&quot; — if type is &quot;Other&quot;, short description; otherwise &quot;&quot;.
+- &quot;amount&quot; — annual amount as a number. Monthly × 12. If unknown, use 0.
+
+Section Scope
+Scan the ENTIRE input text. Look for any statements regarding money the client currently earns, receives, or expects to receive. Extract these as Income.
+
+Fixed Income Types (exact strings):
+Salary | Pension | Rental Income | Dividends | Interest Income | Business Income | Social Benefits | Other
+
+═══════════════════════════════════
+SECTION 3: ASSETS &amp; LIABILITIES
+═══════════════════════════════════
+
+From the input text, create a record for each distinct asset or liability, with:
+- &quot;name&quot; — descriptive name (e.g., &quot;Primary Residence - Oslo&quot;, &quot;Mortgage - DNB&quot;).
+- &quot;assetLiabilityType&quot; — MUST be exactly &quot;Asset&quot; or &quot;Liability&quot;.
+- &quot;type&quot; — sub-type (e.g., &quot;Real Estate&quot;, &quot;Cash&quot;, &quot;Mortgage&quot;, &quot;Listed Securities&quot;).
+- &quot;category&quot; — further classification or &quot;&quot;.
+- &quot;amount&quot; — number. Assets positive. Liabilities NEGATIVE. If unknown, use 0.
+- &quot;description&quot; — brief context or &quot;&quot;.
+
+Section Scope
+Scan the ENTIRE input text. Look for any statements regarding things the client owns (properties, investments, cash balances, vehicles) or owes (mortgages, loans, debt). Extract these as Assets &amp; Liabilities.
+
+═══════════════════════════════════
+SECTION 4: MILESTONES
+═══════════════════════════════════
+
+From the input text, create a record for each distinct milestone, with:
+- &quot;name&quot; — short title (e.g., &quot;Retirement - Anne&quot;, &quot;Sell Medisindata AS&quot;).
+- &quot;year&quot; — 4-digit string. &quot;in X years&quot; → calculate 2026 + X.
+- &quot;description&quot; — one sentence about event and financial impact.
+- &quot;additionalInfo&quot; — extra context or &quot;&quot;.
+
+Section Scope
+Scan the ENTIRE input text. Look for any statements regarding future life events, planned transitions, or key timeline events. Extract these as Milestones.
+
+═══════════════════════════════════
+SECTION 5: COMPANY OWNERSHIP
+═══════════════════════════════════
+
+From the input text, create a record for each distinct ownership relationship, with:
+- &quot;companyOwned&quot; — name of the company being owned (e.g., &quot;Hageveien 4 Holding AS&quot;).
+- &quot;companyOwner&quot; — name of the person or entity that owns it (e.g., &quot;Anne Sterner&quot;).
+- &quot;percentage&quot; — ownership percentage as a number (e.g., 50). If unknown, use 0.
+- &quot;beneficialOwner&quot; — true if the owner is identified as a beneficial owner (reell rettighetshaver); otherwise false.
+- &quot;stockClass&quot; — share class if mentioned (e.g., &quot;A&quot;, &quot;B&quot;); otherwise &quot;&quot;.
+- &quot;comment&quot; — any additional context or &quot;&quot;.
+
+Section Scope
+Scan the ENTIRE input text. Look for any statements describing corporate structures, who owns which company, shareholding percentages, or beneficial ownership. Extract these as Company Ownership.
+
+Ownership Rules
+1. Each ownership relationship is a separate record (company A owned by person B = 1 record).
+2. If one company is owned by multiple people, create a record for EACH owner.
+3. If the text shows a corporate structure diagram, flatten it into individual ownership rows.
+
+═══════════════════════════════════
+SECTION 6: SUSTAINABILITY PREFERENCES
+═══════════════════════════════════
+
+From the input text, create a record for each distinct sustainability preference, with:
+- &quot;name&quot; — a descriptive name (e.g., &quot;ESG Integration - Main Portfolio&quot;).
+- &quot;preference&quot; — the main preference type (e.g., &quot;Yes&quot;, &quot;No&quot;, &quot;Partial&quot;).
+- &quot;engagementStrategy&quot; — how the client wants to engage (e.g., &quot;Active ownership&quot;, &quot;Exclusion&quot;).
+- &quot;investmentsShare&quot; — target share of sustainable investments (e.g., &quot;Over 50%&quot;, &quot;100%&quot;).
+- &quot;negativeImpacts&quot; — approach to negative impacts (e.g., &quot;Yes, consider&quot;, &quot;No preference&quot;).
+- &quot;themes&quot; — specific themes as semicolon-separated string (e.g., &quot;Climate;Biodiversity;Social equality&quot;).
+- &quot;advisorComment&quot; — advisor observations or client quotes about sustainability.
+
+Section Scope
+Scan the ENTIRE input text. Look for discussions about ESG, sustainable investing, climate goals, or ethical investment preferences. Extract these as Sustainability Preferences.
+
+Sustainability Rules
+1. If only one preference is described, create one record.
+2. Themes MUST be semicolon-separated (;) not comma-separated.
+
+═══════════════════════════════════
+SECTION 7: PERSONAL GREETING
+═══════════════════════════════════
+
+CREATE a personalized greeting summarizing the client&apos;s wealth plan based on the input text.
+
+Create a single record with:
+- &quot;subject&quot; — a title or subject line (e.g., &quot;Welcome to your Wealth Plan&quot;).
+- &quot;greeting&quot; — the full generated greeting text.
+- &quot;active&quot; — always true.
+
+Greeting Generation Rules
+1. If the input text ALREADY contains an explicit drafted greeting from the advisor, extract and use that. Otherwise, GENERATE a new one.
+2. Tone: Professional, welcoming, and advisory (acting as their wealth advisor).
+3. Structure the text to include:
+ - A warm welcome addressing the client(s) by name.
+ - A brief summary of their wealth history or current situation (e.g., company ownership, career).
+ - A summary of their most important goals and milestones extracted earlier.
+ - Mention of next steps or ongoing collaboration.
+ - A polite sign-off from the advisor.
+4. Do NOT hallucinate facts; only use the data found in the input text to populate the summary.
+
+═══════════════════════════════════
+SECTION 8: ACTION ITEMS / TO-DOS
+═══════════════════════════════════
+
+From the input text, create a record for each distinct action item, with:
+- &quot;subject&quot; — short task title (e.g., &quot;Send updated portfolio proposal&quot;, &quot;Schedule follow-up with Anne&quot;).
+- &quot;description&quot; — fuller description of what needs to be done.
+- &quot;dueDate&quot; — date as YYYY-MM-DD string if mentioned; otherwise &quot;&quot;.
+- &quot;priority&quot; — &quot;High&quot;, &quot;Normal&quot;, or &quot;Low&quot; based on urgency cues. Default &quot;Normal&quot;.
+- &quot;status&quot; — always &quot;Not Started&quot;.
+
+Section Scope
+Read the ENTIRE input and identify any action items, follow-ups, tasks, or commitments mentioned anywhere (not limited to a specific heading).
+
+To-Do Rules
+1. Scan ALL sections for action items — they may appear in goals, meeting notes, milestones, or anywhere.
+2. Look for cue words: &quot;must&quot;, &quot;should&quot;, &quot;need to&quot;, &quot;follow up&quot;, &quot;action&quot;, &quot;task&quot;, &quot;deadline&quot;, &quot;arrange&quot;, &quot;send&quot;, &quot;schedule&quot;, &quot;review&quot;.
+3. If a deadline mentions &quot;next week&quot; or &quot;within 30 days&quot;, calculate from today (assume current date is 2026-04-09).
+4. Create a separate record for EVERY distinct action item.
+
+═══════════════════════════════════
+OUTPUT INSTRUCTIONS
+═══════════════════════════════════
+
+CRITICAL RULES:
+1. Return a SINGLE valid JSON object with the exact structure below.
+2. Do NOT include markdown formatting (no ```json or ```).
+3. Do NOT include any text before or after the JSON.
+4. LANGUAGE RULE: All free-text fields (descriptions, names, custom fields, comments, greetings, and subjects) MUST be returned in the EXACT SAME LANGUAGE as the input text. However, fixed picklist fields (&quot;category&quot;, &quot;type&quot;, &quot;status&quot;, &quot;assetLiabilityType&quot;, &quot;priority&quot;) MUST use the exact predefined English strings from this prompt, regardless of the input language.
+5. If a section has no data, return an empty array [] for that section.
+6. Create MULTIPLE records in the arrays if multiple items are found — never merge.
+
+### JSON STRUCTURE TEMPLATE ###
+{
+ &quot;goals&quot;: [
+ {
+ &quot;category&quot;: &quot;[Insert exact fixed category]&quot;,
+ &quot;description&quot;: &quot;[Insert paraphrased sentence]&quot;,
+ &quot;status&quot;: &quot;Not Started&quot;,
+ &quot;customGoal&quot;: &quot;[Insert phrase or empty string]&quot;
+ }
+ ],
+ &quot;income&quot;: [
+ {
+ &quot;name&quot;: &quot;[Insert descriptive name]&quot;,
+ &quot;type&quot;: &quot;[Insert exact fixed type]&quot;,
+ &quot;customType&quot;: &quot;[Insert description or empty string]&quot;,
+ &quot;amount&quot;: 0
+ }
+ ],
+ &quot;assets&quot;: [
+ {
+ &quot;name&quot;: &quot;[Insert descriptive name]&quot;,
+ &quot;assetLiabilityType&quot;: &quot;Asset&quot;,
+ &quot;type&quot;: &quot;[Insert sub-type]&quot;,
+ &quot;category&quot;: &quot;[Insert classification or empty string]&quot;,
+ &quot;amount&quot;: 0,
+ &quot;description&quot;: &quot;[Insert description or empty string]&quot;
+ }
+ ],
+ &quot;milestones&quot;: [
+ {
+ &quot;name&quot;: &quot;[Insert event title]&quot;,
+ &quot;year&quot;: &quot;2026&quot;,
+ &quot;description&quot;: &quot;[Insert sentence]&quot;,
+ &quot;additionalInfo&quot;: &quot;[Insert extra context or empty string]&quot;
+ }
+ ],
+ &quot;ownership&quot;: [
+ {
+ &quot;companyOwned&quot;: &quot;[Insert company name]&quot;,
+ &quot;companyOwner&quot;: &quot;[Insert owner name]&quot;,
+ &quot;percentage&quot;: 0,
+ &quot;beneficialOwner&quot;: false,
+ &quot;stockClass&quot;: &quot;[Insert share class or empty string]&quot;,
+ &quot;comment&quot;: &quot;[Insert comment or empty string]&quot;
+ }
+ ],
+ &quot;sustainability&quot;: [
+ {
+ &quot;name&quot;: &quot;[Insert descriptive name]&quot;,
+ &quot;preference&quot;: &quot;[Insert preference value]&quot;,
+ &quot;engagementStrategy&quot;: &quot;[Insert strategy or empty string]&quot;,
+ &quot;investmentsShare&quot;: &quot;[Insert share or empty string]&quot;,
+ &quot;negativeImpacts&quot;: &quot;[Insert approach or empty string]&quot;,
+ &quot;themes&quot;: &quot;[Insert semicolon-separated themes or empty string]&quot;,
+ &quot;advisorComment&quot;: &quot;[Insert text or empty string]&quot;
+ }
+ ],
+ &quot;greetings&quot;: [
+ {
+ &quot;subject&quot;: &quot;[Insert title]&quot;,
+ &quot;greeting&quot;: &quot;[Insert full text]&quot;,
+ &quot;active&quot;: true
+ }
+&lt;
+ ]
+}
+</content>
+        <fileDroppingStrategy>{&quot;dropFilesBy&quot;:&quot;LAST_MODIFIED_DATE&quot;,&quot;dropFileStartingWith&quot;:&quot;OLDEST&quot;}</fileDroppingStrategy>
+        <inputs>
+            <apiName>Additional_Context</apiName>
+            <definition>primitive://String</definition>
+            <masterLabel>Additional Context</masterLabel>
+            <referenceName>Input:Additional_Context</referenceName>
+            <required>false</required>
+        </inputs>
+        <inputs>
+            <apiName>MeetingNoteText</apiName>
+            <definition>primitive://String</definition>
+            <masterLabel>MeetingNoteText</masterLabel>
+            <referenceName>Input:MeetingNoteText</referenceName>
+            <required>false</required>
+        </inputs>
+        <inputs>
+            <apiName>TextFileInput</apiName>
+            <definition>primitive://String</definition>
+            <masterLabel>TextFileInput</masterLabel>
+            <referenceName>Input:TextFileInput</referenceName>
+            <required>false</required>
+        </inputs>
+        <isCitationEnabled>false</isCitationEnabled>
+        <primaryModel>sfdc_ai__DefaultVertexAIGeminiPro25</primaryModel>
+        <status>Published</status>
+        <templateFormat>FormulaExpression</templateFormat>
+    </templateVersions>
+    <type>einstein_gpt__flex</type>
+    <visibility>Global</visibility>
+</GenAiPromptTemplate>
