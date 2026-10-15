@@ -79,9 +79,24 @@ summary HTML  →   meetingNoteText   →   MeetingNoteText     →  MeetingNote
 
 ### The transcript is extracted in Apex, not in the Flow
 
-`MeetingSummaryController.extractTranscriptText()` reads the latest `ContentVersion` of the
-`.txt` document and passes **plain text** as `Transcription`. The Flows do not read the file
-themselves. This is deliberate: it keeps one implementation instead of two.
+`MeetingSummaryController.extractTranscriptText()` reads the latest `ContentVersion` of the `.txt`
+document and passes **plain text** as `Transcription`. The Flows no longer read the file themselves.
+
+**Why Apex rather than the Flow.** The Flow version was never flow-native anyway — it was four
+elements (`Get_Content_Document_TEXT` → a decision → `GET_ContentVersion` →
+`Convert_TEXT_File_to_String`) orchestrating an **Apex invocable**. Moving it into the controller
+replaces that with one method: two fewer SOQL queries per generation, no `VersionData` blob loaded
+into Flow heap, and logic that Apex tests can cover.
+
+**The trade-off, which is real:** extraction now happens in the *caller*. These Flows only work
+when started by `Flow.Interview.createInterview` from the controller. If one is ever invoked from
+another Flow or a record-triggered Flow, `Transcription` arrives empty — silently, like every other
+missing input. Keep that in mind before reusing these Flows elsewhere.
+
+> Both Flows carried this chain until recently. In `MeetingSummary_TRG_AI_Summary_Create` it ran on
+> every generation and **discarded its result** — `formTranscription` reads the Apex-supplied
+> `Transcription` input, and the converted text was referenced nowhere. Two SOQL queries and an
+> Apex invocable per run, for nothing. Removed.
 
 ### Unknown keys are silently dropped
 

@@ -1,30 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Flow xmlns="http://soap.sforce.com/2006/04/metadata">
     <actionCalls>
-        <name>Convert_TEXT_File_to_String</name>
-        <label>Convert TEXT File to String</label>
-        <locationX>0</locationX>
-        <locationY>0</locationY>
-        <actionName>ConvertBlobToString</actionName>
-        <actionType>apex</actionType>
-        <connector>
-            <targetReference>Assign_Values</targetReference>
-        </connector>
-        <faultConnector>
-            <targetReference>Assign_Fault</targetReference>
-        </faultConnector>
-        <flowTransactionModel>Automatic</flowTransactionModel>
-        <inputParameters>
-            <name>contentVersionIds</name>
-            <value>
-                <elementReference>GET_ContentVersion.Id</elementReference>
-            </value>
-        </inputParameters>
-        <nameSegment>ConvertBlobToString</nameSegment>
-        <offset>0</offset>
-        <storeOutputAutomatically>true</storeOutputAutomatically>
-    </actionCalls>
-    <actionCalls>
         <name>Wealth_Plan_AI_Helper_2_5_Meeting_Summary_No_Docs</name>
         <label>Wealth Plan AI Helper 2.6 (Meeting Summary) No Docs</label>
         <locationX>0</locationX>
@@ -662,31 +638,6 @@
         </rules>
     </decisions>
     <decisions>
-        <name>DEC_Check_Text_File_Exist</name>
-        <label>DEC Check Text File Exist</label>
-        <locationX>0</locationX>
-        <locationY>0</locationY>
-        <defaultConnector>
-            <targetReference>Assign_Values</targetReference>
-        </defaultConnector>
-        <defaultConnectorLabel>Default Outcome</defaultConnectorLabel>
-        <rules>
-            <name>TEXT_File_Exists</name>
-            <conditionLogic>and</conditionLogic>
-            <conditions>
-                <leftValueReference>Get_Content_Document_TEXT</leftValueReference>
-                <operator>IsNull</operator>
-                <rightValue>
-                    <booleanValue>false</booleanValue>
-                </rightValue>
-            </conditions>
-            <connector>
-                <targetReference>GET_ContentVersion</targetReference>
-            </connector>
-            <label>TEXT File Exists</label>
-        </rules>
-    </decisions>
-    <decisions>
         <name>DEC_Counter</name>
         <label>DEC Counter</label>
         <locationX>0</locationX>
@@ -898,7 +849,7 @@
         <locationY>0</locationY>
         <assignNullValuesIfNoRecordsFound>false</assignNullValuesIfNoRecordsFound>
         <connector>
-            <targetReference>Get_Content_Document_TEXT</targetReference>
+            <targetReference>Assign_Values</targetReference>
         </connector>
         <faultConnector>
             <targetReference>Assign_Fault</targetReference>
@@ -919,37 +870,6 @@
             </value>
         </filters>
         <getFirstRecordOnly>false</getFirstRecordOnly>
-        <object>ContentDocument</object>
-        <storeOutputAutomatically>true</storeOutputAutomatically>
-    </recordLookups>
-    <recordLookups>
-        <name>Get_Content_Document_TEXT</name>
-        <label>Get Content Document TEXT</label>
-        <locationX>0</locationX>
-        <locationY>0</locationY>
-        <assignNullValuesIfNoRecordsFound>false</assignNullValuesIfNoRecordsFound>
-        <connector>
-            <targetReference>DEC_Check_Text_File_Exist</targetReference>
-        </connector>
-        <faultConnector>
-            <targetReference>Assign_Fault</targetReference>
-        </faultConnector>
-        <filterLogic>and</filterLogic>
-        <filters>
-            <field>Id</field>
-            <operator>In</operator>
-            <value>
-                <elementReference>varContentDocColl</elementReference>
-            </value>
-        </filters>
-        <filters>
-            <field>FileType</field>
-            <operator>EqualTo</operator>
-            <value>
-                <stringValue>TEXT</stringValue>
-            </value>
-        </filters>
-        <getFirstRecordOnly>true</getFirstRecordOnly>
         <object>ContentDocument</object>
         <storeOutputAutomatically>true</storeOutputAutomatically>
     </recordLookups>
@@ -975,37 +895,6 @@
         </filters>
         <getFirstRecordOnly>false</getFirstRecordOnly>
         <object>ContentDocumentLink</object>
-        <storeOutputAutomatically>true</storeOutputAutomatically>
-    </recordLookups>
-    <recordLookups>
-        <name>GET_ContentVersion</name>
-        <label>GET ContentVersion</label>
-        <locationX>0</locationX>
-        <locationY>0</locationY>
-        <assignNullValuesIfNoRecordsFound>false</assignNullValuesIfNoRecordsFound>
-        <connector>
-            <targetReference>Convert_TEXT_File_to_String</targetReference>
-        </connector>
-        <faultConnector>
-            <targetReference>Assign_Fault</targetReference>
-        </faultConnector>
-        <filterLogic>and</filterLogic>
-        <filters>
-            <field>ContentDocumentId</field>
-            <operator>EqualTo</operator>
-            <value>
-                <elementReference>Get_Content_Document_TEXT.Id</elementReference>
-            </value>
-        </filters>
-        <filters>
-            <field>IsLatest</field>
-            <operator>EqualTo</operator>
-            <value>
-                <booleanValue>true</booleanValue>
-            </value>
-        </filters>
-        <getFirstRecordOnly>true</getFirstRecordOnly>
-        <object>ContentVersion</object>
         <storeOutputAutomatically>true</storeOutputAutomatically>
     </recordLookups>
     <recordLookups>
