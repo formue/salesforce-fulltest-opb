@@ -385,3 +385,124 @@ Expected — see §10.
 - **Production runs all local tests** and any failure anywhere in the org fails the deploy.
 - Renaming a Flow is **high risk**: the `*FlowApiName` properties live in page configuration outside
   source control, so a rename passes every validation and silently breaks production.
+
+---
+
+## 13. Future work, technical debt and cleanup
+
+Everything below is known and deliberate. Nothing here is blocking day-to-day use; it is recorded so
+the next person does not have to rediscover it.
+
+### 13.1 Safe to delete
+
+| Item | Size / scope | Caveat before deleting |
+|---|---|---|
+| `wealthPlanHelper` LWC | ~4,800 lines | Rendered by **zero** templates, but `isExposed=true` — confirm it is not placed on a Flow screen or App Builder page in **production** first |
+| `handleGenerateTodosDirect`, `handleCancelGenerateOverwrite` | 4 handlers across `advisorWealthPlan` and `advisorAssistant` | Verified dead: not `@api`, zero template bindings, definition-only |
+| `WealthPlan_AL_WealthPlan_Create_and_Update` | 1 Flow | Superseded by `_V2`; confirm nothing still points at V1 |
+| `Wealth_Plan_AI_Helper_2_5_Meeting_Summary` | 1 template | No Flow binds it — it survives only as an *action label*. Do not include it in deployments |
+| `MeetingContext` + the `typeLabels` map in Apex | ~12 lines | Computed on every call; **no Flow declares `MeetingContext`**, so it is discarded |
+| `AdditionalContext` compatibility put | 1 line | Both Flows now read `Notes`. The code comment marks it removable |
+| `MeetingType`, `HasTodos`, `SaveDoc1AsArtifact`, `SaveDoc2AsArtifact` | 4 puts | Declared by no Flow; silently dropped. Removing the parameters changes signatures, so check callers |
+| `Documents_3_To_do` branch | 1 decision rule + 1 action | Unreachable: `generateMeetingTodos` sends only `documentId1`/`documentId2`, so the count never reaches 3 |
+| 13 `System.debug` calls | `MeetingSummaryController` | Includes `System.debug('saveTodos — todosJson: ' + todosJson)` — full payloads into the log on every save |
+| `amlIntelligenceTabs` LWC | 1 bundle | **Not part of this app.** Swept into commit `ed5ac3b` by mistake; belongs to another team |
+
+### 13.2 Known defects
+
+| Defect | Impact | Fix |
+|---|---|---|
+| **Zero-document generation fails** | Advisor cannot generate from notes alone | A prompt template variant without `RecordSnapshot:Document_*` grounding; the Flow's No-Docs branch then needs only an `actionName` change |
+| **`extractTranscriptText` swallows all failures** | The transcript — the most valuable prompt input — can vanish with no trace | Log the reason, and surface it through `DebugLog` |
+| **`Working Meeting` stores `Other`** | Wrong data written to a restricted picklist | Add `Prospect Meeting` / `Working Meeting` to `Event.MeetingType__c`, migrate the 3 `Whiteboard Meeting` records, **then** update `MEETING_TYPE_STORED`. Order matters: changing the code first makes saves fail |
+| **`advisorWealthPlan` has no per-kind file cap** | Can auto-select three non-text files; the Flow uses two and ignores the third | Port `MAX_ATTACHMENTS` / `_fileSlots` from the other two components, and replace the flat `.slice(0, 3)` auto-select |
+| **`outputLanguage` bound on one action only** | Language pill has no effect except on summary No-Docs | Bind it on the remaining summary and to-do actions |
+
+### 13.3 Improvements worth making
+
+**1. A contract-check script — highest value, zero production risk.**
+
+Nearly every defect in this system has been a silent contract break between layers. A script run in
+CI would catch them mechanically:
+
+- every `flowInputs.put('X', …)` in Apex ↔ an `isInput` variable on the target Flow
+- every `Input:X` binding in a Flow ↔ a real input on that prompt template
+  (templates **are** retrievable: `sf project retrieve start -m GenAiPromptTemplate:<name>`)
+- every `@api` on a child LWC ↔ actually passed by the parent, plus a diff between sibling tags
+- every Flow element has an **incoming connection** — orphans break Flow Builder's auto-layout
+- every CSS `var(--token)` ↔ a token that is actually defined somewhere
+
+Each bullet corresponds to a defect that has already happened at least once.
+
+**2. One shared input builder in Apex.**
+
+`generateSummary` and `generateMeetingTodos` build their flow-input maps independently with ~80%
+overlap. That is exactly how `AdditionalContext` ended up in one and not the other, and how
+`Transcription` reached the summary prompt but not the to-do prompt. Extract one private builder;
+keep the same number of classes.
+
+**3. Split to-do generation into its own Flow.**
+
+`MeetingSummary_TRG_AI_Summary_Create` serves both paths via `GenerateMode`, and the two branches
+already use **different prompt templates with different input conventions** — they are only
+nominally one Flow. Today, editing the to-do branch produces a new version containing the working
+summary actions, so every change must be proven safe by diffing action-by-action.
+
+**4. De-duplicate the sibling LWCs — in thin slices.**
+
+`advisorMeetingSummary` (499 members) and `advisorWealthPlan` (472) share **466 member names**; 418
+exist in all three components. They are forks, not siblings, and this is the direct cause of the
+missing-attribute class of bug. Extract one cohesive area at a time — file selection, then payload
+building, then Markdown — each with tests before and after. **Not a big-bang rewrite:** a previous
+broad cleanup was reverted after a UI regression.
+
+**5. Strengthen the Apex tests.**
+
+The suite is weighted toward invalid-flow exception paths — cheap coverage that does not verify the
+thing that actually breaks. A test asserting the exact **key set** passed to `flowInputs` would have
+caught the `Notes` / `AdditionalContext` mismatch immediately. `readFlowResult`'s error-surfacing
+path is also uncovered, since it needs a Flow that sets `ErrorMessage`.
+
+### 13.4 Renaming — considered and deliberately deferred
+
+The naming is inconsistent and it is fair to want it fixed:
+
+| Layer | Inconsistency |
+|---|---|
+| Flows | Three prefixes for one app (`AdvisorAssistant_`, `MeetingSummary_`, `WealthPlan_`); `_TRG_` / `_AL_` / `_SCR_` infixes that do not describe what the Flow is |
+| Templates | `Wealth_Plan_…` vs `WealthPlan_…` — the app name spelled two ways; versions as `_2_6_`, `_V4`, `_v2` |
+| Apex | `MeetingSummaryController` also handles wealth plans, to-do's, notes, files and versions |
+
+**Recommendation: do not rename Flows or templates.**
+
+The ten `*FlowApiName` values are page configuration and **live outside source control**. Rename a
+Flow and every validation passes, every test passes, the deploy succeeds — and the component
+silently stops working in production because a property still points at the old name. That is the
+same failure mode as every other defect here, multiplied across twenty components. Salesforce also
+does not truly rename: it creates new and leaves old, updating no references.
+
+**What to do instead:**
+
+1. Document the convention — including that `_TRG_` is historical — so drift stops growing.
+2. Apply it to **new** components only.
+3. Take the one safe rename if desired: `MeetingSummaryController` → `AdvisorAssistantController`.
+   Apex class references live only in LWC imports, which are in source control, so the compiler
+   catches every miss. This is the only rename here that cannot fail silently.
+4. Prefer **deleting** over renaming where possible (§13.1).
+
+If a full rename is ever wanted, the contract-check script (§13.3) is the prerequisite — it turns a
+silent production break into a loud CI failure.
+
+### 13.5 Housekeeping
+
+- **`amlIntelligenceTabs` is inside commit `ed5ac3b`** — 3,600 lines of another team's work, swept
+  in by a directory-wide `git add`. Split it out or acknowledge it.
+- **`ADVISOR_ASSISTANT.md` section 8 is stale** — its Apex API and Flow I/O tables still describe
+  `currentSummary`, `MeetingBrief` and `AdditionalContext`. Sections 1–7 remain good design
+  rationale. This document supersedes section 8.
+- **Only `UserAIInstruction__c` is in `objects/`.** `MeetingNote__c`, `MeetingNoteVersion__c` and the
+  rest exist only in the org, so they cannot be recreated from source.
+- **`StrategyAllocationHubControllerTest` currently fails** — unrelated to this app, but production
+  runs all local tests, so it blocks every deploy until its owner fixes it.
+- **Jest coverage is thin** — 34 tests, covering the Markdown converter and wealth plan parsing
+  only. The file-selection and payload-building logic, where the recent bugs were, has none.
