@@ -1,0 +1,356 @@
+<template>
+    <div class={rootClass}>
+        <!-- ── Search ───────────────────────────────────────────────────── -->
+        <lightning-input
+            type="search"
+            label="Find any account"
+            placeholder="Search by account name"
+            value={searchTerm}
+            role="combobox"
+            aria-expanded={hasResults}
+            aria-controls="al-listbox"
+            aria-activedescendant={activeDescendant}
+            field-level-help="Shows a limited view of all accounts. Standard search only shows accounts you own or are a team member of."
+            onchange={handleSearchChange}
+            onkeydown={handleSearchKeyDown}
+        ></lightning-input>
+
+        <div class="al-scopes" role="group" aria-label="Which customers to search">
+            <template for:each={scopeOptions} for:item="option">
+                <button
+                    key={option.value}
+                    class={option.cssClass}
+                    data-value={option.value}
+                    title={option.title}
+                    onclick={handleScopeClick}
+                >{option.label}</button>
+            </template>
+        </div>
+
+        <p class="al-helper">
+            <template lwc:if={isNarrowedScope}>
+                <span>Searching {scopeLabel} only.</span>
+            </template>
+            <template lwc:else>
+                <span>Limited view of every account.</span>
+            </template>
+            <span class="al-hint">
+                <span class="al-kbd">Ctrl</span><span class="al-kbd">K</span> search ·
+                <span class="al-kbd">↑</span><span class="al-kbd">↓</span> move ·
+                <span class="al-kbd">Enter</span> open
+            </span>
+        </p>
+
+        <!-- Announced to screen readers; the same information is shown visually below. -->
+        <div class="slds-assistive-text" aria-live="polite" role="status">{statusMessage}</div>
+
+        <!-- ── Recent ───────────────────────────────────────────────────── -->
+        <template lwc:if={showRecent}>
+            <div class="al-recent">
+                <div class="al-recent-head">
+                    <span>Recent</span>
+                    <button class="al-link" onclick={handleClearRecent}>Clear</button>
+                </div>
+
+                <template lwc:if={hasRecentAccounts}>
+                    <div class="al-chips">
+                        <template for:each={recentAccounts} for:item="account">
+                            <button
+                                key={account.id}
+                                class="al-chip al-chip_account"
+                                data-id={account.id}
+                                onclick={handleRecentAccountClick}
+                            >
+                                <lightning-icon icon-name="utility:clock" size="xx-small"></lightning-icon>
+                                {account.name}
+                            </button>
+                        </template>
+                    </div>
+                </template>
+
+                <template lwc:if={hasRecentSearches}>
+                    <div class="al-chips">
+                        <template for:each={recentSearches} for:item="term">
+                            <button
+                                key={term}
+                                class="al-chip"
+                                data-term={term}
+                                onclick={handleRecentClick}
+                            >{term}</button>
+                        </template>
+                    </div>
+                </template>
+            </div>
+        </template>
+
+        <!-- ── Household breadcrumb ─────────────────────────────────────── -->
+        <template lwc:if={isPivoted}>
+            <div class="al-breadcrumb">
+                <button class="al-back" onclick={handleLeaveHousehold}>
+                    <lightning-icon icon-name="utility:back" size="xx-small"></lightning-icon>
+                    Back to results
+                </button>
+                <span class="al-breadcrumb-name">
+                    <lightning-icon icon-name="utility:home" size="xx-small"></lightning-icon>
+                    {pivotName}
+                </span>
+            </div>
+        </template>
+
+        <!-- ── Loading skeleton ─────────────────────────────────────────── -->
+        <template lwc:if={isLoading}>
+            <div class="al-skeleton" aria-hidden="true">
+                <div class="al-skeleton-row"></div>
+                <div class="al-skeleton-row"></div>
+                <div class="al-skeleton-row"></div>
+            </div>
+        </template>
+
+        <!-- ── Error ────────────────────────────────────────────────────── -->
+        <template lwc:if={errorMessage}>
+            <div class="al-error" role="alert">
+                <lightning-icon icon-name="utility:error" variant="error" size="x-small"></lightning-icon>
+                <span>{errorMessage}</span>
+            </div>
+        </template>
+
+        <!-- ── Summary strip ────────────────────────────────────────────── -->
+        <template lwc:if={hasSummary}>
+            <div class="al-summary">
+                <div class="al-summary-facts">
+                    <template for:each={summaryParts} for:item="part">
+                        <span key={part.key} class="al-summary-part" title={part.title}>{part.text}</span>
+                    </template>
+                    <template lwc:if={hasDuplicates}>
+                        <span class="al-dup-badge" title="Accounts that look like the same company">
+                            <lightning-icon icon-name="utility:merge" size="xx-small"></lightning-icon>
+                            {duplicateLabel}
+                        </span>
+                    </template>
+                </div>
+
+                <div class="al-summary-controls">
+                    <span class="al-control-label">Sort</span>
+                    <template for:each={sortOptions} for:item="option">
+                        <button
+                            key={option.value}
+                            class={option.cssClass}
+                            data-value={option.value}
+                            onclick={handleSortClick}
+                        >{option.label}</button>
+                    </template>
+                    <button class="al-link" onclick={handleDensityToggle}>{densityLabel}</button>
+                </div>
+            </div>
+
+            <!-- ── Filters ──────────────────────────────────────────────── -->
+            <template lwc:if={hasFilterGroups}>
+                <div class="al-filterbar">
+                    <button
+                        class={filtersButtonClass}
+                        aria-expanded={filtersOpen}
+                        onclick={handleFiltersToggle}
+                    >
+                        <lightning-icon icon-name="utility:filterList" size="xx-small"></lightning-icon>
+                        {filtersButtonLabel}
+                    </button>
+
+                    <template for:each={activeFilterPills} for:item="pill">
+                        <button
+                            key={pill.key}
+                            class="al-activefilter"
+                            data-field={pill.field}
+                            onclick={handleRemoveFilter}
+                            title="Remove this filter"
+                        >
+                            {pill.label}
+                            <lightning-icon icon-name="utility:close" size="xx-small"></lightning-icon>
+                        </button>
+                    </template>
+
+                    <template lwc:if={hasActiveFilters}>
+                        <button class="al-link" onclick={handleClearFilters}>Clear all</button>
+                    </template>
+                </div>
+
+                <template lwc:if={filtersOpen}>
+                    <div class="al-filterpanel">
+                        <template for:each={filterGroups} for:item="group">
+                            <div key={group.key} class="al-filtergroup">
+                                <span class="al-filtergroup-label">{group.label}</span>
+                                <div class="al-chips">
+                                    <template for:each={group.options} for:item="option">
+                                        <button
+                                            key={option.key}
+                                            class={option.cssClass}
+                                            data-field={option.field}
+                                            data-value={option.value}
+                                            onclick={handleOptionClick}
+                                        >{option.label}</button>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+            </template>
+        </template>
+
+        <!-- ── Results ──────────────────────────────────────────────────── -->
+        <template lwc:if={hasResults}>
+            <template lwc:if={isWide}>
+                <div class="al-colhead" aria-hidden="true">
+                    <span class="al-col-name">Name</span>
+                    <span class="al-col-household">Household</span>
+                    <span class="al-col-location">Location</span>
+                    <span class="al-col-owner">Owner</span>
+                    <span class="al-col-activity">Activity</span>
+                    <span class="al-col-aum">AUM</span>
+                    <span class="al-col-actions"></span>
+                </div>
+            </template>
+
+            <ul id="al-listbox" class="al-list" role="listbox" aria-label="Account results">
+                <template for:each={visibleResults} for:item="row">
+                    <li key={row.accountId} role="presentation">
+                        <div
+                            id={row.optionId}
+                            class={row.rowClass}
+                            role="option"
+                            tabindex="-1"
+                            aria-selected={row.isActive}
+                            data-id={row.accountId}
+                            onclick={handleResultClick}
+                        >
+                            <!-- Name -->
+                            <span class="al-col-name">
+                                <span class="al-nameline">
+                                    <template lwc:if={row.hasStatus}>
+                                        <span class={row.statusClass} title={row.status}></span>
+                                    </template>
+                                    <span class="al-name">
+                                        <template for:each={row.segments} for:item="segment">
+                                            <template lwc:if={segment.isMatch}>
+                                                <mark key={segment.key} class="al-mark">{segment.text}</mark>
+                                            </template>
+                                            <template lwc:else>
+                                                <span key={segment.key}>{segment.text}</span>
+                                            </template>
+                                        </template>
+                                    </span>
+                                    <template lwc:if={row.isPossibleDuplicate}>
+                                        <span class="al-dup-dot" title="Possible duplicate">
+                                            <lightning-icon icon-name="utility:merge" size="xx-small"></lightning-icon>
+                                        </span>
+                                    </template>
+                                </span>
+                                <span class="al-subline">{row.stackedDetail}</span>
+                            </span>
+
+                            <!-- Household -->
+                            <span class="al-col-household">
+                                <template lwc:if={row.hasHousehold}>
+                                    <button
+                                        class="al-household"
+                                        data-id={row.householdId}
+                                        data-name={row.householdName}
+                                        onclick={handleHouseholdClick}
+                                        title="Show everyone in this household"
+                                    >
+                                        <lightning-icon icon-name="utility:home" size="xx-small"></lightning-icon>
+                                        {row.householdLabel}
+                                    </button>
+                                </template>
+                            </span>
+
+                            <!-- Location -->
+                            <span class="al-col-location">{row.location}</span>
+
+                            <!-- Owner -->
+                            <span class="al-col-owner">
+                                <span class="al-avatar" aria-hidden="true">{row.initials}</span>
+                                <span class="al-ownername">{row.ownerName}</span>
+                            </span>
+
+                            <!-- Activity -->
+                            <span class="al-col-activity" title={row.activityTitle}>{row.activityLabel}</span>
+
+                            <!-- AUM -->
+                            <span class="al-col-aum">
+                                <template lwc:if={row.hasAum}>
+                                    <span class={row.aumClass} title={row.aumTitle}>{row.aumLabel}</span>
+                                </template>
+                            </span>
+
+                            <!-- Actions -->
+                            <span class="al-col-actions">
+                                <template lwc:if={row.hasPhone}>
+                                    <a href={row.phoneHref} class="al-action" title={row.phone} onclick={handleActionClick}>
+                                        <lightning-icon icon-name="utility:call" size="xx-small"></lightning-icon>
+                                        <span class="slds-assistive-text">Call {row.name}</span>
+                                    </a>
+                                </template>
+                                <template lwc:if={row.hasEmail}>
+                                    <a href={row.emailHref} class="al-action" title={row.email} onclick={handleActionClick}>
+                                        <lightning-icon icon-name="utility:email" size="xx-small"></lightning-icon>
+                                        <span class="slds-assistive-text">Email {row.name}</span>
+                                    </a>
+                                </template>
+                                <template lwc:if={row.hasFullAccess}>
+                                    <button
+                                        class="al-action al-action_open"
+                                        data-id={row.accountId}
+                                        onclick={handleOpenRecord}
+                                        title="Open the record"
+                                    >
+                                        <lightning-icon icon-name="utility:new_window" size="xx-small"></lightning-icon>
+                                        <span class="slds-assistive-text">Open {row.name}</span>
+                                    </button>
+                                </template>
+                                <span class={row.accessClass}>{row.accessLabel}</span>
+                            </span>
+                        </div>
+                    </li>
+                </template>
+            </ul>
+        </template>
+
+        <!-- ── Filtered out ─────────────────────────────────────────────── -->
+        <template lwc:if={showFilteredOutState}>
+            <div class="al-empty">
+                <lightning-icon icon-name="utility:filterList" size="small"></lightning-icon>
+                <p>No results match these filters</p>
+                <button class="al-link" onclick={handleClearFilters}>Clear filters</button>
+            </div>
+        </template>
+
+        <!-- ── Empty ────────────────────────────────────────────────────── -->
+        <template lwc:if={showEmptyState}>
+            <div class="al-empty">
+                <lightning-icon icon-name="utility:search" size="small"></lightning-icon>
+                <template lwc:if={isNarrowedScope}>
+                    <p>Nothing in {scopeLabel}</p>
+                    <button class="al-link" onclick={handleWidenScope}>
+                        Search all customers instead
+                    </button>
+                </template>
+                <template lwc:else>
+                    <p>No accounts found</p>
+                </template>
+                <ul class="al-hints">
+                    <template for:each={emptyStateHints} for:item="hint">
+                        <li key={hint.key}>{hint.text}</li>
+                    </template>
+                </ul>
+            </div>
+        </template>
+
+        <template lwc:if={isDetailOpen}>
+            <c-account-lookup-detail
+                account-id={selectedAccountId}
+                onclose={handleDetailClose}
+                onopenrecord={handleDetailOpenRecord}
+            ></c-account-lookup-detail>
+        </template>
+    </div>
+</template>

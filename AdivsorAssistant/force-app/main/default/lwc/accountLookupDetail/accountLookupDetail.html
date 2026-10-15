@@ -1,0 +1,105 @@
+<template>
+    <!-- eslint-disable-next-line -->
+    <section
+        role="dialog"
+        tabindex="-1"
+        aria-modal="true"
+        aria-labelledby="ald-heading"
+        class="slds-modal slds-fade-in-open"
+        onkeydown={handleKeyDown}
+    >
+        <div class="slds-modal__container ald-container">
+            <header class="slds-modal__header">
+                <button
+                    class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse ald-close"
+                    title="Close"
+                    onclick={handleClose}
+                >
+                    <lightning-icon
+                        icon-name="utility:close"
+                        alternative-text="Close"
+                        variant="inverse"
+                        size="small"
+                    ></lightning-icon>
+                    <span class="slds-assistive-text">Close</span>
+                </button>
+                <h2 id="ald-heading" class="slds-modal__title slds-hyphenate">{title}</h2>
+            </header>
+
+            <div class="slds-modal__content slds-p-around_medium ald-content">
+                <template lwc:if={isLoading}>
+                    <div class="ald-spinner">
+                        <lightning-spinner alternative-text="Loading account" size="small"></lightning-spinner>
+                    </div>
+                </template>
+
+                <template lwc:if={errorMessage}>
+                    <div class="ald-error" role="alert">
+                        <lightning-icon icon-name="utility:error" variant="error" size="x-small"></lightning-icon>
+                        <span>{errorMessage}</span>
+                    </div>
+                </template>
+
+                <template lwc:if={hasAccount}>
+                    <template lwc:if={isLimitedView}>
+                        <div class="ald-notice">
+                            <lightning-icon icon-name="utility:info" size="x-small"></lightning-icon>
+                            <span>You have a limited view of this account.</span>
+                        </div>
+                    </template>
+
+                    <div class="ald-completeness">
+                        <div class="ald-meter" role="presentation">
+                            <div class="ald-meter-fill" style={completenessStyle}></div>
+                        </div>
+                        <span class="ald-completeness-label">{completenessLabel}</span>
+                    </div>
+
+                    <dl class="ald-fields">
+                        <template for:each={fields} for:item="field">
+                            <div class="ald-field" key={field.key}>
+                                <dt class="ald-label">{field.label}</dt>
+                                <dd class="ald-value">
+                                    <template lwc:if={field.isLink}>
+                                        <template lwc:if={field.isExternal}>
+                                            <a href={field.href} target="_blank" rel="noopener noreferrer">{field.value}</a>
+                                        </template>
+                                        <template lwc:else>
+                                            <a href={field.href}>{field.value}</a>
+                                        </template>
+                                    </template>
+                                    <template lwc:else>
+                                        <span>{field.value}</span>
+                                    </template>
+
+                                    <button
+                                        class="ald-copy"
+                                        title="Copy to clipboard"
+                                        data-value={field.value}
+                                        onclick={handleCopy}
+                                    >
+                                        <lightning-icon icon-name="utility:copy" size="xx-small"></lightning-icon>
+                                        <span class="slds-assistive-text">Copy {field.label}</span>
+                                    </button>
+                                </dd>
+                            </div>
+                        </template>
+                    </dl>
+                </template>
+            </div>
+
+            <footer class="slds-modal__footer">
+                <template lwc:if={hasFullAccess}>
+                    <lightning-button
+                        class="ald-open"
+                        variant="brand"
+                        label="Open record"
+                        onclick={handleOpenRecord}
+                    ></lightning-button>
+                </template>
+                <lightning-button label="Close" onclick={handleClose}></lightning-button>
+            </footer>
+        </div>
+    </section>
+    <div class="slds-backdrop slds-backdrop_open"></div>
+</template>

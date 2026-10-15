@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomPermission xmlns="http://soap.sforce.com/2006/04/metadata">
+    <isLicensed>false</isLicensed>
+    <label>Can Search All Accounts</label>
+    <description>Allows the holder to use Account Lookup, which returns a fixed, limited set of fields for accounts the user cannot otherwise access. Checked in Apex on every entry point of AccountLookupService. Grant only through the Account_Lookup_User permission set.</description>
+</CustomPermission>

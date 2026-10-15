@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>68.0</apiVersion>
+    <isExposed>true</isExposed>
+    <masterLabel>Account Lookup</masterLabel>
+    <description>Finds any account and shows a limited, fixed set of fields for accounts the user cannot otherwise access. Requires the Account Lookup User permission set.</description>
+    <targets>
+        <target>lightning__UtilityBar</target>
+        <target>lightning__AppPage</target>
+        <target>lightning__HomePage</target>
+        <target>lightning__Tab</target>
+    </targets>
+</LightningComponentBundle>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
+    <label>Account Lookup User</label>
+    <description>Grants access to the Account Lookup tool: the Can_Search_All_Accounts custom permission and the two Apex classes behind it. Grants nothing else - no object, field or record access is widened by this permission set.</description>
+    <hasActivationRequired>false</hasActivationRequired>
+    <customPermissions>
+        <enabled>true</enabled>
+        <name>Can_Search_All_Accounts</name>
+    </customPermissions>
+    <classAccesses>
+        <apexClass>AccountLookupController</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>AccountLookupService</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+</PermissionSet>

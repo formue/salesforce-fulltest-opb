@@ -1,0 +1,596 @@
+:host {
+    display: block;
+}
+
+.al-root {
+    padding: 0.75rem;
+    box-sizing: border-box;
+    height: 100%;
+    overflow-y: auto;
+}
+
+/* ── Helper text ─────────────────────────────────────────────── */
+.al-helper {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0.375rem 0 0.625rem;
+    font-size: 0.6875rem;
+    color: var(--slds-g-color-neutral-base-30, #747474);
+}
+
+.al-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.125rem;
+    flex-wrap: wrap;
+}
+
+.al-kbd {
+    display: inline-block;
+    padding: 0 0.25rem;
+    margin: 0 0.0625rem;
+    border: 1px solid var(--slds-g-color-border-base-2, #c9c9c9);
+    border-bottom-width: 2px;
+    border-radius: 0.1875rem;
+    font-family: monospace;
+    font-size: 0.5625rem;
+    line-height: 1.5;
+}
+
+/* ── Recent ──────────────────────────────────────────────────── */
+.al-recent {
+    margin-bottom: 0.75rem;
+}
+
+.al-recent-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.375rem;
+    font-size: 0.6875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.0625em;
+    color: var(--slds-g-color-neutral-base-30, #747474);
+}
+
+.al-link {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    font-size: 0.6875rem;
+    color: var(--slds-g-color-brand-base-50, #0176d3);
+}
+
+.al-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    margin-bottom: 0.375rem;
+}
+
+.al-chip,
+.al-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.1875rem;
+    padding: 0.1875rem 0.5rem;
+    border: 1px solid var(--slds-g-color-border-base-2, #c9c9c9);
+    border-radius: 1rem;
+    background: var(--slds-g-color-neutral-base-100, #fff);
+    font-size: 0.6875rem;
+    color: inherit;
+    cursor: pointer;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.al-chip:hover,
+.al-option:hover {
+    background: var(--slds-g-color-neutral-base-95, #f3f3f3);
+}
+
+.al-option_active {
+    background: var(--slds-g-color-brand-base-50, #0176d3);
+    border-color: var(--slds-g-color-brand-base-50, #0176d3);
+    color: #fff;
+}
+
+.al-option_active:hover {
+    background: var(--slds-g-color-brand-base-40, #014486);
+}
+
+/* ── Summary strip ───────────────────────────────────────────── */
+.al-summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.75rem;
+    color: var(--slds-g-color-neutral-base-30, #747474);
+}
+
+.al-summary-facts {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+}
+
+/* Dot separators between facts, drawn rather than typed so no empty node can
+   leave a stray dot behind. */
+.al-summary-part + .al-summary-part::before {
+    content: '·';
+    margin-right: 0.5rem;
+}
+
+.al-summary-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    flex-shrink: 0;
+}
+
+.al-control-label {
+    font-size: 0.6875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.0625em;
+}
+
+.al-sort {
+    background: none;
+    border: none;
+    padding: 0.0625rem 0.3125rem;
+    border-radius: 0.1875rem;
+    font-size: 0.6875rem;
+    color: var(--slds-g-color-neutral-base-30, #747474);
+    cursor: pointer;
+}
+
+.al-sort_active {
+    color: var(--slds-g-color-brand-base-50, #0176d3);
+    font-weight: 600;
+    background: var(--slds-g-color-brand-base-95, #eef4ff);
+}
+
+.al-dup-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.0625rem 0.375rem;
+    border-radius: 0.75rem;
+    background: var(--slds-g-color-warning-container-1, #fef5e7);
+    color: var(--slds-g-color-warning-base-10, #8c4b02);
+}
+
+/* ── Filters ─────────────────────────────────────────────────── */
+.al-filterbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.375rem;
+    margin-bottom: 0.5rem;
+}
+
+.al-filters-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.1875rem 0.5rem;
+    border: 1px solid var(--slds-g-color-border-base-2, #c9c9c9);
+    border-radius: 0.25rem;
+    background: var(--slds-g-color-neutral-base-100, #fff);
+    font-size: 0.6875rem;
+    color: inherit;
+    cursor: pointer;
+}
+
+.al-filters-btn_active {
+    border-color: var(--slds-g-color-brand-base-50, #0176d3);
+    color: var(--slds-g-color-brand-base-50, #0176d3);
+}
+
+.al-activefilter {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.1875rem;
+    padding: 0.1875rem 0.5rem;
+    border: none;
+    border-radius: 1rem;
+    background: var(--slds-g-color-brand-base-95, #eef4ff);
+    color: var(--slds-g-color-brand-base-30, #0b5cab);
+    font-size: 0.6875rem;
+    cursor: pointer;
+}
+
+.al-filterpanel {
+    padding: 0.5rem 0.625rem;
+    margin-bottom: 0.625rem;
+    border: 1px solid var(--slds-g-color-border-base-1, #e5e5e5);
+    border-radius: 0.25rem;
+    background: var(--slds-g-color-neutral-base-98, #fafaf9);
+}
+
+.al-filtergroup + .al-filtergroup {
+    margin-top: 0.5rem;
+}
+
+.al-filtergroup-label {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-size: 0.625rem;
+    text-transform: uppercase;
+    letter-spacing: 0.0625em;
+    color: var(--slds-g-color-neutral-base-30, #747474);
+}
+
+/* ── Rows: stacked by default ────────────────────────────────── */
+.al-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.al-colhead {
+    display: none;
+}
+
+.al-result {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem 0.5rem;
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    border: 1px solid transparent;
+}
+
+.al-result:hover {
+    background: var(--slds-g-color-neutral-base-95, #f3f3f3);
+}
+
+/* Keyboard selection has to read differently from hover, or arrow-key users lose
+   track of where they are when the pointer happens to rest on another row. */
+.al-result_active {
+    background: var(--slds-g-color-brand-base-95, #eef4ff);
+    border-color: var(--slds-g-color-brand-base-50, #0176d3);
+}
+
+.al-col-name {
+    flex: 1 1 100%;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.al-nameline {
+    display: flex;
+    align-items: center;
+    gap: 0.3125rem;
+    min-width: 0;
+}
+
+.al-name {
+    min-width: 0;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.al-mark {
+    background: var(--slds-g-color-warning-container-2, #fcefd2);
+    color: inherit;
+    padding: 0 0.0625rem;
+    border-radius: 0.125rem;
+}
+
+.al-subline,
+.al-col-location,
+.al-col-activity,
+.al-ownername {
+    font-size: 0.6875rem;
+    color: var(--slds-g-color-neutral-base-30, #747474);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.al-col-household,
+.al-col-location,
+.al-col-owner,
+.al-col-activity,
+.al-col-aum {
+    min-width: 0;
+}
+
+.al-col-owner {
+    display: flex;
+    align-items: center;
+    gap: 0.3125rem;
+    min-width: 0;
+}
+
+.al-col-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+/* The stacked layout drops the columns that would make the card too tall. */
+.al-root:not(.al-root_wide) .al-col-location,
+.al-root:not(.al-root_wide) .al-col-activity {
+    display: none;
+}
+
+.al-root_compact .al-result {
+    padding: 0.3125rem 0.5rem;
+}
+
+.al-root_compact:not(.al-root_wide) .al-col-owner {
+    display: none;
+}
+
+/* ── Status dot ──────────────────────────────────────────────── */
+.al-status {
+    flex: 0 0 auto;
+    width: 0.4375rem;
+    height: 0.4375rem;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.al-status_active {
+    background: var(--slds-g-color-success-base-50, #2e844a);
+}
+
+.al-status_inactive {
+    background: var(--slds-g-color-neutral-base-80, #c9c9c9);
+}
+
+/* ── Avatar ──────────────────────────────────────────────────── */
+.al-avatar {
+    flex: 0 0 1.5rem;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.5625rem;
+    font-weight: 600;
+    color: #fff;
+    background: var(--slds-g-color-neutral-base-50, #939393);
+}
+
+/* ── AUM ─────────────────────────────────────────────────────── */
+.al-aum {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+/* A band is an approximation, so it must not read like an exact figure. */
+.al-aum_band {
+    font-weight: 400;
+    font-style: italic;
+    color: var(--slds-g-color-neutral-base-30, #747474);
+}
+
+/* ── Household ───────────────────────────────────────────────── */
+.al-household {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.1875rem;
+    max-width: 100%;
+    padding: 0.0625rem 0.375rem;
+    border: 1px solid var(--slds-g-color-border-base-2, #c9c9c9);
+    border-radius: 0.75rem;
+    background: var(--slds-g-color-neutral-base-100, #fff);
+    font-size: 0.625rem;
+    color: var(--slds-g-color-brand-base-50, #0176d3);
+    cursor: pointer;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.al-household:hover {
+    background: var(--slds-g-color-brand-base-95, #eef4ff);
+}
+
+/* ── Row actions ─────────────────────────────────────────────── */
+.al-action {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.125rem;
+    border: none;
+    border-radius: 0.1875rem;
+    background: none;
+    color: var(--slds-g-color-neutral-base-30, #747474);
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.al-action:hover {
+    background: var(--slds-g-color-neutral-base-90, #e5e5e5);
+    color: var(--slds-g-color-brand-base-50, #0176d3);
+}
+
+.al-dup-dot {
+    color: var(--slds-g-color-warning-base-10, #8c4b02);
+    display: inline-flex;
+}
+
+.al-pill {
+    padding: 0.0625rem 0.375rem;
+    border-radius: 0.75rem;
+    font-size: 0.625rem;
+    white-space: nowrap;
+}
+
+.al-pill_full {
+    background: var(--slds-g-color-success-container-1, #ebf7e6);
+    color: var(--slds-g-color-success-base-10, #2e844a);
+}
+
+.al-pill_limited {
+    background: var(--slds-g-color-neutral-base-95, #f3f3f3);
+    color: var(--slds-g-color-neutral-base-30, #747474);
+}
+
+/* ── Wide: one grid definition shared by the header and every row ─── */
+.al-root_wide .al-colhead,
+.al-root_wide .al-result {
+    display: grid;
+    grid-template-columns:
+        minmax(10rem, 2.2fr)   /* name            */
+        minmax(7rem, 1.3fr)    /* household       */
+        minmax(6rem, 1fr)      /* location        */
+        minmax(7rem, 1fr)      /* owner           */
+        5rem                   /* activity        */
+        5rem                   /* aum             */
+        minmax(8rem, auto);    /* actions + pill  */
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.al-root_wide .al-colhead {
+    padding: 0 0.5rem 0.25rem;
+    font-size: 0.5625rem;
+    text-transform: uppercase;
+    letter-spacing: 0.0625em;
+    color: var(--slds-g-color-neutral-base-30, #747474);
+    border-bottom: 1px solid var(--slds-g-color-border-base-1, #e5e5e5);
+}
+
+.al-root_wide .al-col-name {
+    flex: none;
+}
+
+.al-root_wide .al-col-aum,
+.al-root_wide .al-colhead .al-col-aum,
+.al-root_wide .al-col-activity {
+    text-align: right;
+}
+
+.al-root_wide .al-col-actions {
+    justify-content: flex-end;
+}
+
+/* ── Skeleton ────────────────────────────────────────────────── */
+.al-skeleton-row {
+    height: 2.5rem;
+    margin-bottom: 0.25rem;
+    border-radius: 0.25rem;
+    background: linear-gradient(
+        90deg,
+        var(--slds-g-color-neutral-base-95, #f3f3f3) 25%,
+        var(--slds-g-color-neutral-base-90, #e5e5e5) 37%,
+        var(--slds-g-color-neutral-base-95, #f3f3f3) 63%
+    );
+    background-size: 400% 100%;
+    animation: al-shimmer 1.4s ease infinite;
+}
+
+@keyframes al-shimmer {
+    0%   { background-position: 100% 50%; }
+    100% { background-position: 0 50%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .al-skeleton-row {
+        animation: none;
+    }
+}
+
+/* ── Error ───────────────────────────────────────────────────── */
+.al-error {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 0.75rem;
+    border-radius: 0.25rem;
+    font-size: 0.8125rem;
+    color: var(--slds-g-color-error-base-10, #ba0517);
+    background: var(--slds-g-color-error-container-1, #fef1ee);
+}
+
+/* ── Empty states ────────────────────────────────────────────── */
+.al-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 2rem 1rem;
+    color: var(--slds-g-color-neutral-base-30, #747474);
+    font-size: 0.8125rem;
+}
+
+.al-empty p {
+    margin: 0;
+}
+
+.al-hints {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    text-align: center;
+    font-size: 0.6875rem;
+    line-height: 1.7;
+}
+
+/* ── Main filter: which customers to search ──────────────────── */
+.al-scopes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0;
+    margin-top: 0.5rem;
+    border: 1px solid var(--slds-g-color-border-base-2, #c9c9c9);
+    border-radius: 0.25rem;
+    overflow: hidden;
+    width: fit-content;
+    max-width: 100%;
+}
+
+.al-scope {
+    padding: 0.3125rem 0.75rem;
+    border: none;
+    border-right: 1px solid var(--slds-g-color-border-base-2, #c9c9c9);
+    background: var(--slds-g-color-neutral-base-100, #fff);
+    font-size: 0.75rem;
+    color: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.al-scope:last-child {
+    border-right: none;
+}
+
+.al-scope:hover {
+    background: var(--slds-g-color-neutral-base-95, #f3f3f3);
+}
+
+.al-scope_active {
+    background: var(--slds-g-color-brand-base-50, #0176d3);
+    color: #fff;
+    font-weight: 600;
+}
+
+.al-scope_active:hover {
+    background: var(--slds-g-color-brand-base-40, #014486);
+}
