@@ -75,7 +75,7 @@ private class MeetingSummaryControllerTest {
         Test.startTest();
         try {
             MeetingSummaryController.saveMeetingNote(
-                INVALID_FLOW, null, '<p>Note</p>', '# Note', '<p>Brief</p>', '# Brief', null, false, 'annual', false
+                INVALID_FLOW, null, '<p>Note</p>', '<p>Brief</p>', null, false, 'annual', false
             );
             Assert.fail('Expected AuraHandledException');
         } catch (AuraHandledException e) {
@@ -138,8 +138,8 @@ private class MeetingSummaryControllerTest {
         Test.startTest();
         try {
             MeetingSummaryController.saveMeetingNote(
-                INVALID_FLOW, '001000000000001AAA', '<p>Published</p>', '# Published',
-                '<p>Brief</p>', '# Brief', null, true, 'whiteboard', false
+                INVALID_FLOW, '001000000000001AAA', '<p>Published</p>',
+                '<p>Brief</p>', null, true, 'whiteboard', false
             );
             Assert.fail('Expected AuraHandledException');
         } catch (AuraHandledException e) {

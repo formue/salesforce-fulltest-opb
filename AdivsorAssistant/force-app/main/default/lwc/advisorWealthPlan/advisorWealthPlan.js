@@ -245,45 +245,6 @@ const FIELD_ALIASES = {
     },
 };
 
-// ── HTML → Markdown converter (DOMParser-based, browser-only) ───────────────
-// NOTE: this copy is unreachable — this component binds no save handler in its template.
-// The LIVE implementation is the one in advisorMeetingSummary.js, which was fixed
-// to JOIN block elements instead of concatenating them. Do not fix this copy in
-// isolation — if it ever becomes reachable, take that version.
-function _nodeToMd(node) {
-    if (node.nodeType === 3) return node.textContent; // TEXT_NODE
-    if (node.nodeType !== 1) return '';               // not ELEMENT_NODE
-    const tag = node.tagName.toLowerCase();
-    const inner = () => Array.from(node.childNodes).map(_nodeToMd).join('');
-    switch (tag) {
-        case 'h1': return `# ${inner()}\n\n`;
-        case 'h2': return `## ${inner()}\n\n`;
-        case 'h3': return `### ${inner()}\n\n`;
-        case 'h4': return `#### ${inner()}\n\n`;
-        case 'h5': return `##### ${inner()}\n\n`;
-        case 'h6': return `###### ${inner()}\n\n`;
-        case 'p':  return `${inner()}\n\n`;
-        case 'br': return '\n';
-        case 'strong': case 'b': return `**${inner()}**`;
-        case 'em':     case 'i': return `*${inner()}*`;
-        case 'code': return `\`${inner()}\``;
-        case 'ul': return Array.from(node.children).map(li => `- ${_nodeToMd(li).trim()}\n`).join('') + '\n';
-        case 'ol': return Array.from(node.children).map((li, i) => `${i + 1}. ${_nodeToMd(li).trim()}\n`).join('') + '\n';
-        case 'li': return inner();
-        case 'hr': return '---\n\n';
-        case 'a':  { const h = node.getAttribute('href'); return h ? `[${inner()}](${h})` : inner(); }
-        default:   return inner();
-    }
-}
-function _htmlToMd(html) {
-    if (!html) return '';
-    try {
-        const doc = new DOMParser().parseFromString(html, 'text/html');
-        return _nodeToMd(doc.body).trim();
-    } catch(e) {
-        return html; // safe fallback if DOMParser unavailable
-    }
-}
 function _stripStyleBlocks(html) {
     if (!html) return html;
     return html.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '').trim();
@@ -717,7 +678,6 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
     @api outputMeetingNote           = null;   // MeetingNote__c record for update { Id, Note__c, NoteMarkdown__c } — mutually exclusive with outputMeetingNoteToCreate
     @api outputMeetingNoteToCreate   = null;   // MeetingNote__c shell for create { Note__c, NoteMarkdown__c } — populated when no existing note exists
     @api outputNoteIdToDelete        = '';     // Deprecated — retained for flow backwards compatibility; deletion handled via deleteNote flag in saveSummaryFlowApiName
-    @api outputNoteMarkdown          = '';     // Markdown string derived from Note__c — for web app consumption
     @api outputMeetingType           = '';     // 'whiteboard' | 'status' | 'annual' | ''
     @api outputHasTodos              = false;  // whether To-Do's format was selected
     @api outputSelectedEventId       = '';     // Id of the selected event — used by flow to link new note to Event.MeetingNote__c
@@ -1832,20 +1792,17 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
     _applyNoteOutputs(html, publishedFlag) {
         this.outputMeetingSummary = html;
         this._flowOut('outputMeetingSummary', html);
-        const md = _htmlToMd(html);
-        this.outputNoteMarkdown = md;
-        this._flowOut('outputNoteMarkdown', md);
         const noteId = (this._creatingNewVersion && this.createVersionFlowApiName)
             ? (this.selectedEventNote?.Id || this._backgroundSavedNoteId || null)
             : (this._creatingNewVersion ? null : (this.selectedEventNote?.Id || this._backgroundSavedNoteId || null));
         if (noteId) {
-            const updated = { Id: noteId, Note__c: html, NoteMarkdown__c: md, ...(publishedFlag ? { Published__c: true } : {}) };
+            const updated = { Id: noteId, Note__c: html, ...(publishedFlag ? { Published__c: true } : {}) };
             this.outputMeetingNote = updated;
             this._flowOut('outputMeetingNote', updated);
             this.outputMeetingNoteToCreate = null;
             this._flowOut('outputMeetingNoteToCreate', null);
         } else {
-            const newNote = { Note__c: html, NoteMarkdown__c: md, ...(publishedFlag ? { Published__c: true } : {}) };
+            const newNote = { Note__c: html, ...(publishedFlag ? { Published__c: true } : {}) };
             this.outputMeetingNoteToCreate = newNote;
             this._flowOut('outputMeetingNoteToCreate', newNote);
             this.outputMeetingNote = null;
@@ -1866,9 +1823,7 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
                     flowApiName:   this.createVersionFlowApiName,
                     noteId:        this.selectedEventNote?.Id || this._backgroundSavedNoteId || '',
                     noteHtml:      html,
-                    noteMarkdown:  _htmlToMd(html),
                     briefHtml:     '',   // brief removed; key kept for the Apex signature
-                    briefMarkdown: '',
                     eventId:       this._selectedEventId  || '',
                     published:     false,
                     meetingType:   this.meetingTypeStoredValue || '',
@@ -1897,9 +1852,7 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
                 flowApiName:   this.saveSummaryFlowApiName,
                 noteId:        this.selectedEventNote?.Id || this._backgroundSavedNoteId || '',
                 noteHtml:      html,
-                noteMarkdown:  _htmlToMd(html),
                 briefHtml:     '',   // brief removed; key kept for the Apex signature
-                briefMarkdown: '',
                 eventId:       this._selectedEventId  || '',
                 published:     false,
                 meetingType:   this.meetingTypeStoredValue || '',
@@ -1990,9 +1943,7 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
                     flowApiName:   this.createVersionFlowApiName,
                     noteId:        this.selectedEventNote?.Id || this._backgroundSavedNoteId || '',
                     noteHtml:      html,
-                    noteMarkdown:  _htmlToMd(html),
                     briefHtml:     '',   // brief removed; key kept for the Apex signature
-                    briefMarkdown: '',
                     eventId:       this._selectedEventId  || '',
                     published:     true,
                     meetingType:   this.meetingTypeStoredValue || '',
@@ -2024,9 +1975,7 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
                 flowApiName:   this.saveSummaryFlowApiName,
                 noteId:        this.selectedEventNote?.Id || this._backgroundSavedNoteId || '',
                 noteHtml:      html,
-                noteMarkdown:  _htmlToMd(html),
                 briefHtml:     '',   // brief removed; key kept for the Apex signature
-                briefMarkdown: '',
                 eventId:       this._selectedEventId  || '',
                 published:     true,
                 meetingType:   this.meetingTypeStoredValue || '',
@@ -2064,9 +2013,7 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
                     flowApiName:   this.saveSummaryFlowApiName,
                     noteId:        noteId,
                     noteHtml:      '',
-                    noteMarkdown:  '',
                     briefHtml:     '',
-                    briefMarkdown: '',
                     eventId:       this._selectedEventId || '',
                     published:     false,
                     meetingType:   '',

@@ -239,9 +239,7 @@ public with sharing class MeetingSummaryController {
      * Flow inputs:  saveMode      (Text)    — always 'summary' from this method
      *               noteId        (Text)    — blank to create
      *               noteHtml      (Text)    — client-facing note body, HTML
-     *               noteMarkdown  (Text)    — Markdown mirror of noteHtml
      *               briefHtml     (Text)    — "At a Glance" brief, HTML
-     *               briefMarkdown (Text)    — Markdown mirror of briefHtml
      *               eventId       (Text)    — Event to link a newly created note to
      *               published     (Boolean)
      *               meetingType   (Text)    — 'whiteboard' | 'status' | 'annual' | ''
@@ -251,9 +249,7 @@ public with sharing class MeetingSummaryController {
      * @param flowApiName   API name of the save (or create-version) flow.
      * @param noteId        Id of an existing MeetingNote__c to update, or blank to create.
      * @param noteHtml      HTML content of the note.
-     * @param noteMarkdown  Markdown rendering of noteHtml, for the client-facing web app.
      * @param briefHtml     HTML content of the "At a Glance" brief.
-     * @param briefMarkdown Markdown rendering of briefHtml.
      * @param eventId       Id of the Event to link a newly created note to.
      * @param published     Whether to mark the note as Published__c = true.
      * @param meetingType   Meeting category label chosen by the advisor.
@@ -265,9 +261,7 @@ public with sharing class MeetingSummaryController {
             String flowApiName,
             String noteId,
             String noteHtml,
-            String noteMarkdown,
             String briefHtml,
-            String briefMarkdown,
             String eventId,
             Boolean published,
             String meetingType,
@@ -280,9 +274,7 @@ public with sharing class MeetingSummaryController {
             flowInputs.put('saveMode',      'summary');
             flowInputs.put('noteId',        noteId        != null ? noteId        : '');
             flowInputs.put('noteHtml',      noteHtml      != null ? noteHtml      : '');
-            flowInputs.put('noteMarkdown',  noteMarkdown  != null ? noteMarkdown  : '');
             flowInputs.put('briefHtml',     briefHtml     != null ? briefHtml     : '');
-            flowInputs.put('briefMarkdown', briefMarkdown != null ? briefMarkdown : '');
             flowInputs.put('eventId',       eventId       != null ? eventId       : '');
             flowInputs.put('published',     published     != null ? published     : false);
             flowInputs.put('meetingType',   meetingType   != null ? meetingType   : '');

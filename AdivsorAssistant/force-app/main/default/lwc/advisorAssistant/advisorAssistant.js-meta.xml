@@ -152,8 +152,8 @@
             <!-- ═══ OUTPUTS ═══════════════════════════════════════════════════
                  Meeting summary                                                  -->
             <property name="outputSelectedEventId"     type="String" label="Selected Event ID" role="outputOnly" description="Id of the currently selected event. Use after a Create Records on New Meeting Note to set Event.MeetingNote__c to the new note's Id."/>
+            <property name="outputNoteMarkdown"        type="String" label="Meeting Summary (Markdown)" role="outputOnly" description="Deprecated and always empty. The Markdown mirror was removed; this property is retained because Salesforce will not allow deleting an output property while the component is referenced by existing flow versions."/>
             <property name="outputMeetingSummary"      type="String" label="Meeting Summary (HTML)" role="outputOnly" description="The meeting summary as HTML, as currently shown to the advisor."/>
-            <property name="outputNoteMarkdown"        type="String" label="Meeting Summary (Markdown)" role="outputOnly" description="Markdown mirror of the meeting summary, for consumption by the client-facing web app."/>
             <property name="outputMeetingType"        type="String" label="Meeting Type" role="outputOnly" description="The meeting category the advisor selected: 'whiteboard', 'status', 'annual', or blank."/>
             <property name="outputHasTodos"           type="Boolean" label="To-Do's Requested" role="outputOnly" description="True when the advisor asked for action items alongside the summary."/>
             <property name="outputMeetingNote"        type="@salesforce/schema/MeetingNote__c" label="Meeting Note (for Update)" role="outputOnly" description="Populated when the selected event already has a MeetingNote__c. Contains Id plus the note fields. Use in an Update Records element. Mutually exclusive with New Meeting Note."/>

@@ -326,58 +326,6 @@ const FIELD_ALIASES = {
 // advisor edits) and as Markdown (NoteMarkdown__c, consumed by the customer-facing
 // web app). These functions produce the Markdown copy on every save.
 
-// NOTE: this copy is unreachable — this component binds no save handler in its
-// template. The LIVE implementation is the one in advisorMeetingSummary.js, which
-// was fixed to JOIN block elements instead of concatenating them. Do not fix this
-// copy in isolation — if it ever becomes reachable, take that version.
-/**
- * Recursively converts one DOM node to Markdown.
- * Unknown tags fall through to their children, so unsupported markup degrades to
- * plain text rather than being dropped.
- * @param {Node} node
- * @returns {string}
- */
-function _nodeToMd(node) {
-    if (node.nodeType === 3) return node.textContent; // TEXT_NODE
-    if (node.nodeType !== 1) return '';               // not ELEMENT_NODE
-    const tag = node.tagName.toLowerCase();
-    const inner = () => Array.from(node.childNodes).map(_nodeToMd).join('');
-    switch (tag) {
-        case 'h1': return `# ${inner()}\n\n`;
-        case 'h2': return `## ${inner()}\n\n`;
-        case 'h3': return `### ${inner()}\n\n`;
-        case 'h4': return `#### ${inner()}\n\n`;
-        case 'h5': return `##### ${inner()}\n\n`;
-        case 'h6': return `###### ${inner()}\n\n`;
-        case 'p':  return `${inner()}\n\n`;
-        case 'br': return '\n';
-        case 'strong': case 'b': return `**${inner()}**`;
-        case 'em':     case 'i': return `*${inner()}*`;
-        case 'code': return `\`${inner()}\``;
-        case 'ul': return Array.from(node.children).map(li => `- ${_nodeToMd(li).trim()}\n`).join('') + '\n';
-        case 'ol': return Array.from(node.children).map((li, i) => `${i + 1}. ${_nodeToMd(li).trim()}\n`).join('') + '\n';
-        case 'li': return inner();
-        case 'hr': return '---\n\n';
-        case 'a':  { const h = node.getAttribute('href'); return h ? `[${inner()}](${h})` : inner(); }
-        default:   return inner();
-    }
-}
-/**
- * HTML → Markdown. Returns the input unchanged if DOMParser throws, so a save can
- * never fail because of the Markdown mirror.
- * @param {string} html
- * @returns {string}
- */
-function _htmlToMd(html) {
-    if (!html) return '';
-    try {
-        const doc = new DOMParser().parseFromString(html, 'text/html');
-        return _nodeToMd(doc.body).trim();
-    } catch(e) {
-        return html; // safe fallback if DOMParser unavailable
-    }
-}
-
 /** Removes <style> blocks the AI sometimes wraps its HTML output in. */
 function _stripStyleBlocks(html) {
     if (!html) return html;
@@ -1037,11 +985,14 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
     //   output<X>ToUpdate  → existing records the advisor edited
     //   output<X>ToDelete  → existing records the advisor marked for deletion
     @api outputSummary               = '';
+    // Deprecated and always empty -- the Markdown mirror was removed. Retained because
+    // Salesforce refuses to delete an output property while the component is referenced
+    // by existing flow versions.
+    @api outputNoteMarkdown          = '';
     @api outputMeetingSummary        = '';
     @api outputMeetingNote           = null;   // MeetingNote__c record for update { Id, Note__c, NoteMarkdown__c } — mutually exclusive with outputMeetingNoteToCreate
     @api outputMeetingNoteToCreate   = null;   // MeetingNote__c shell for create { Note__c, NoteMarkdown__c } — populated when no existing note exists
     @api outputNoteIdToDelete        = '';     // Deprecated — retained for flow backwards compatibility; deletion handled via deleteNote flag in saveSummaryFlowApiName
-    @api outputNoteMarkdown          = '';     // Markdown string derived from Note__c — for web app consumption
     @api outputMeetingType           = '';     // 'whiteboard' | 'status' | 'annual' | ''
     @api outputHasTodos              = false;  // whether To-Do's format was selected
     @api outputSelectedEventId       = '';     // Id of the selected event — used by flow to link new note to Event.MeetingNote__c
@@ -2306,20 +2257,17 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
     _applyNoteOutputs(html, publishedFlag) {
         this.outputMeetingSummary = html;
         this.dispatchEvent(new FlowAttributeChangeEvent('outputMeetingSummary', html));
-        const md = _htmlToMd(html);
-        this.outputNoteMarkdown = md;
-        this.dispatchEvent(new FlowAttributeChangeEvent('outputNoteMarkdown', md));
         const noteId = (this._creatingNewVersion && this.createVersionFlowApiName)
             ? (this.selectedEventNote?.Id || this._backgroundSavedNoteId || null)
             : (this._creatingNewVersion ? null : (this.selectedEventNote?.Id || this._backgroundSavedNoteId || null));
         if (noteId) {
-            const updated = { Id: noteId, Note__c: html, NoteMarkdown__c: md, ...(publishedFlag ? { Published__c: true } : {}) };
+            const updated = { Id: noteId, Note__c: html, ...(publishedFlag ? { Published__c: true } : {}) };
             this.outputMeetingNote = updated;
             this.dispatchEvent(new FlowAttributeChangeEvent('outputMeetingNote', updated));
             this.outputMeetingNoteToCreate = null;
             this.dispatchEvent(new FlowAttributeChangeEvent('outputMeetingNoteToCreate', null));
         } else {
-            const newNote = { Note__c: html, NoteMarkdown__c: md, ...(publishedFlag ? { Published__c: true } : {}) };
+            const newNote = { Note__c: html, ...(publishedFlag ? { Published__c: true } : {}) };
             this.outputMeetingNoteToCreate = newNote;
             this.dispatchEvent(new FlowAttributeChangeEvent('outputMeetingNoteToCreate', newNote));
             this.outputMeetingNote = null;
@@ -2340,9 +2288,7 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
                     flowApiName:   this.createVersionFlowApiName,
                     noteId:        this.selectedEventNote?.Id || this._backgroundSavedNoteId || '',
                     noteHtml:      html,
-                    noteMarkdown:  _htmlToMd(html),
                     briefHtml:     '',   // brief removed; key kept for the Apex signature
-                    briefMarkdown: '',
                     eventId:       this._selectedEventId  || '',
                     published:     false,
                     meetingType:   this.meetingTypeStoredValue || '',
@@ -2371,9 +2317,7 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
                 flowApiName:   this.saveSummaryFlowApiName,
                 noteId:        this.selectedEventNote?.Id || this._backgroundSavedNoteId || '',
                 noteHtml:      html,
-                noteMarkdown:  _htmlToMd(html),
                 briefHtml:     '',   // brief removed; key kept for the Apex signature
-                briefMarkdown: '',
                 eventId:       this._selectedEventId  || '',
                 published:     false,
                 meetingType:   this.meetingTypeStoredValue || '',
@@ -2406,9 +2350,7 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
                     flowApiName:   this.createVersionFlowApiName,
                     noteId:        this.selectedEventNote?.Id || this._backgroundSavedNoteId || '',
                     noteHtml:      html,
-                    noteMarkdown:  _htmlToMd(html),
                     briefHtml:     '',   // brief removed; key kept for the Apex signature
-                    briefMarkdown: '',
                     eventId:       this._selectedEventId  || '',
                     published:     true,
                     meetingType:   this.meetingTypeStoredValue || '',
@@ -2440,9 +2382,7 @@ export default class AdvisorAssistant extends NavigationMixin(LightningElement) 
                 flowApiName:   this.saveSummaryFlowApiName,
                 noteId:        this.selectedEventNote?.Id || this._backgroundSavedNoteId || '',
                 noteHtml:      html,
-                noteMarkdown:  _htmlToMd(html),
                 briefHtml:     '',   // brief removed; key kept for the Apex signature
-                briefMarkdown: '',
                 eventId:       this._selectedEventId  || '',
                 published:     true,
                 meetingType:   this.meetingTypeStoredValue || '',

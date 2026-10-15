@@ -270,147 +270,6 @@ const FIELD_ALIASES = {
         status: 'Status',
     },
 };
-
-// ── HTML → Markdown converter (DOMParser-based, browser-only) ───────────────
-/**
- * Produces the `NoteMarkdown__c` mirror the client web app reads.
- *
- * THE RULE THAT MATTERS: block elements are JOINED with a blank line, not
- * concatenated. The previous version had each tag append its own TRAILING "\n\n"
- * and nothing guaranteed a LEADING one, so any block following inline text welded
- * onto it:
- *
- *   slutten av en setning.<h3>heading 3</h3>  ->  "slutten av en setning.### heading 3"
- *   <div>a</div><div>b</div>                  ->  "ab"
- *
- * Hence `_nodeToMd` returns { md, block } rather than a bare string: the joiner
- * needs to know whether either side of a boundary is a block before deciding to
- * separate them. `_htmlToMd` keeps its (html) => string signature, so every call
- * site and the Flow plumbing are unaffected.
- */
-
-/** Tags whose output must be separated from its neighbours by a blank line. */
-const _MD_BLOCK_TAGS = new Set([
-    'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'hr',
-    'div', 'section', 'article', 'figure', 'blockquote', 'table', 'tr', 'pre',
-]);
-
-/** Indent every non-empty line — keeps list continuations inside their item. */
-function _mdIndent(text, pad) {
-    return text.split('\n').map(l => (l ? pad + l : l)).join('\n');
-}
-
-/**
- * @returns {{md: string, block: boolean}} `block` tells the caller's joiner whether
- *          this output needs a blank line between it and its neighbours.
- */
-function _nodeToMd(node) {
-    if (node.nodeType === 3) {
-        // Collapse runs of whitespace. Source-formatting newlines between tags are
-        // not content, and emitting them verbatim is what produced "\n\n\n" runs.
-        return { md: node.textContent.replace(/\s+/g, ' '), block: false };
-    }
-    if (node.nodeType !== 1) return { md: '', block: false };
-
-    const tag = node.tagName.toLowerCase();
-    const isBlock = _MD_BLOCK_TAGS.has(tag);
-
-    // Join children: a blank line wherever a block meets anything, inline runs
-    // concatenated as-is.
-    const kids = () => {
-        let out = '';
-        let prevBlock = false;
-        for (const child of node.childNodes) {
-            const r = _nodeToMd(child);
-            // Whitespace-only text between two blocks is layout, not content.
-            if (!r.md || (!r.block && !r.md.trim() && prevBlock)) continue;
-            if (out && (r.block || prevBlock)) out = out.replace(/\s+$/, '') + '\n\n';
-            out += r.md;
-            prevBlock = r.block;
-        }
-        return out.trim();
-    };
-    const B = md => ({ md, block: true });
-    const I = md => ({ md, block: false });
-
-    switch (tag) {
-        case 'h1': case 'h2': case 'h3':
-        case 'h4': case 'h5': case 'h6': {
-            // The prompt often emits <h3><b>Tittel</b></h3>. Bold inside a heading is
-            // meaningless and renders as "### **Tittel**", so drop it when it wraps the
-            // whole text. Partial emphasis inside a heading is left alone.
-            let text = kids();
-            const whole = text.match(/^\*\*([\s\S]+)\*\*$/);
-            if (whole && !whole[1].includes('**')) text = whole[1];
-            return B(`${'#'.repeat(Number(tag[1]))} ${text}`);
-        }
-        case 'p': case 'div': case 'section': case 'article': case 'figure':
-            return B(kids());
-        case 'br': return I('\n');
-        // Markdown has no underline. The prompt uses <u> as a pseudo-heading
-        // ("<u>Team update:</u>"), so bold preserves the intent rather than dropping it.
-        case 'u':  return I(`**${kids()}**`);
-        // Losing a strikethrough turns a retracted figure into a current one — the worst
-        // failure available here, so it is handled even though the prompt has never emitted it.
-        case 'del': case 's': case 'strike': return I(`~~${kids()}~~`);
-        case 'strong': case 'b': return I(`**${kids()}**`);
-        case 'em':     case 'i': return I(`*${kids()}*`);
-        case 'code':             return I(`\`${kids()}\``);
-        case 'hr':               return B('---');
-        case 'blockquote':
-            return B(kids().split('\n').map(l => `> ${l}`.trimEnd()).join('\n'));
-        case 'ul': case 'ol': {
-            const items = Array.from(node.children)
-                .filter(c => c.tagName.toLowerCase() === 'li');
-            return B(items.map((li, i) => {
-                const marker = tag === 'ol' ? `${i + 1}. ` : '- ';
-                // Indent by the marker width so a <br> or a nested list stays part of
-                // THIS item; at column 0 markdown would end the list instead. Tight
-                // lists (single \n between item and nested list) are the convention.
-                const body = _nodeToMd(li).md.trim().replace(/\n{2,}/g, '\n');
-                return marker + _mdIndent(body, ' '.repeat(marker.length)).slice(marker.length);
-            }).join('\n'));
-        }
-        case 'li': return B(kids());
-        case 'table':
-            // One line per row, cells separated by " | ". Deliberately not a GFM pipe
-            // table: nothing in Salesforce reads this field and the consumer is an
-            // external app, so plain lines are the safe choice over an extension.
-            return B(Array.from(node.querySelectorAll('tr'))
-                .map(tr => Array.from(tr.children)
-                    .map(cell => _nodeToMd(cell).md.trim()).join(' | '))
-                .filter(Boolean).join('\n'));
-        case 'img': {
-            // Without this the image vanishes silently, alt text and all.
-            const src = node.getAttribute('src') || '';
-            const alt = node.getAttribute('alt') || '';
-            return I(src ? `![${alt}](${src})` : '');
-        }
-        case 'pre': {
-            // Must read textContent directly: the text-node branch collapses whitespace,
-            // which would destroy the newlines and indentation that make this a code block.
-            const code = (node.textContent || '').replace(/\s+$/, '');
-            return B(`\`\`\`\n${code}\n\`\`\``);
-        }
-        case 'a': {
-            const h = node.getAttribute('href');
-            return I(h ? `[${kids()}](${h})` : kids());
-        }
-        default: return isBlock ? B(kids()) : I(kids());
-    }
-}
-
-// Exported purely so the conversion can be unit-tested directly. LWC consumes only
-// the default export, so a named export alongside it has no runtime effect.
-export function _htmlToMd(html) {
-    if (!html) return '';
-    try {
-        const doc = new DOMParser().parseFromString(html, 'text/html');
-        return _nodeToMd(doc.body).md.replace(/\n{3,}/g, '\n\n').trim();
-    } catch(e) {
-        return html; // safe fallback if DOMParser unavailable
-    }
-}
 function _stripStyleBlocks(html) {
     if (!html) return html;
     return html.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '').trim();
@@ -882,7 +741,6 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
     @api outputMeetingNote           = null;   // MeetingNote__c record for update { Id, Note__c, NoteMarkdown__c } — mutually exclusive with outputMeetingNoteToCreate
     @api outputMeetingNoteToCreate   = null;   // MeetingNote__c shell for create { Note__c, NoteMarkdown__c } — populated when no existing note exists
     @api outputNoteIdToDelete        = '';     // Deprecated — retained for flow backwards compatibility; deletion handled via deleteNote flag in saveSummaryFlowApiName
-    @api outputNoteMarkdown          = '';     // Markdown string derived from Note__c — for web app consumption
     @api outputMeetingType           = '';     // 'whiteboard' | 'status' | 'annual' | ''
     @api outputHasTodos              = false;  // whether To-Do's format was selected
     @api outputSelectedEventId       = '';     // Id of the selected event — used by flow to link new note to Event.MeetingNote__c
@@ -1078,7 +936,7 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
     // Brief Summary was removed from the UI. This field is kept ONLY so the value
     // already stored in MeetingNote__c.Brief_Summary__c survives a re-save: it is
     // read from the note on event select and handed straight back to the save
-    // Flow as briefHtml/briefMarkdown. Nothing renders or edits it.
+    // Flow as briefHtml. Nothing renders or edits it.
     _meetingBrief                   = null;
     @track _noteDeletedLocally      = false; // true after note deleted this session; cleared on event re-select
     @track _versionSavedLocally     = false; // true after version save; makes isNotePublished ignore selectedEventNote?.Published__c
@@ -2449,20 +2307,17 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
     _applyNoteOutputs(html, publishedFlag) {
         this.outputMeetingSummary = html;
         this._flowOut('outputMeetingSummary', html);
-        const md = _htmlToMd(html);
-        this.outputNoteMarkdown = md;
-        this._flowOut('outputNoteMarkdown', md);
         const noteId = (this._creatingNewVersion && this.createVersionFlowApiName)
             ? (this.selectedEventNote?.Id || this._backgroundSavedNoteId || null)
             : (this._creatingNewVersion ? null : (this.selectedEventNote?.Id || this._backgroundSavedNoteId || null));
         if (noteId) {
-            const updated = { Id: noteId, Note__c: html, NoteMarkdown__c: md, ...(publishedFlag ? { Published__c: true } : {}) };
+            const updated = { Id: noteId, Note__c: html, ...(publishedFlag ? { Published__c: true } : {}) };
             this.outputMeetingNote = updated;
             this._flowOut('outputMeetingNote', updated);
             this.outputMeetingNoteToCreate = null;
             this._flowOut('outputMeetingNoteToCreate', null);
         } else {
-            const newNote = { Note__c: html, NoteMarkdown__c: md, ...(publishedFlag ? { Published__c: true } : {}) };
+            const newNote = { Note__c: html, ...(publishedFlag ? { Published__c: true } : {}) };
             this.outputMeetingNoteToCreate = newNote;
             this._flowOut('outputMeetingNoteToCreate', newNote);
             this.outputMeetingNote = null;
@@ -2484,8 +2339,7 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
      * success, so the component stays usable in an org that has not wired the Flows.
      *
      * Both routes send the note twice — `noteHtml` (what the advisor edits) and
-     * `noteMarkdown` (the mirror the client web app reads) — plus `briefHtml` /
-     * `briefMarkdown`. The brief is no longer part of the UI; those two are the
+     * plus `briefHtml`. The brief is no longer part of the UI; it is the
      * stored `Brief_Summary__c` handed straight back, so a save does not blank it.
      *
      * @returns {Promise<boolean>} true ONLY if the note actually reached the server.
@@ -2506,9 +2360,7 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
                     flowApiName:   this.createVersionFlowApiName,
                     noteId:        this.selectedEventNote?.Id || this._backgroundSavedNoteId || '',
                     noteHtml:      html,
-                    noteMarkdown:  _htmlToMd(html),
                     briefHtml:     this._meetingBrief     || '',
-                    briefMarkdown: _htmlToMd(this._meetingBrief || ''),
                     eventId:       this._selectedEventId  || '',
                     published:     false,
                     meetingType:   this.meetingTypeStoredValue || '',
@@ -2538,9 +2390,7 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
                 flowApiName:   this.saveSummaryFlowApiName,
                 noteId:        this.selectedEventNote?.Id || this._backgroundSavedNoteId || '',
                 noteHtml:      html,
-                noteMarkdown:  _htmlToMd(html),
                 briefHtml:     this._meetingBrief     || '',
-                briefMarkdown: _htmlToMd(this._meetingBrief || ''),
                 eventId:       this._selectedEventId  || '',
                 published:     false,
                 meetingType:   this.meetingTypeStoredValue || '',
@@ -2633,9 +2483,7 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
                     flowApiName:   this.createVersionFlowApiName,
                     noteId:        this.selectedEventNote?.Id || this._backgroundSavedNoteId || '',
                     noteHtml:      html,
-                    noteMarkdown:  _htmlToMd(html),
                     briefHtml:     this._meetingBrief     || '',
-                    briefMarkdown: _htmlToMd(this._meetingBrief || ''),
                     eventId:       this._selectedEventId  || '',
                     published:     true,
                     meetingType:   this.meetingTypeStoredValue || '',
@@ -2667,9 +2515,7 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
                 flowApiName:   this.saveSummaryFlowApiName,
                 noteId:        this.selectedEventNote?.Id || this._backgroundSavedNoteId || '',
                 noteHtml:      html,
-                noteMarkdown:  _htmlToMd(html),
                 briefHtml:     this._meetingBrief     || '',
-                briefMarkdown: _htmlToMd(this._meetingBrief || ''),
                 eventId:       this._selectedEventId  || '',
                 published:     true,
                 meetingType:   this.meetingTypeStoredValue || '',
@@ -2707,9 +2553,7 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
                     flowApiName:   this.saveSummaryFlowApiName,
                     noteId:        noteId,
                     noteHtml:      '',
-                    noteMarkdown:  '',
                     briefHtml:     '',
-                    briefMarkdown: '',
                     eventId:       this._selectedEventId || '',
                     published:     false,
                     meetingType:   '',
