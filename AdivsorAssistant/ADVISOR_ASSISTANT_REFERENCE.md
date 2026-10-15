@@ -185,7 +185,7 @@ meetingType, hasTodos, notes, instructions, transcriptDocumentId
 | Method | Parameters | Returns |
 |---|---|---|
 | `regenerateMeetingSummary` | `flowApiName, currentSummary, instructions, documentId` | regenerated HTML |
-| `saveMeetingNote` | `flowApiName, noteId, noteHtml, noteMarkdown, briefHtml, briefMarkdown, eventId, published, meetingType, deleteNote` | saved note Id |
+| `saveMeetingNote` | `flowApiName, noteId, noteHtml, briefHtml, eventId, published, meetingType, deleteNote` | saved note Id |
 | `saveInternalNotes` | `flowApiName, noteId, eventId, internalNotes` | saved note Id |
 | `saveTodos` | `flowApiName, todosJson, eventId, whoId` | result string |
 | `saveWealthPlan` | `flowApiName, recordsJson, accountId` | JSON result incl. per-section errors |
@@ -276,7 +276,7 @@ Appearance options: `componentTitle`, `componentSubtitle`, `backgroundColor`, `m
 
 | Object | Purpose |
 |---|---|
-| `MeetingNote__c` | The meeting summary; `Note__c`, `NoteMarkdown__c`, `Internal_Notes__c`, `Published__c` |
+| `MeetingNote__c` | The meeting summary; `Note__c`, `Internal_Notes__c`, `Published__c`. `NoteMarkdown__c` still exists but is **no longer populated** — see §9 |
 | `MeetingNoteVersion__c` | Published version history |
 | `UserAIInstruction__c` | Per-user AI instructions — `InstructionText__c`, `IsActive__c`, `User__c` |
 | `Meeting_Artifact__c` | Links documents to an Event |
@@ -305,6 +305,27 @@ then never reached the prompt. `_fileKind()` normalises `ContentDocument.FileTyp
 The Flows select documents **by kind**, not by slot: a lookup filters `FileType != TEXT` and a loop
 assigns the first two to `varContentDoc1` / `varContentDoc2`. A transcript therefore never occupies
 an attachment slot regardless of selection order.
+
+### Markdown mirror — removed
+
+The component used to convert the summary HTML to Markdown and store it in
+`MeetingNote__c.NoteMarkdown__c`, as a mirror for a client-facing web app. **That converter has been
+removed**: nothing read the field any more, and the logic existed in four copies that had to be kept
+in step.
+
+Two remnants are deliberate:
+
+- **`outputNoteMarkdown`** survives as an inert, always-empty `@api` output. Salesforce refuses to
+  delete an output property while the component is referenced by existing flow versions — here, four
+  versions of `AdvisorAssistant_SCR_AI_Helper`. Note the rule is about the *component* being
+  referenced, not the property being bound: no flow binds this one, and it still could not be
+  removed.
+- **The save flow still assigns `NoteMarkdown__c`.** Apex no longer sends a value, so it writes
+  blank. Removing the assignment means editing the flow every save depends on, which is not worth
+  the risk for a field nothing reads.
+
+If a Markdown mirror is ever needed again, generate it server-side in Apex rather than in four
+components.
 
 ---
 
@@ -453,7 +474,7 @@ summary actions, so every change must be proven safe by diffing action-by-action
 `advisorMeetingSummary` (499 members) and `advisorWealthPlan` (472) share **466 member names**; 418
 exist in all three components. They are forks, not siblings, and this is the direct cause of the
 missing-attribute class of bug. Extract one cohesive area at a time — file selection, then payload
-building, then Markdown — each with tests before and after. **Not a big-bang rewrite:** a previous
+building, then event handling — each with tests before and after. **Not a big-bang rewrite:** a previous
 broad cleanup was reverted after a UI regression.
 
 **5. Strengthen the Apex tests.**
@@ -504,5 +525,5 @@ silent production break into a loud CI failure.
   rest exist only in the org, so they cannot be recreated from source.
 - **`StrategyAllocationHubControllerTest` currently fails** — unrelated to this app, but production
   runs all local tests, so it blocks every deploy until its owner fixes it.
-- **Jest coverage is thin** — 34 tests, covering the Markdown converter and wealth plan parsing
-  only. The file-selection and payload-building logic, where the recent bugs were, has none.
+- **Jest coverage is thin** — 9 tests in a single spec, covering wealth plan JSON parsing only.
+  The file-selection and payload-building logic, where the recent bugs were, has none.
