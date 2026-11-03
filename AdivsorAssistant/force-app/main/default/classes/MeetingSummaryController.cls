@@ -67,7 +67,8 @@ public with sharing class MeetingSummaryController {
             flowInputs.put('GenerateMode', 'summary');
             if (String.isNotBlank(meetingType)) {
                 Map<String, String> typeLabels = new Map<String, String>{
-                    'whiteboard' => 'Whiteboard Meeting',
+                    'whiteboard' => 'Prospect Meeting',
+                    'working'    => 'Working Meeting',
                     'status'     => 'Status Meeting',
                     'annual'     => 'Annual Review'
                 };
@@ -75,6 +76,9 @@ public with sharing class MeetingSummaryController {
                 String meetingContext = (String.isNotBlank(typeLabel) ? typeLabel : 'Unspecified')
                     + ' | To-Dos: ' + (hasTodos == true ? 'Yes' : 'No');
                 flowInputs.put('MeetingContext', meetingContext);
+                // Steers the summary outline: the prompt gives Input:Instructions absolute
+                // priority, and the summary flow folds this label into that input.
+                flowInputs.put('MeetingTypeLabel', typeLabel);
             }
             if (saveDoc1AsArtifact != null) flowInputs.put('SaveDoc1AsArtifact', saveDoc1AsArtifact);
             if (saveDoc2AsArtifact != null) flowInputs.put('SaveDoc2AsArtifact', saveDoc2AsArtifact);
@@ -242,7 +246,7 @@ public with sharing class MeetingSummaryController {
      *               briefHtml     (Text)    — "At a Glance" brief, HTML
      *               eventId       (Text)    — Event to link a newly created note to
      *               published     (Boolean)
-     *               meetingType   (Text)    — 'whiteboard' | 'status' | 'annual' | ''
+     *               meetingType   (Text)    — stored picklist label: 'Prospect Meeting' | 'Working Meeting' | 'Status Meeting' | 'Annual Review' | ''
      *               deleteNote    (Boolean) — when true the content inputs arrive blank
      * Flow output:  savedNoteId   (Text)    — Id of the created or updated MeetingNote__c
      *

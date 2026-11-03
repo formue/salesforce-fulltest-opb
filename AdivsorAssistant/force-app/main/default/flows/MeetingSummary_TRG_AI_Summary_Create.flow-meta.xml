@@ -17,7 +17,7 @@
         <inputParameters>
             <name>Input:Instructions</name>
             <value>
-                <elementReference>formInstructions</elementReference>
+                <elementReference>formSummaryInstructions</elementReference>
                 <inputConfiguratorMode>Resource</inputConfiguratorMode>
             </value>
         </inputParameters>
@@ -73,7 +73,7 @@
         <inputParameters>
             <name>Input:Instructions</name>
             <value>
-                <elementReference>formInstructions</elementReference>
+                <elementReference>formSummaryInstructions</elementReference>
                 <inputConfiguratorMode>Resource</inputConfiguratorMode>
             </value>
         </inputParameters>
@@ -122,7 +122,7 @@
         <inputParameters>
             <name>Input:Instructions</name>
             <value>
-                <elementReference>formInstructions</elementReference>
+                <elementReference>formSummaryInstructions</elementReference>
                 <inputConfiguratorMode>Resource</inputConfiguratorMode>
             </value>
         </inputParameters>
@@ -798,6 +798,13 @@
         <expression>IF({!Instructions} = null, &apos; &apos;, {!Instructions})</expression>
     </formulas>
     <formulas>
+        <name>formSummaryInstructions</name>
+        <dataType>String</dataType>
+        <expression>IF(BLANKVALUE({!MeetingTypeLabel}, &apos;&apos;) = &apos;&apos;, &apos;&apos;, &apos;This is a &apos; &amp; {!MeetingTypeLabel} &amp; &apos;. Use the section outline defined for that meeting type. &apos;)
+&amp; &apos;Return raw, valid HTML only. Use only &lt;h2&gt;, &lt;h3&gt;, &lt;p&gt;, &lt;strong&gt;, and &lt;br&gt;. Use &lt;h2&gt; for the title and &lt;h3&gt; for each section header, and write all sections as continuous &lt;p&gt; paragraphs. Never use bullet points, numbered lists, or list tags. Do not wrap the output in Markdown code fences. &apos;
+&amp; BLANKVALUE({!Instructions}, &apos;&apos;)</expression>
+    </formulas>
+    <formulas>
         <name>formOutputLanguage</name>
         <dataType>String</dataType>
         <expression>IF(ISBLANK({!OutputLanguage}), &apos;nb_NO&apos;, {!OutputLanguage})</expression>
@@ -1045,6 +1052,13 @@
     </variables>
     <variables>
         <name>Instructions</name>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+    </variables>
+    <variables>
+        <name>MeetingTypeLabel</name>
         <dataType>String</dataType>
         <isCollection>false</isCollection>
         <isInput>true</isInput>

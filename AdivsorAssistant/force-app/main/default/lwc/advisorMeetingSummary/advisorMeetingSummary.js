@@ -309,29 +309,29 @@ const MAX_TRANSCRIPTS = 1;   // Input:Transcription
 
 // ── Meeting categories ──────────────────────────────────────────────────────
 /**
- * Display label and stored value are deliberately DIFFERENT for the prospect
- * category. `Event.MeetingType__c` is a RESTRICTED picklist holding "Whiteboard
- * Meeting" and not "Prospect Meeting", so writing the new name into it fails the
- * save. The advisor sees the new name; Salesforce keeps storing the old one.
- *
- * To finish the rename: add the picklist value, migrate existing records, then
- * change the one line in MEETING_TYPE_STORED. MEETING_TYPE_ALIASES already reads
- * both spellings.
+ * `Event.MeetingType__c` is a RESTRICTED picklist carrying all four labels below,
+ * so the stored value is identical to the display label — no translation needed.
+ * The internal keys (whiteboard/working/status/annual) are the component's own
+ * identifiers and are independent of the stored labels. Keep this in sync with
+ * the same maps in advisorAssistant.js.
  */
 const MEETING_TYPE_LABELS = {
     whiteboard: 'Prospect Meeting',
+    working:    'Working Meeting',
     status:     'Status Meeting',
     annual:     'Annual Review',
 };
 const MEETING_TYPE_STORED = {
-    whiteboard: 'Whiteboard Meeting',   // ← restricted picklist value; see above
+    whiteboard: 'Prospect Meeting',
+    working:    'Working Meeting',
     status:     'Status Meeting',
     annual:     'Annual Review',
 };
-/** Stored value → internal key. Both spellings, so legacy records still preselect. */
+/** Stored value → internal key. Every spelling we might read back. */
 const MEETING_TYPE_ALIASES = {
-    'Whiteboard Meeting': 'whiteboard',
+    'Whiteboard Meeting': 'whiteboard',   // legacy value; pre-migration rows preselect
     'Prospect Meeting':   'whiteboard',
+    'Working Meeting':    'working',
     'Status Meeting':     'status',
     'Annual Review':      'annual',
 };
@@ -741,7 +741,7 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
     @api outputMeetingNote           = null;   // MeetingNote__c record for update { Id, Note__c, NoteMarkdown__c } — mutually exclusive with outputMeetingNoteToCreate
     @api outputMeetingNoteToCreate   = null;   // MeetingNote__c shell for create { Note__c, NoteMarkdown__c } — populated when no existing note exists
     @api outputNoteIdToDelete        = '';     // Deprecated — retained for flow backwards compatibility; deletion handled via deleteNote flag in saveSummaryFlowApiName
-    @api outputMeetingType           = '';     // 'whiteboard' | 'status' | 'annual' | ''
+    @api outputMeetingType           = '';     // 'whiteboard' | 'working' | 'status' | 'annual' | ''
     @api outputHasTodos              = false;  // whether To-Do's format was selected
     @api outputSelectedEventId       = '';     // Id of the selected event — used by flow to link new note to Event.MeetingNote__c
     // New/AI records for upsert
@@ -864,7 +864,7 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
 
     // ── Event selection + meeting type modal ─────────────────────────────────
     @track _selectedEventId      = null;   // Id of the selected Salesforce Event
-    @track _selectedMeetingType  = null;   // 'whiteboard' | 'status' | 'annual'
+    @track _selectedMeetingType  = null;   // 'whiteboard' | 'working' | 'status' | 'annual'
     @track _hasTodos             = false;
     @track _eventsLoadedAt       = null;   // Date when events finished loading
     @track _msTodosExpanded      = false;
@@ -1301,9 +1301,10 @@ export default class AdvisorMeetingSummary extends NavigationMixin(LightningElem
         return true;
     }
     // Meeting type getters — class-based so LWC re-renders reactively
-    get isWhiteboardSelected() { return this._selectedMeetingType === 'whiteboard'; }
-    get isStatusSelected()     { return this._selectedMeetingType === 'status'; }
-    get isAnnualSelected()     { return this._selectedMeetingType === 'annual'; }
+    get isWhiteboardSelected()     { return this._selectedMeetingType === 'whiteboard'; }
+    get isWorkingMeetingSelected() { return this._selectedMeetingType === 'working'; }
+    get isStatusSelected()         { return this._selectedMeetingType === 'status'; }
+    get isAnnualSelected()         { return this._selectedMeetingType === 'annual'; }
     get whiteboardBtnClass() { return `wph-ms-type-btn${this.isWhiteboardSelected ? ' wph-ms-type-btn--active' : ''}`; }
     get statusBtnClass()     { return `wph-ms-type-btn${this.isStatusSelected ? ' wph-ms-type-btn--active' : ''}`; }
     get annualBtnClass()     { return `wph-ms-type-btn${this.isAnnualSelected ? ' wph-ms-type-btn--active' : ''}`; }
