@@ -349,8 +349,44 @@ state, so children never re-render from it. Teardown is in the single `disconnec
 
 The countdown is driven by `ContentDocument.CreatedDate`, which **the Flow must query** — see the
 `inputContentDocuments` property. If that field is absent no chip renders at all, so the component
-degrades cleanly rather than showing a wrong date. Nothing here performs the deletion; the chip
-only reports the policy.
+degrades cleanly rather than showing a wrong date. Nothing in the component performs the
+deletion; the chip only reports the policy.
+
+#### The retention job
+
+The deletion is done by the scheduled flow **`AdvisorAssistant_SCH_Transcript_Retention`**, which
+runs daily at 02:00. The flow owns the switches and the delete; the Apex action
+**`TranscriptRetentionSelector`** ("Select Transcripts For Retention", read-only, `without sharing`)
+decides *which* files go:
+
+- extension `txt`, title contains "Transcript", `CreatedDate` older than the retention period;
+- **and** linked to a `Meeting_Artifact__c`. Transcripts linked only to a User or Account are
+  never read;
+- oldest first, up to `MaxFilesPerRun__c`.
+
+The files are reached **through `ContentDocumentLink`** (`LinkedEntityId IN (SELECT Id FROM
+Meeting_Artifact__c …)`), never by querying `ContentDocument` directly: Salesforce applies file
+sharing to direct `ContentDocument` queries even in system mode, and the Automated Process user
+that runs the scheduled flow got **zero** files that way. Links are read in pages of 200 with a
+(file `CreatedDate`, `ContentDocumentId`) cursor, at most 2000 per run. A deleted file takes its
+links with it, so the job doesn't grow with Meeting Artifact history.
+
+The flow then deletes the returned files in one Delete Records step (or only reports them in dry
+run) and emails a summary. A fault in the selector or the delete is captured and reported, and
+nothing is deleted after a selector fault. It is controlled by the
+`Transcript_Retention_Setting__mdt` record **`Default`** — no deploy needed to change it:
+
+| Field | Shipped value | Effect |
+|---|---|---|
+| `IsActive__c` | `false` | Master switch; when off the flow exits immediately |
+| `DryRun__c` | `true` | Reports the files it would delete, deletes nothing |
+| `RetentionDays__c` | `7` | Keep in step with the chip, which assumes 7 |
+| `MaxFilesPerRun__c` | `50` | Cap per run, oldest first |
+| `NotificationEmail__c` | blank | Receives the run summary (mode, count, errors, file list) |
+
+Rollout: activate the flow → set `IsActive__c` and a notification address while still in dry run →
+compare the emailed list with an admin SOQL count → turn `DryRun__c` off with a low cap → raise the
+cap. Deleted files go to the Recycle Bin for 15 days.
 
 #### `ContentDocument.FileType` is not the file extension
 

@@ -250,6 +250,50 @@ Both generation flows implement the same pattern:
 > `FlowTransform` elements do not support fault connectors in API 66.0, so `Get_DocumentId_s` is the
 > one element without one.
 
+### Save flows and access errors
+
+`WealthPlan_AL_Meeting_Summary_Save_Update` and `WealthPlan_AL_Meeting_Note_Create_Version` use the
+same pattern: every lookup and DML element faults to `Assign_Fault` → `ErrorMessage` output. In
+`MeetingSummaryController`:
+
+- **Pre-check** (`assertCanSaveNote`, used by `saveMeetingNote` and `saveInternalNotes`) mirrors the
+  flow's routing and checks `UserRecordAccess` edit on the note and/or Event before the flow starts.
+- **Savepoint + rollback** around every save flow, so a note created before a failed Event link is
+  not left orphaned.
+- Any `INSUFFICIENT_ACCESS*` failure — pre-check, flow `ErrorMessage`, thrown exception, or a wealth
+  plan section DML error — is shown as Custom Label **`AA_Save_InsufficientAccess`** (contact the
+  Support Center). Other errors keep their technical message. Error toasts are sticky.
+
+### Liabilities
+
+`FinServ__AssetsAndLiabilities__c` rows with `AssetorLiabilityType__c = Liability` are stored with a
+**positive** `FinServ__Amount__c` and a **blank** `FF_Category__c`. `advisorWealthPlan` applies this
+on AI parse, on edit (the Category picker is disabled for liabilities), and in `clean()` before save;
+`MeetingSummaryController.normalizeLiabilities` is the server-side guard. The save preview subtracts
+liabilities and reads "NOK net".
+
+### Transcript retention
+
+`AdvisorAssistant_SCH_Transcript_Retention` (scheduled, daily 02:00, system mode without sharing):
+`Get_Retention_Settings` → `Is_Active` → **`Select_Transcripts`** (Apex `TranscriptRetentionSelector`)
+→ `Is_Dry_Run` → `Delete_Transcripts` → `Check_Email_Configured` → `Send_Summary_Email`.
+
+| Selector input | Source | | Selector output | Flow variable |
+|---|---|---|---|---|
+| `retentionDays` | `RetentionDays__c` | | `documents` | `filesToDelete` |
+| `maxFiles` | `MaxFilesPerRun__c` | | `selectedCount` | `counter` |
+| `maxScan` | not set (default and max 2000) | | `scannedCount` | `scannedCount` |
+| | | | `fileList` | `fileList` (`Id - Title`, `<br/>`-separated) |
+
+The selector is read-only and `without sharing` with `WITH SYSTEM_MODE` queries. It queries
+**`ContentDocumentLink` with `LinkedEntityId IN (SELECT Id FROM Meeting_Artifact__c WHERE
+CreatedDate < :cutoff)`** plus `ContentDocument.FileExtension/Title/CreatedDate` filters — not
+`ContentDocument` directly, which returned zero rows for the Automated Process user because file
+sharing still applies to it in system mode. One query per page of 200 links; stops at `maxFiles`,
+`maxScan`, a short page, or the query limit. `scannedCount` counts links, so a file linked to two
+artifacts is read twice and selected once. Tests: `TranscriptRetentionSelectorTest` (includes a
+run as a Standard User with no access to the file).
+
 ---
 
 ## 7. Configuration

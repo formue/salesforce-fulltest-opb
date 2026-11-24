@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>MaxFilesPerRun__c</fullName>
+    <label>Max Files Per Run</label>
+    <type>Number</type>
+    <precision>5</precision>
+    <scale>0</scale>
+    <description>Upper bound on transcripts handled in one run, oldest first. Start low and raise it once deletions are confirmed correct.</description>
+    <inlineHelpText>Maximum number of transcripts deleted (or reported) per run.</inlineHelpText>
+</CustomField>

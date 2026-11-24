@@ -376,6 +376,9 @@ export default class AdvisorInternalNotes extends LightningElement {
     }
 
     _toast(title, message, variant) {
-        this.dispatchEvent(new ShowToastEvent({ title, message, variant }));
+        // Errors stay until dismissed: an access failure tells the advisor to contact the
+        // Support Center, which a 3-second toast is too short to read.
+        const mode = variant === 'error' ? 'sticky' : 'dismissible';
+        this.dispatchEvent(new ShowToastEvent({ title, message, variant, mode }));
     }
 }

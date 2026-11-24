@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <label>Transcript Retention Setting</label>
+    <pluralLabel>Transcript Retention Settings</pluralLabel>
+    <description>Controls the scheduled flow AdvisorAssistant_SCH_Transcript_Retention, which deletes meeting transcripts (text files whose title contains "transcript") after the retention period. Read from the record named Default. Lets the job be switched on, run in dry-run, and capped per run without a deploy.</description>
+    <visibility>Public</visibility>
+</CustomObject>

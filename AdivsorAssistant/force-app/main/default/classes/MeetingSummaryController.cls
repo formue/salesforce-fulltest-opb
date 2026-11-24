@@ -270,7 +270,12 @@ public with sharing class MeetingSummaryController {
             Boolean published,
             String meetingType,
             Boolean deleteNote) {
+        Savepoint sp = null;
         try {
+            // Fail early with the support message rather than letting the Flow die mid-way
+            // on INSUFFICIENT_ACCESS_ON_CROSS_REFERENCE_ENTITY.
+            assertCanSaveNote(eventId, noteId, meetingType, true);
+
             Map<String, Object> flowInputs = new Map<String, Object>();
             // Explicit mode so the Flow never has to infer the caller from which inputs
             // happen to be blank — an unset Flow variable and an empty string are
@@ -284,12 +289,20 @@ public with sharing class MeetingSummaryController {
             flowInputs.put('meetingType',   meetingType   != null ? meetingType   : '');
             flowInputs.put('deleteNote',    deleteNote    != null ? deleteNote    : false);
 
+            // The Flow creates the note BEFORE linking it to the Event. If the link fails,
+            // the rollback stops an orphan MeetingNote__c from being left behind.
+            sp = Database.setSavepoint();
             Flow.Interview interview = Flow.Interview.createInterview(flowApiName, flowInputs);
             interview.start();
+            throwIfFlowFaulted(interview);
 
             return (String) interview.getVariableValue('savedNoteId');
+        } catch (AuraHandledException ahe) {
+            rollbackTo(sp);
+            throw ahe;
         } catch (Exception e) {
-            throw new AuraHandledException('Error executing save note flow: ' + e.getMessage());
+            rollbackTo(sp);
+            throw toAuraException('Error executing save note flow: ', e);
         }
     }
 
@@ -324,7 +337,12 @@ public with sharing class MeetingSummaryController {
             String noteId,
             String eventId,
             String internalNotes) {
+        Savepoint sp = null;
         try {
+            // An internal notes save never writes the meeting type, so only the note itself
+            // (or, on the create path, the Event link) needs edit access.
+            assertCanSaveNote(eventId, noteId, null, false);
+
             Map<String, Object> flowInputs = new Map<String, Object>();
             // See saveMeetingNote: the Flow branches on this rather than guessing.
             // It matters most when the advisor CLEARS their notes — internalNotes is then
@@ -335,12 +353,18 @@ public with sharing class MeetingSummaryController {
             flowInputs.put('eventId',       eventId       != null ? eventId       : '');
             flowInputs.put('internalNotes', internalNotes != null ? internalNotes : '');
 
+            sp = Database.setSavepoint();
             Flow.Interview interview = Flow.Interview.createInterview(flowApiName, flowInputs);
             interview.start();
+            throwIfFlowFaulted(interview);
 
             return (String) interview.getVariableValue('savedNoteId');
+        } catch (AuraHandledException ahe) {
+            rollbackTo(sp);
+            throw ahe;
         } catch (Exception e) {
-            throw new AuraHandledException('Error executing internal notes flow: ' + e.getMessage());
+            rollbackTo(sp);
+            throw toAuraException('Error executing internal notes flow: ', e);
         }
     }
 
@@ -372,6 +396,7 @@ public with sharing class MeetingSummaryController {
             String todosJson,
             String eventId,
             String whoId) {
+        Savepoint sp = null;
         try {
             System.debug('saveTodos called — flowApiName: ' + flowApiName);
             System.debug('saveTodos — eventId: ' + eventId);
@@ -424,13 +449,15 @@ public with sharing class MeetingSummaryController {
             System.debug('saveTodos — WhoId in flowInputs: '          + flowInputs.get('WhoId'));
             System.debug('saveTodos — WhatId in flowInputs: '         + flowInputs.get('WhatId'));
 
+            sp = Database.setSavepoint();
             Flow.Interview interview = Flow.Interview.createInterview(flowApiName, flowInputs);
             interview.start();
 
             String result = (String) interview.getVariableValue('SaveResult');
             return String.isNotBlank(result) ? result : 'Saved';
         } catch (Exception e) {
-            throw new AuraHandledException('Error saving to-dos: ' + e.getMessage());
+            rollbackTo(sp);
+            throw toAuraException('Error saving to-dos: ', e);
         }
     }
 
@@ -453,9 +480,11 @@ public with sharing class MeetingSummaryController {
                 getWpList(all,'income','delete', List<FF_Income__c>.class),
                 errors, successSections);
 
+            // Liabilities are stored as a positive amount with no category. The component already
+            // normalises them; this is the server-side guard for every caller.
             trySaveSection('assets',         'Assets & Liabilities',
-                getWpList(all,'assets','create', List<FinServ__AssetsAndLiabilities__c>.class),
-                getWpList(all,'assets','update', List<FinServ__AssetsAndLiabilities__c>.class),
+                normalizeLiabilities(getWpList(all,'assets','create', List<FinServ__AssetsAndLiabilities__c>.class)),
+                normalizeLiabilities(getWpList(all,'assets','update', List<FinServ__AssetsAndLiabilities__c>.class)),
                 getWpList(all,'assets','delete', List<FinServ__AssetsAndLiabilities__c>.class),
                 errors, successSections);
 
@@ -514,7 +543,160 @@ public with sharing class MeetingSummaryController {
             successSections.add(key);
         } catch (Exception e) {
             Database.rollback(sp);
-            errors.add(label + ': ' + e.getMessage());
+            errors.add(label + ': ' + (isAccessError(e.getMessage()) ? insufficientAccessMessage() : e.getMessage()));
+        }
+    }
+
+    // ── Liability normalisation ──────────────────────────────────────────────
+
+    @TestVisible
+    private static final String LIABILITY = 'Liability';
+
+    /**
+     * A liability is stored with a POSITIVE FinServ__Amount__c and a BLANK FF_Category__c.
+     * Category is assigned explicitly (not just left unset) so an update also clears a category
+     * that was saved earlier.
+     */
+    @TestVisible
+    private static List<SObject> normalizeLiabilities(List<SObject> records) {
+        for (SObject rec : records) {
+            FinServ__AssetsAndLiabilities__c al = (FinServ__AssetsAndLiabilities__c) rec;
+            if (al.AssetorLiabilityType__c != LIABILITY) continue;
+            al.FF_Category__c = null;
+            if (al.FinServ__Amount__c != null) al.FinServ__Amount__c = Math.abs(al.FinServ__Amount__c);
+        }
+        return records;
+    }
+
+    // ── Save access handling ─────────────────────────────────────────────────
+
+    /** Shown whenever a save is blocked by record access or Client Net Role. */
+    @TestVisible
+    private static String insufficientAccessMessage() {
+        return System.Label.AA_Save_InsufficientAccess;
+    }
+
+    /**
+     * Covers INSUFFICIENT_ACCESS_ON_CROSS_REFERENCE_ENTITY, INSUFFICIENT_ACCESS_OR_READONLY, etc.
+     * The status code stays in English in the fault text whatever the user's language is.
+     */
+    @TestVisible
+    private static Boolean isAccessError(String message) {
+        return message != null && message.contains('INSUFFICIENT_ACCESS');
+    }
+
+    private static AuraHandledException supportError() {
+        String msg = insufficientAccessMessage();
+        AuraHandledException ex = new AuraHandledException(msg);
+        ex.setMessage(msg);   // so getMessage() returns the text, including in tests
+        return ex;
+    }
+
+    /** Access errors get the support message; anything else keeps the technical prefix + cause. */
+    @TestVisible
+    private static AuraHandledException toAuraException(String prefix, Exception e) {
+        if (isAccessError(e.getMessage())) return supportError();
+        String msg = prefix + e.getMessage();
+        AuraHandledException ex = new AuraHandledException(msg);
+        ex.setMessage(msg);
+        return ex;
+    }
+
+    private static void rollbackTo(Savepoint sp) {
+        if (sp != null) Database.rollback(sp);
+    }
+
+    /**
+     * The save flows route DML faults to an ErrorMessage output, so the interview ends
+     * "successfully". Treat that as the failure it is. Flows without the variable are fine.
+     */
+    private static void throwIfFlowFaulted(Flow.Interview interview) {
+        String err;
+        try {
+            err = (String) interview.getVariableValue('ErrorMessage');
+        } catch (Exception e) {
+            return;   // flow does not declare ErrorMessage
+        }
+        if (String.isBlank(err)) return;
+        if (isAccessError(err)) throw supportError();
+        throw new FlowFaultException(err);
+    }
+
+    private class FlowFaultException extends Exception {}
+
+    /**
+     * Checks up front that the running user can do what the save flow is about to do, so the
+     * advisor gets the support message instead of a half-run Flow.
+     *
+     * Mirrors the flow's routing:
+     *   - the note resolves to noteId, else the note already linked on the Event;
+     *   - no note → the flow CREATES one and links it to the Event (needs create + Event edit);
+     *   - a note  → the flow UPDATES it (needs note edit), and on a summary save also writes
+     *     Event.MeetingType__c when it changed (needs Event edit).
+     *
+     * The Event lookup is best-effort: if the user cannot read the Event or its fields, the
+     * decision is made from the Ids alone — which still demands Event edit on the create path.
+     * Only a failure of the access query itself fails OPEN; the catch in the caller and the
+     * flow's fault path remain the authoritative check.
+     */
+    private static void assertCanSaveNote(String eventId, String noteId, String meetingType, Boolean writesMeetingType) {
+        Id evtId   = toIdOrNull(eventId);
+        Id noteRef = toIdOrNull(noteId);
+
+        Event evt = null;
+        if (evtId != null) {
+            try {
+                List<Event> events = [
+                    SELECT Id, MeetingNote__c, MeetingType__c
+                    FROM   Event
+                    WHERE  Id = :evtId
+                    WITH   USER_MODE
+                    LIMIT  1
+                ];
+                if (!events.isEmpty()) evt = events[0];
+            } catch (Exception e) {
+                evt = null;   // no read access to the fields — decide from the Ids below
+            }
+        }
+
+        Set<Id> needsEdit = new Set<Id>();
+        Id resolvedNoteId = noteRef != null ? noteRef : evt?.MeetingNote__c;
+        Boolean needsCreate = resolvedNoteId == null;
+        if (needsCreate) {
+            // evtId, not evt.Id: an Event the user cannot even read must still fail here.
+            if (evtId != null) needsEdit.add(evtId);
+        } else {
+            needsEdit.add(resolvedNoteId);
+            Boolean typeChanges = (evt?.MeetingType__c ?? '') != (meetingType ?? '');
+            if (writesMeetingType && evt != null && typeChanges) needsEdit.add(evt.Id);
+        }
+
+        if (needsCreate && !Schema.sObjectType.MeetingNote__c.isCreateable()) throw supportError();
+        if (needsEdit.isEmpty()) return;
+
+        List<UserRecordAccess> access;
+        try {
+            access = [
+                SELECT RecordId, HasEditAccess
+                FROM   UserRecordAccess
+                WHERE  UserId = :UserInfo.getUserId()
+                  AND  RecordId IN :needsEdit
+                LIMIT  10
+            ];
+        } catch (Exception e) {
+            return;   // fail open — see method comment
+        }
+        for (UserRecordAccess ura : access) {
+            if (!ura.HasEditAccess) throw supportError();
+        }
+    }
+
+    private static Id toIdOrNull(String value) {
+        if (String.isBlank(value)) return null;
+        try {
+            return Id.valueOf(value);
+        } catch (Exception e) {
+            return null;
         }
     }
 
@@ -537,16 +719,19 @@ public with sharing class MeetingSummaryController {
 
     @AuraEnabled
     public static String saveFileToEvent(String flowApiName, String contentDocumentId, String eventId) {
+        Savepoint sp = null;
         try {
             Map<String, Object> inputs = new Map<String, Object>{
                 'ContentDocumentId' => contentDocumentId,
                 'EventId'           => eventId
             };
+            sp = Database.setSavepoint();
             Flow.Interview interview = Flow.Interview.createInterview(flowApiName, inputs);
             interview.start();
             return 'success';
         } catch (Exception e) {
-            throw new AuraHandledException(e.getMessage());
+            rollbackTo(sp);
+            throw toAuraException('', e);
         }
     }
 

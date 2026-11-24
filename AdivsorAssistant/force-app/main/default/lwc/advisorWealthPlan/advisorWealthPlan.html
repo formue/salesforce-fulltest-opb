@@ -615,7 +615,7 @@
                                                                                         </template>
                                                                                     </label>
                                                                                     <template lwc:if={fld.isSelect}>
-                                                                                        <select class={fld.selectClass} data-field={fld.api} onchange={handleFieldChange}>
+                                                                                        <select class={fld.selectClass} data-field={fld.api} onchange={handleFieldChange} disabled={fld.isDisabled} title={fld.disabledHint}>
                                                                                             <template for:each={fld.selectOptions} for:item="opt">
                                                                                                 <option key={opt.value} value={opt.value} selected={opt.selected}>{opt.label}</option>
                                                                                             </template>

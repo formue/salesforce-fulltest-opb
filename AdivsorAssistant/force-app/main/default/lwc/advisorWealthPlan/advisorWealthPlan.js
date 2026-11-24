@@ -178,6 +178,36 @@ const SECTIONS = [
 // Fields that use owner options — eligible for smart propagation
 const OWNER_FIELD_APIS = new Set(['FinServ__PrimaryOwner__c', 'FF_Account__c']);
 
+// ── Liability rule ───────────────────────────────────────────────────────────
+// A liability is stored with a POSITIVE FinServ__Amount__c and a BLANK FF_Category__c.
+// Enforced at every entry point: AI parse, manual edit, and save (`clean()`), with
+// MeetingSummaryController.normalizeLiabilities as the server-side guard.
+const LIABILITY_VALUE = 'Liability';
+const LIABILITY_ALIASES = new Set(['liability', 'liabilities', 'gjeld']);
+
+/** True when the record's Asset/Liability value is Liability (or a word the AI uses for it). */
+function _isLiability(rec) {
+    const v = rec?.AssetorLiabilityType__c;
+    return v != null && LIABILITY_ALIASES.has(String(v).trim().toLowerCase());
+}
+
+/** Strips the sign without reinterpreting the number — parseFloat('-1 500 000') would give -1. */
+function _absAmount(value) {
+    if (typeof value === 'number') return Math.abs(value);
+    if (typeof value === 'string') return value.trim().replace(/^[-−–]\s*/, '');
+    return value;
+}
+
+/** Returns a copy of an assets row with the liability rule applied; non-liabilities pass through. */
+function _normalizeLiability(rec) {
+    if (!_isLiability(rec)) return rec;
+    const out = { ...rec, AssetorLiabilityType__c: LIABILITY_VALUE, FF_Category__c: '' };
+    if (rec.FinServ__Amount__c != null && rec.FinServ__Amount__c !== '') {
+        out.FinServ__Amount__c = _absAmount(rec.FinServ__Amount__c);
+    }
+    return out;
+}
+
 // ── AI-friendly → Salesforce API name mappings per section ───────────────────
 // The AI prompt may return human-readable keys; we normalize them here.
 const FIELD_ALIASES = {
@@ -3020,6 +3050,7 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
                 if (def.key === 'assets' && !normalized.FinServ__PrimaryOwner__c && primaryId) {
                     normalized.FinServ__PrimaryOwner__c = primaryId;
                 }
+                if (def.key === 'assets') return _normalizeLiability(normalized);
                 return normalized;
             });
 
@@ -3241,9 +3272,13 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
                         ?? null;
 
                     const fldMaxlength = f.maxlength || null;
+                    // A liability has no category — lock the picker rather than let one be chosen.
+                    const isDisabled = s.key === 'assets' && f.api === 'FF_Category__c' && _isLiability(rec);
                     return {
                         api: f.api, label: f.label, type: f.type,
                         role: f.role || '',
+                        isDisabled,
+                        disabledHint: isDisabled ? 'Liabilities have no category' : null,
                         required: !!f.required,
                         value: rawValue, displayValue,
                         isSelect, isCheckbox, isTextarea, isNumber, isText,
@@ -3985,8 +4020,10 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
             this._undoStack = stack;
         }
 
-        // Update the record
-        records[recIdx] = { ...rec, [fieldApi]: value };
+        // Update the record. Assets also get the liability rule: choosing Liability clears
+        // Category and drops the sign, and so does editing the amount of a liability.
+        const updated = { ...rec, [fieldApi]: value };
+        records[recIdx] = section.key === 'assets' ? _normalizeLiability(updated) : updated;
         section.records = records;
         const sections = [...this._sections];
         sections[secIdx] = section;
@@ -4266,7 +4303,10 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
         const assetSec = this._sections.find(s => s.key === 'assets');
         if (assetSec) {
             assetSec.records.forEach(r => {
-                const amt = parseFloat(r['FinServ__Amount__c']) || 0;
+                // Liabilities are stored positive, so they must be subtracted here — this used
+                // to net out only because liabilities were saved as negative numbers.
+                const raw = parseFloat(r['FinServ__Amount__c']) || 0;
+                const amt = _isLiability(r) ? -Math.abs(raw) : raw;
                 if (r._source !== 'existing' && isRecLocked(r._id, 'assets')) newAssetNOK += amt;
                 if (r._source === 'existing' && this._deletedRows[r._id])     delAssetNOK += amt;
             });
@@ -4283,7 +4323,7 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
         const negClass = 'wph-delta-chip wph-delta-neg';
         const delta = {
             hasChange:   netNOK !== 0 || goalNet !== 0 || incomeNet !== 0,
-            assetLabel:  netNOK !== 0 ? `${signFmt(Math.round(netNOK))} NOK assets` : null,
+            assetLabel:  netNOK !== 0 ? `${signFmt(Math.round(netNOK))} NOK net` : null,
             assetClass:  netNOK >= 0 ? posClass : negClass,
             goalLabel:   `${goalNet >= 0 ? '+' : ''}${goalNet} goal${Math.abs(goalNet) !== 1 ? 's' : ''}`,
             goalClass:   goalNet >= 0 ? posClass : negClass,
@@ -4521,6 +4561,14 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
                         }
                     });
                     if (r._sfId) c.Id = r._sfId;
+                    // The loop above skips null fields, so an edited liability would keep the
+                    // category saved earlier. Send an explicit null to clear it.
+                    if (key === 'assets' && _isLiability(c)) {
+                        c.FF_Category__c = null;
+                        if (c.FinServ__Amount__c != null && c.FinServ__Amount__c !== '') {
+                            c.FinServ__Amount__c = _absAmount(c.FinServ__Amount__c);
+                        }
+                    }
                     return c;
                 };
                 const creates = [], updates = [], deletes = [];
@@ -5307,6 +5355,9 @@ export default class AdvisorWealthPlan extends NavigationMixin(LightningElement)
 
     // ── Utility ──────────────────────────────────────────────────────────────
     _showToast(title, message, variant) {
-        this.dispatchEvent(new ShowToastEvent({ title, message, variant }));
+        // Errors stay until dismissed: an access failure tells the advisor to contact the
+        // Support Center, which a 3-second toast is too short to read.
+        const mode = variant === 'error' ? 'sticky' : 'dismissible';
+        this.dispatchEvent(new ShowToastEvent({ title, message, variant, mode }));
     }
 }

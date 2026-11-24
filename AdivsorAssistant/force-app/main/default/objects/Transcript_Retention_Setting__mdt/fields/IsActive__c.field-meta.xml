@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>IsActive__c</fullName>
+    <label>Active</label>
+    <type>Checkbox</type>
+    <defaultValue>false</defaultValue>
+    <description>Master switch. When false the scheduled flow exits without querying or deleting anything.</description>
+    <inlineHelpText>Turn on to let the transcript retention job run.</inlineHelpText>
+</CustomField>

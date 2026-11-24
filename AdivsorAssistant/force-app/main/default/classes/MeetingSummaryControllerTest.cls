@@ -382,6 +382,123 @@ private class MeetingSummaryControllerTest {
         Test.stopTest();
     }
 
+    // ── Insufficient access → support message ────────────────────────────────
+
+    @IsTest
+    static void testIsAccessError_RecognisesAccessCodes() {
+        Assert.isTrue(MeetingSummaryController.isAccessError(
+            'This error occurred: INSUFFICIENT_ACCESS_ON_CROSS_REFERENCE_ENTITY: insufficient access rights on object id'),
+            'Cross-reference access error should be recognised');
+        Assert.isTrue(MeetingSummaryController.isAccessError('INSUFFICIENT_ACCESS_OR_READONLY'),
+            'Read-only access error should be recognised');
+        Assert.isFalse(MeetingSummaryController.isAccessError('FIELD_CUSTOM_VALIDATION_EXCEPTION'),
+            'Other errors must keep their own message');
+        Assert.isFalse(MeetingSummaryController.isAccessError(null), 'Null is not an access error');
+    }
+
+    @IsTest
+    static void testToAuraException_AccessErrorGetsSupportMessage() {
+        AuraHandledException ex = MeetingSummaryController.toAuraException(
+            'Error executing save note flow: ',
+            new DmlException('INSUFFICIENT_ACCESS_ON_CROSS_REFERENCE_ENTITY: insufficient access rights on object id'));
+        Assert.areEqual(System.Label.AA_Save_InsufficientAccess, ex.getMessage(),
+            'An access failure should tell the advisor to contact the Support Center');
+    }
+
+    @IsTest
+    static void testToAuraException_OtherErrorKeepsTechnicalMessage() {
+        AuraHandledException ex = MeetingSummaryController.toAuraException(
+            'Error executing save note flow: ', new DmlException('Something else'));
+        Assert.areEqual('Error executing save note flow: Something else', ex.getMessage(),
+            'Non-access errors keep the prefix and the cause');
+    }
+
+    @IsTest
+    static void testSaveInternalNotes_UserWithoutEventAccess_GetsSupportMessage() {
+        // The Event belongs to the running admin; a user outside the role hierarchy cannot edit
+        // it, so creating and linking a note must be refused up front with the support message.
+        Event evt = new Event(
+            Subject           = 'Access Test Meeting',
+            StartDateTime     = System.now(),
+            EndDateTime       = System.now().addHours(1),
+            DurationInMinutes = 60
+        );
+        insert evt;
+        User noAccess = createUserWithoutViewAll();
+
+        String message;
+        Test.startTest();
+        System.runAs(noAccess) {
+            try {
+                MeetingSummaryController.saveInternalNotes(INVALID_FLOW, null, evt.Id, '<p>x</p>');
+                Assert.fail('Expected AuraHandledException');
+            } catch (AuraHandledException e) {
+                message = e.getMessage();
+            }
+        }
+        Test.stopTest();
+
+        Assert.areEqual(System.Label.AA_Save_InsufficientAccess, message,
+            'A user without access should be told to contact the Support Center');
+        Assert.areEqual(0, [SELECT COUNT() FROM MeetingNote__c WHERE CreatedById = :noAccess.Id],
+            'No note may be left behind by a refused save');
+    }
+
+    private static User createUserWithoutViewAll() {
+        Profile p = [
+            SELECT Id FROM Profile
+            WHERE  UserType = 'Standard'
+              AND  UserLicense.Name = 'Salesforce'
+              AND  PermissionsViewAllData = false
+              AND  PermissionsModifyAllData = false
+            ORDER BY Name
+            LIMIT 1
+        ];
+        String unique = String.valueOf(Crypto.getRandomInteger()).replace('-', '');
+        User u = new User(
+            ProfileId         = p.Id,
+            LastName          = 'NoAccess',
+            Alias             = 'noacc',
+            Email             = 'noaccess' + unique + '@example.com',
+            Username          = 'noaccess' + unique + '@example.com.aatest',
+            TimeZoneSidKey    = 'Europe/Oslo',
+            LocaleSidKey      = 'en_US',
+            EmailEncodingKey  = 'UTF-8',
+            LanguageLocaleKey = 'en_US'
+        );
+        insert u;
+        return u;
+    }
+
+    // ── Liability normalisation ──────────────────────────────────────────────
+
+    @IsTest
+    static void testNormalizeLiabilities_PositiveAmountAndBlankCategory() {
+        List<SObject> recs = new List<SObject>{
+            new FinServ__AssetsAndLiabilities__c(
+                Name = 'Boliglån', AssetorLiabilityType__c = 'Liability',
+                FF_Category__c = 'Safety', FinServ__Amount__c = -2500000),
+            new FinServ__AssetsAndLiabilities__c(
+                Name = 'Hytte', AssetorLiabilityType__c = 'NonfinancialAsset',
+                FF_Category__c = 'Preserve & Grow', FinServ__Amount__c = 1000000),
+            new FinServ__AssetsAndLiabilities__c(
+                Name = 'Lån uten beløp', AssetorLiabilityType__c = 'Liability')
+        };
+
+        MeetingSummaryController.normalizeLiabilities(recs);
+
+        FinServ__AssetsAndLiabilities__c liability = (FinServ__AssetsAndLiabilities__c) recs[0];
+        Assert.areEqual(2500000, liability.FinServ__Amount__c, 'Liability amount must be positive');
+        Assert.isNull(liability.FF_Category__c, 'Liability must have no category');
+
+        FinServ__AssetsAndLiabilities__c asset = (FinServ__AssetsAndLiabilities__c) recs[1];
+        Assert.areEqual('Preserve & Grow', asset.FF_Category__c, 'Assets keep their category');
+        Assert.areEqual(1000000, asset.FinServ__Amount__c, 'Assets keep their amount');
+
+        Assert.isNull(((FinServ__AssetsAndLiabilities__c) recs[2]).FinServ__Amount__c,
+            'A blank amount stays blank');
+    }
+
     // ── getMeetingNoteVersions ───────────────────────────────────────────────
 
     @IsTest
